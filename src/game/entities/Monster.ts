@@ -1,6 +1,5 @@
 import Phaser from "phaser";
 import {
-  TILE_SIZE,
   BASE_STEP_MS,
   MELEE_RANGE,
   MONSTER_AGGRO_RANGE,
@@ -11,6 +10,7 @@ import { MonsterDef } from "../../data/monsters";
 import { findPath, chebyshevDistance, TileCoord } from "../pathfinding";
 import { rollDamage } from "../combat";
 import { Direction, directionFromDelta, directionalFrameIndex } from "../directionalSprite";
+import { tileAnchorX, tileAnchorY, depthForTileY } from "../tileAnchor";
 
 const AI_TICK_MS = 400; // throttle pathfinding/decision-making for battery friendliness
 
@@ -40,26 +40,28 @@ export class Monster {
     this.tileY = spawnY;
     this.hp = def.hp;
 
-    this.sprite = scene.add.sprite(
-      spawnX * TILE_SIZE + TILE_SIZE / 2,
-      spawnY * TILE_SIZE + TILE_SIZE / 2,
-      def.textureKey,
-      0,
-    );
-    this.sprite.setDepth(5);
+    this.sprite = scene.add.sprite(tileAnchorX(spawnX), tileAnchorY(spawnY), def.textureKey, 0);
+    this.sprite.setOrigin(1, 1);
+    this.sprite.setDepth(depthForTileY(spawnY));
 
     const barY = this.barY();
-    this.hpBarBg = scene.add.rectangle(this.sprite.x, barY, 24, 4, 0x000000, 0.6).setDepth(6).setVisible(false);
-    this.hpBarFill = scene.add.rectangle(this.sprite.x, barY, 24, 4, 0xc9302f).setDepth(7).setVisible(false);
+    const barX = this.barX();
+    this.hpBarBg = scene.add.rectangle(barX, barY, 24, 4, 0x000000, 0.6).setDepth(6).setVisible(false);
+    this.hpBarFill = scene.add.rectangle(barX, barY, 24, 4, 0xc9302f).setDepth(7).setVisible(false);
   }
 
   get tile(): TileCoord {
     return { x: this.tileX, y: this.tileY };
   }
 
+  /** Sprite origin is bottom-right (oblique-projection anchor), so the horizontal center is offset left by half the width. */
+  private barX(): number {
+    return this.sprite.x - this.sprite.displayWidth / 2;
+  }
+
   /** A few px above the sprite's own top edge, so taller monsters (e.g. the troll) don't have their HP bar overlapping their head. */
   private barY(): number {
-    return this.sprite.y - this.sprite.displayHeight / 2 - 6;
+    return this.sprite.y - this.sprite.displayHeight - 6;
   }
 
   private updateHpBar() {
@@ -73,9 +75,10 @@ export class Monster {
 
   private syncBarPosition() {
     const barY = this.barY();
-    this.hpBarBg.setPosition(this.sprite.x, barY);
+    const barX = this.barX();
+    this.hpBarBg.setPosition(barX, barY);
     this.hpBarFill.y = barY;
-    this.hpBarFill.x = this.sprite.x - (24 - this.hpBarFill.width) / 2;
+    this.hpBarFill.x = barX - (24 - this.hpBarFill.width) / 2;
   }
 
   /** Directional sheets (framesPerDirection set) index by facing + idle/step; simple 2-frame sheets just toggle frame 0/1, flipped horizontally for movement direction. */
@@ -103,10 +106,11 @@ export class Monster {
       this.moving = true;
       this.stepToggle = !this.stepToggle;
       this.applyFrame(false);
+      this.sprite.setDepth(depthForTileY(y));
       this.scene.tweens.add({
         targets: this.sprite,
-        x: x * TILE_SIZE + TILE_SIZE / 2,
-        y: y * TILE_SIZE + TILE_SIZE / 2,
+        x: tileAnchorX(x),
+        y: tileAnchorY(y),
         duration: BASE_STEP_MS,
         onUpdate: () => this.syncBarPosition(),
         onComplete: () => {
@@ -142,10 +146,8 @@ export class Monster {
     this.hp = this.def.hp;
     this.tileX = this.spawnX;
     this.tileY = this.spawnY;
-    this.sprite.setPosition(
-      this.spawnX * TILE_SIZE + TILE_SIZE / 2,
-      this.spawnY * TILE_SIZE + TILE_SIZE / 2,
-    );
+    this.sprite.setPosition(tileAnchorX(this.spawnX), tileAnchorY(this.spawnY));
+    this.sprite.setDepth(depthForTileY(this.spawnY));
     this.facing = "down";
     this.applyFrame(true);
     this.sprite.setVisible(true);
@@ -162,7 +164,7 @@ export class Monster {
     playerTile: TileCoord,
     playerAlive: boolean,
     isWalkable: (x: number, y: number) => boolean,
-    onAttackPlayer: (damage: number) => void,
+    onAttackPlayer: (damage: number, attackerName: string) => void,
   ) {
     if (!this.alive) {
       this.respawnTimer -= dtMs;
@@ -182,7 +184,7 @@ export class Monster {
 
     if (dist <= MELEE_RANGE) {
       if (this.attackCooldown <= 0) {
-        onAttackPlayer(rollDamage(this.def.minDamage, this.def.maxDamage));
+        onAttackPlayer(rollDamage(this.def.minDamage, this.def.maxDamage), this.def.name);
         this.attackCooldown = this.def.attackIntervalMs;
       }
       return;

@@ -97,6 +97,147 @@ function signpostSprite() {
   return s;
 }
 
+/** A stacked wooden barrel — town-yard clutter outside shops. */
+function barrelSprite() {
+  const s = new Sprite(16, 16);
+  s.fillEllipse(8, 13.5, 5, 1.4, "#14110f"); // ground shadow
+  s.fillRect(4, 5, 8, 8, "#7a5230");
+  s.fillRect(4, 5, 8, 1, "#8a6038");
+  s.fillRect(3, 6, 10, 1, "#4a2f1a"); // top hoop
+  s.fillRect(3, 11, 10, 1, "#4a2f1a"); // bottom hoop
+  s.fillRect(4, 5, 1, 8, "#5c3c22");
+  s.fillRect(11, 5, 1, 8, "#5c3c22");
+  s.fillRect(6, 6, 2, 6, "#8f6338");
+  return s;
+}
+
+/** A crated shipment — flat wooden slats, town-yard clutter outside shops. */
+function crateSprite() {
+  const s = new Sprite(16, 16);
+  s.fillEllipse(8, 13.5, 5.4, 1.4, "#14110f"); // ground shadow
+  s.fillRect(3, 6, 10, 7, "#8a6a3d");
+  s.fillRect(3, 6, 10, 1, "#a3814f");
+  s.fillRect(3, 6, 1, 7, "#5a3d22");
+  s.fillRect(12, 6, 1, 7, "#5a3d22");
+  s.line(3, 9, 13, 9, "#5a3d22");
+  s.line(3, 6, 8, 13, "#6b4a2a");
+  s.line(13, 6, 8, 13, "#6b4a2a");
+  return s;
+}
+
+/** A small stone plaza well — the town's centerpiece. */
+function wellSprite() {
+  const s = new Sprite(16, 16);
+  s.fillEllipse(8, 13, 6, 1.6, "#14110f"); // ground shadow
+  s.fillEllipse(8, 9.5, 6, 4.2, "#5c5762"); // stone ring, back
+  s.fillEllipse(8, 8.6, 5.4, 3.6, "#726c78");
+  s.fillEllipse(8, 8.2, 4.2, 2.6, "#1c2b30"); // dark water
+  s.fillEllipse(6.6, 7.6, 1.2, 0.7, "#3d5a63"); // water glint
+  s.fillRect(3, 3, 1, 6, "#4a2e18"); // support posts
+  s.fillRect(12, 3, 1, 6, "#4a2e18");
+  s.fillRect(2, 2, 12, 1, "#5a3d22"); // roof beam
+  s.fillRect(3, 1, 10, 1, "#6b4a2a"); // roof cap
+  return s;
+}
+
+// ---------------------------------------------------------------------------
+// Town NPCs — original designs (each a distinct silhouette, not palette
+// swaps of one base), sized to match the player character (16x16 -> 32x32,
+// same scale as the player sheet) rather than towering over it.
+// ---------------------------------------------------------------------------
+
+/** Borin the Blacksmith: stocky build, leather apron, bald, a hammer at his side. */
+function borinFrame() {
+  const s = new Sprite(16, 16);
+  const skin = "#c98a5c";
+  const apron = "#6b4a2f";
+  const apronDark = "#573c26";
+  const trousers = "#33363b";
+  const boots = "#201814";
+
+  s.fillRect(5, 12, 2, 2, boots);
+  s.fillRect(9, 12, 2, 2, boots);
+  s.fillRect(5, 9, 2, 3, trousers);
+  s.fillRect(9, 9, 2, 3, trousers);
+  // broad torso + apron
+  s.fillRect(3, 5, 10, 6, apron);
+  s.fillRect(3, 5, 10, 1, apronDark);
+  s.fillRect(7, 6, 2, 5, apronDark); // center strap
+  // arms (rolled sleeves, skin showing at forearm)
+  s.fillRect(2, 6, 1, 3, skin);
+  s.fillRect(13, 6, 1, 3, skin);
+  // head: ruddy, bald with a short dark fringe
+  s.fillCircle(8, 3, 3, skin);
+  s.fillRect(5, 1, 6, 1, "#2a2320");
+  s.setPixel(6, 3, "#241a12");
+  s.setPixel(9, 3, "#241a12");
+  // hammer prop at his side
+  s.fillRect(13, 9, 2, 1, "#8a6a3d");
+  s.fillRect(14, 8, 1, 3, "#9c9ca6");
+  return s;
+}
+
+/** Wren the Herbalist: slender, hooded cloak, a basket of herbs at her hip. */
+function wrenFrame() {
+  const s = new Sprite(16, 16);
+  const cloak = "#2f6b45";
+  const cloakDark = "#204d33";
+  const skin = "#e0ac69";
+  const basket = "#7a5c3e";
+
+  s.setPixel(6, 13, "#241a12");
+  s.setPixel(9, 13, "#241a12");
+  // long robe (trapezoid via stacked rects, widening toward the hem)
+  s.fillRect(6, 10, 4, 3, cloak);
+  s.fillRect(5, 8, 6, 3, cloak);
+  s.fillRect(5, 8, 1, 5, cloakDark);
+  s.fillRect(10, 8, 1, 5, cloakDark);
+  s.fillRect(6, 6, 4, 3, cloak);
+  // arms
+  s.fillRect(4, 7, 1, 3, cloak);
+  s.fillRect(11, 7, 1, 3, cloak);
+  // hood + face (only lower face visible, rest shadowed by hood)
+  s.fillCircle(8, 3.5, 2.8, cloakDark);
+  s.fillEllipse(8, 4.5, 2, 1.6, skin);
+  s.setPixel(7, 4, "#241a12");
+  s.setPixel(9, 4, "#241a12");
+  // basket prop at her hip
+  s.fillRect(11, 9, 3, 2, basket);
+  s.setPixel(12, 8, "#4a8f52");
+  s.setPixel(13, 8, "#6fc47f");
+  return s;
+}
+
+/** Elder Corwin: robed, long white beard, a gem-topped staff. */
+function elderFrame() {
+  const s = new Sprite(16, 16);
+  const robe = "#3a3a7a";
+  const robeDark = "#28285a";
+  const skin = "#e0b58a";
+  const beard = "#e8e8e0";
+  const staff = "#6b4a2f";
+
+  // long robe reaching the ground
+  s.fillRect(5, 9, 6, 4, robe);
+  s.fillRect(5, 9, 1, 4, robeDark);
+  s.fillRect(10, 9, 1, 4, robeDark);
+  s.fillRect(7, 11, 2, 2, "#c9a24a"); // rope belt
+  s.fillRect(5, 6, 6, 4, robe);
+  s.fillRect(4, 7, 1, 3, robe);
+  s.fillRect(11, 7, 1, 3, robe);
+  // head + long beard
+  s.fillCircle(8, 3, 2.6, skin);
+  s.fillRect(6, 1, 4, 1, beard); // hair
+  s.fillRect(6, 4, 4, 4, beard); // beard body
+  s.fillRect(7, 8, 2, 2, beard); // beard tip
+  s.setPixel(6, 3, "#241a12");
+  s.setPixel(10, 3, "#241a12");
+  // staff prop with a small gem
+  s.fillRect(13, 2, 1, 11, staff);
+  s.fillCircle(13.5, 2, 1.1, "#6fb2ff");
+  return s;
+}
+
 // ---------------------------------------------------------------------------
 // Monsters
 // ---------------------------------------------------------------------------
@@ -235,8 +376,15 @@ saveSprite(roadTile(), SCALE, `${OUT}/tiles/road.png`);
 
 saveSprite(treeSprite(), SCALE, `${OUT}/props/tree.png`);
 saveSprite(bushSprite(), SCALE, `${OUT}/props/bush.png`);
+
+saveSprite(borinFrame(), SCALE, `${OUT}/npcs/borin.png`);
+saveSprite(wrenFrame(), SCALE, `${OUT}/npcs/wren.png`);
+saveSprite(elderFrame(), SCALE, `${OUT}/npcs/elder-corwin.png`);
 saveSprite(boulderSprite(), SCALE, `${OUT}/props/boulder.png`);
 saveSprite(signpostSprite(), SCALE, `${OUT}/props/signpost.png`);
+saveSprite(barrelSprite(), SCALE, `${OUT}/props/barrel.png`);
+saveSprite(crateSprite(), SCALE, `${OUT}/props/crate.png`);
+saveSprite(wellSprite(), SCALE, `${OUT}/props/well.png`);
 
 const ratFrames = [ratFrame({ step: 0 }), ratFrame({ step: 1 })];
 const ratMeta = saveSpriteSheet(ratFrames, SCALE, `${OUT}/entities/rat.png`);

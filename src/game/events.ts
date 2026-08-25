@@ -16,6 +16,8 @@ export const EVENTS = {
   OPEN_VOCATION_CHOICE: "open-vocation-choice",
   CHOOSE_VOCATION: "choose-vocation",
   MODAL_STATE: "modal-state",
+  OPEN_DIALOGUE: "open-dialogue",
+  REQUEST_VOCATION_TALK: "request-vocation-talk",
 } as const;
 
 export interface PlayerStatsPayload {
@@ -71,4 +73,17 @@ export interface ChooseVocationPayload {
 
 export interface ModalStatePayload {
   open: boolean;
+}
+
+export interface OpenDialoguePayload {
+  npcId: string;
+  npcName: string;
+  textureKey: string;
+  role: "shop" | "vocation";
+  greeting: string;
+  about: string;
+}
+
+export interface RequestVocationTalkPayload {
+  npcId: string;
 }

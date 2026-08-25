@@ -118,30 +118,9 @@ results.troll = await buildDirectionalSheet({
   outPath: `${OUT}/entities/troll.png`,
 });
 
-// --- NPC "jim": the Blacksmith (weapons/armor). Two recolors give us two more
-// distinct-looking shopkeepers from the same well-shaded base art. ---
-results.jim = await buildStaticSprite({
-  path: `${RAW}/npcs/jim.png`,
-  targetHeight: 48,
-  outPath: `${OUT}/npcs/blacksmith.png`,
-});
-
-async function recoloredNpc(tint, outPath) {
-  const box = await contentBBox(`${RAW}/npcs/jim.png`);
-  const targetHeight = 48;
-  const scale = targetHeight / box.height;
-  const targetWidth = Math.round(box.width * scale);
-  await sharp(`${RAW}/npcs/jim.png`)
-    .extract(box)
-    .resize(targetWidth, targetHeight, { fit: "fill" })
-    .tint(tint)
-    .png()
-    .toFile(outPath);
-  return { width: targetWidth, height: targetHeight };
-}
-
-results.herbalist = await recoloredNpc({ r: 120, g: 195, b: 130 }, `${OUT}/npcs/herbalist.png`);
-results.elder = await recoloredNpc({ r: 150, g: 130, b: 220 }, `${OUT}/npcs/elder.png`);
+// NPCs (Borin, Wren, Elder Corwin) are now original procedural designs from
+// scripts/generate-assets.mjs, not derived from the uploaded pack's "jim.png"
+// — see docs discussion: they need to be distinct designs, not recolors.
 
 // --- Building facades: decorative backdrops for shop NPCs in town. ---
 results.building1 = await buildStaticSprite({

@@ -64,10 +64,28 @@ export const BUILDINGS: BuildingPlacement[] = [
   { textureKey: "building-weaponshop", footprintX: 26, footprintY: 20, footprintW: 3, footprintH: 3 },
   { textureKey: "building-cottage", footprintX: 40, footprintY: 20, footprintW: 3, footprintH: 3 },
   { textureKey: "building-house", footprintX: 36, footprintY: 29, footprintW: 3, footprintH: 3 },
+  // Guard House — reuses the cottage art (same as classic Tibia towns reusing house sprites).
+  { textureKey: "building-cottage", footprintX: 22, footprintY: 29, footprintW: 3, footprintH: 3 },
 ];
 for (const building of BUILDINGS) {
   b.rect(building.footprintX, building.footprintY, building.footprintW, building.footprintH, "W");
 }
+
+// --- Dirt walkways connecting each building's doorway to the town street ---
+b.vline(27, 24, 1, "D"); // blacksmith -> street
+b.vline(41, 24, 1, "D"); // herbalist -> street
+b.set(38, 28, "D"); // elder's house -> plaza
+b.vline(23, 27, 2, "D"); // guard house -> street
+
+// --- Plaza well (town centerpiece, off the crossroads) ---
+b.set(32, 24, "w");
+
+// --- Barrels & crates (shop-yard clutter) ---
+b.set(25, 20, "k"); // barrel, west of the blacksmith
+b.set(25, 21, "x"); // crate, west of the blacksmith
+b.set(43, 20, "k"); // barrel, east of the herbalist
+b.set(43, 21, "x"); // crate, east of the herbalist
+b.set(39, 29, "k"); // barrel, east of the elder's house
 
 // --- Signposts (decorative, non-blocking, placed just off the road) ---
 export interface SignPlacement {
@@ -79,6 +97,10 @@ export const SIGNS: SignPlacement[] = [
   { x: 33, y: 17, text: "North: the Highlands" },
   { x: 33, y: 33, text: "South: the Lowlands" },
   { x: 18, y: 35, text: "West: the Old Mine" },
+  { x: 29, y: 21, text: "Borin's Forge" },
+  { x: 39, y: 21, text: "Wren's Apothecary" },
+  { x: 35, y: 29, text: "Elder Corwin's House" },
+  { x: 25, y: 30, text: "Guard Post" },
 ];
 // Signs are rendered as their own sprite in WorldScene (on top of whatever
 // terrain is already there — grass, road, trail) rather than as a grid tile,
@@ -90,14 +112,45 @@ export interface NpcSpawn {
   name: string;
   textureKey: string;
   role: "shop" | "vocation";
+  greeting: string;
+  about: string;
   x: number;
   y: number;
 }
 
 export const NPC_SPAWNS: NpcSpawn[] = [
-  { id: "blacksmith", name: "Borin", textureKey: "blacksmith", role: "shop", x: 27, y: 23 },
-  { id: "herbalist", name: "Wren", textureKey: "herbalist", role: "shop", x: 41, y: 23 },
-  { id: "elder", name: "Elder Corwin", textureKey: "elder", role: "vocation", x: 37, y: 28 },
+  {
+    id: "blacksmith",
+    name: "Borin",
+    textureKey: "npc-borin",
+    role: "shop",
+    greeting: "Need something forged, traveler?",
+    about:
+      "I've been the blacksmith here in Oakhollow for twenty years. Swords, armor — if it's metal, I can shape it.",
+    x: 27,
+    y: 23,
+  },
+  {
+    id: "herbalist",
+    name: "Wren",
+    textureKey: "npc-wren",
+    role: "shop",
+    greeting: "Oh! A visitor. Looking for potions?",
+    about: "I gather herbs out on the plains and brew what remedies I can. Health, mana... a bit of everything.",
+    x: 41,
+    y: 23,
+  },
+  {
+    id: "elder",
+    name: "Elder Corwin",
+    textureKey: "npc-elder-corwin",
+    role: "vocation",
+    greeting: "Welcome, young one.",
+    about:
+      "I have watched many adventurers pass through Oakhollow and find their calling. In time, perhaps, you will find yours too.",
+    x: 37,
+    y: 28,
+  },
 ];
 
 // --- Monster spawns (none in town — mountain/plains/cave only) ---
@@ -161,6 +214,9 @@ const LEGEND: Record<string, TileInfo> = {
   t: { walkable: false, textureKey: "grass", overlayKey: "tree", safe: false },
   b: { walkable: false, textureKey: "grass", overlayKey: "bush", safe: false },
   o: { walkable: false, textureKey: "grass", overlayKey: "boulder", safe: false },
+  k: { walkable: false, textureKey: "grass", overlayKey: "barrel", safe: false },
+  x: { walkable: false, textureKey: "grass", overlayKey: "crate", safe: false },
+  w: { walkable: false, textureKey: "temple-floor", overlayKey: "well", safe: true },
 };
 
 const MAP_ROWS: string[] = b.rows();

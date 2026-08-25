@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { TILE_SIZE, MELEE_RANGE, NPC_INTERACT_RANGE, VOCATION_CHOICE_LEVEL } from "../game/constants";
+import { tileAnchorX, tileAnchorY, depthForTileY } from "../game/tileAnchor";
 import {
   forEachTile,
   isWalkable,
@@ -29,6 +30,7 @@ import {
   SellItemPayload,
   ChooseVocationPayload,
   ModalStatePayload,
+  RequestVocationTalkPayload,
 } from "../game/events";
 
 const RECHASE_INTERVAL_MS = 300;
@@ -91,6 +93,9 @@ export class WorldScene extends Phaser.Scene {
     bus.on(EVENTS.MODAL_STATE, (payload: ModalStatePayload) => {
       this.modalOpen = payload.open;
     });
+    bus.on(EVENTS.REQUEST_VOCATION_TALK, (payload: RequestVocationTalkPayload) =>
+      this.requestVocationTalk(payload.npcId),
+    );
 
     // UIScene's create() (which subscribes to these events) runs in the same
     // scene-boot flush but isn't guaranteed to run first, so defer the
@@ -103,8 +108,10 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private applyZoom() {
-    const desiredTilesVisible = 11;
-    const zoom = Phaser.Math.Clamp(this.scale.width / (desiredTilesVisible * TILE_SIZE), 1, 3);
+    // Matches classic Tibia's 15-tile-wide field of view (verified: the
+    // client's game window renders 15x11 tiles at default zoom).
+    const desiredTilesVisible = 15;
+    const zoom = Phaser.Math.Clamp(this.scale.width / (desiredTilesVisible * TILE_SIZE), 0.5, 3);
     this.cameras.main.setZoom(zoom);
   }
 
@@ -122,14 +129,20 @@ export class WorldScene extends Phaser.Scene {
 
   private buildEnvironmentDecoration() {
     for (const building of BUILDINGS) {
-      const cx = (building.footprintX + building.footprintW / 2) * TILE_SIZE;
-      const bottomY = (building.footprintY + building.footprintH) * TILE_SIZE;
-      this.add.image(cx, bottomY, building.textureKey).setOrigin(0.5, 1).setDepth(3);
+      // Anchor at the bottom-right tile of the footprint (Tibia-style oblique
+      // anchor) so the building leans up-left over the tiles behind it.
+      const anchorTileX = building.footprintX + building.footprintW - 1;
+      const anchorTileY = building.footprintY + building.footprintH - 1;
+      this.add
+        .image(tileAnchorX(anchorTileX), tileAnchorY(anchorTileY), building.textureKey)
+        .setOrigin(1, 1)
+        .setDepth(depthForTileY(anchorTileY));
     }
     for (const sign of SIGNS) {
       const sprite = this.add
-        .image(sign.x * TILE_SIZE + TILE_SIZE / 2, sign.y * TILE_SIZE + TILE_SIZE / 2, "signpost")
-        .setDepth(4)
+        .image(tileAnchorX(sign.x), tileAnchorY(sign.y), "signpost")
+        .setOrigin(1, 1)
+        .setDepth(depthForTileY(sign.y))
         .setInteractive({ useHandCursor: true });
       sprite.on("pointerdown", () => this.log("info", sign.text));
     }
@@ -139,8 +152,9 @@ export class WorldScene extends Phaser.Scene {
     this.npcs = NPC_SPAWNS.map((def) => ({
       def,
       sprite: this.add
-        .image(def.x * TILE_SIZE + TILE_SIZE / 2, def.y * TILE_SIZE + TILE_SIZE / 2, def.textureKey)
-        .setDepth(4),
+        .image(tileAnchorX(def.x), tileAnchorY(def.y), def.textureKey)
+        .setOrigin(1, 1)
+        .setDepth(depthForTileY(def.y)),
     }));
   }
 
@@ -181,13 +195,21 @@ export class WorldScene extends Phaser.Scene {
       this.log("info", `Walk closer to talk to ${npc.name}.`);
       return;
     }
+    bus.emit(EVENTS.OPEN_DIALOGUE, {
+      npcId: npc.id,
+      npcName: npc.name,
+      textureKey: npc.textureKey,
+      role: npc.role,
+      greeting: npc.greeting,
+      about: npc.about,
+    });
+  }
 
-    if (npc.role === "shop") {
-      bus.emit(EVENTS.OPEN_SHOP, { npcId: npc.id, npcName: npc.name });
-      return;
-    }
+  /** The dialogue panel's "My Path" button — vocation eligibility is game state, so it's checked here, not in the UI. */
+  private requestVocationTalk(npcId: string) {
+    const npc = NPC_SPAWNS.find((n) => n.id === npcId);
+    if (!npc) return;
 
-    // role === "vocation"
     if (this.player.vocation !== "none") {
       this.log("info", `${npc.name}: "You have already chosen your path, ${VOCATION_NAMES[this.player.vocation]}."`);
       return;
@@ -220,8 +242,8 @@ export class WorldScene extends Phaser.Scene {
     }
 
     for (const monster of this.monsters) {
-      monster.update(delta, this.player.tile, this.player.hp > 0, isWalkable, (damage) =>
-        this.damagePlayer(damage),
+      monster.update(delta, this.player.tile, this.player.hp > 0, isWalkable, (damage, attackerName) =>
+        this.damagePlayer(damage, attackerName),
       );
     }
 
@@ -245,7 +267,7 @@ export class WorldScene extends Phaser.Scene {
         const dmg = rollDamage(this.player.weapon.min, this.player.weapon.max);
         const died = target.takeDamage(dmg);
         this.log("damage", `You hit the ${target.def.name} for ${dmg}.`);
-        this.floatText(target.sprite.x, this.spriteTopY(target.sprite), `-${dmg}`, "#ffffff");
+        this.floatText(this.spriteCenterX(target.sprite), this.spriteTopY(target.sprite), `-${dmg}`, "#ffffff");
         this.player.attackCooldown = this.player.weapon.intervalMs;
 
         if (died) {
@@ -274,7 +296,7 @@ export class WorldScene extends Phaser.Scene {
   private rewardKill(monster: Monster) {
     const { leveledUp } = this.player.gainExp(monster.def.xp);
     this.log("xp", `You destroy the ${monster.def.name}. +${monster.def.xp} exp.`);
-    this.floatText(this.player.sprite.x, this.spriteTopY(this.player.sprite) - 14, `+${monster.def.xp} xp`, "#8fd0ff");
+    this.floatText(this.spriteCenterX(this.player.sprite), this.spriteTopY(this.player.sprite) - 14, `+${monster.def.xp} xp`, "#8fd0ff");
     if (leveledUp) {
       this.log("levelup", `You advanced to level ${this.player.level}!`);
     }
@@ -286,7 +308,12 @@ export class WorldScene extends Phaser.Scene {
 
   private spawnCorpse(monster: Monster, loot: { itemId: string; amount: number }[]) {
     const sprite = this.add.sprite(monster.sprite.x, monster.sprite.y, monster.def.textureKey, 0);
-    sprite.setDepth(3).setTint(0x808080).setScale(1, 0.55).setAlpha(0.9);
+    sprite
+      .setOrigin(1, 1)
+      .setDepth(depthForTileY(monster.tileY) - 1) // just under the live sprite it replaces
+      .setTint(0x808080)
+      .setScale(1, 0.55)
+      .setAlpha(0.9);
     const corpse: Corpse = { sprite, loot, name: monster.def.name };
     this.corpses.push(corpse);
     this.time.delayedCall(CORPSE_DECAY_MS, () => this.removeCorpse(corpse));
@@ -313,10 +340,10 @@ export class WorldScene extends Phaser.Scene {
     this.removeCorpse(corpse);
   }
 
-  private damagePlayer(amount: number) {
+  private damagePlayer(amount: number, attackerName: string) {
     this.player.takeDamage(amount);
-    this.log("damage", `A creature hits you for ${amount}.`);
-    this.floatText(this.player.sprite.x, this.spriteTopY(this.player.sprite), `-${amount}`, "#ff5c5c");
+    this.log("damage", `The ${attackerName} hits you for ${amount}.`);
+    this.floatText(this.spriteCenterX(this.player.sprite), this.spriteTopY(this.player.sprite), `-${amount}`, "#ff5c5c");
     this.emitPlayerStats();
   }
 
@@ -336,11 +363,11 @@ export class WorldScene extends Phaser.Scene {
 
     if (item.healAmount) {
       this.player.heal(item.healAmount);
-      this.floatText(this.player.sprite.x, this.spriteTopY(this.player.sprite), `+${item.healAmount}`, "#7cff7c");
+      this.floatText(this.spriteCenterX(this.player.sprite), this.spriteTopY(this.player.sprite), `+${item.healAmount}`, "#7cff7c");
     }
     if (item.manaAmount) {
       this.player.restoreMana(item.manaAmount);
-      this.floatText(this.player.sprite.x, this.spriteTopY(this.player.sprite) - 14, `+${item.manaAmount} mp`, "#7cc8ff");
+      this.floatText(this.spriteCenterX(this.player.sprite), this.spriteTopY(this.player.sprite) - 14, `+${item.manaAmount} mp`, "#7cc8ff");
     }
 
     this.log("info", `You use a ${item.name}.`);
@@ -385,8 +412,14 @@ export class WorldScene extends Phaser.Scene {
     this.emitPlayerStats();
   }
 
+  // Sprites use a bottom-right origin (oblique-projection anchor), so the
+  // visual center/top are offset from sprite.x/y rather than equal to it.
+  private spriteCenterX(sprite: Phaser.GameObjects.Sprite): number {
+    return sprite.x - sprite.displayWidth / 2;
+  }
+
   private spriteTopY(sprite: Phaser.GameObjects.Sprite): number {
-    return sprite.y - sprite.displayHeight / 2;
+    return sprite.y - sprite.displayHeight;
   }
 
   private floatText(x: number, y: number, text: string, color: string) {

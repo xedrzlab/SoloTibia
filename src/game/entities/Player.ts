@@ -1,5 +1,6 @@
 import Phaser from "phaser";
-import { TILE_SIZE, BASE_STEP_MS } from "../constants";
+import { BASE_STEP_MS } from "../constants";
+import { tileAnchorX, tileAnchorY, depthForTileY } from "../tileAnchor";
 import {
   Vocation,
   maxHpFor,
@@ -52,12 +53,13 @@ export class Player {
     this.maxCapacity = maxCapacityFor(this.vocation, this.level);
 
     this.sprite = scene.add.sprite(
-      tileX * TILE_SIZE + TILE_SIZE / 2,
-      tileY * TILE_SIZE + TILE_SIZE / 2,
+      tileAnchorX(tileX),
+      tileAnchorY(tileY),
       "player",
       directionalFrameIndex("down", 0, PLAYER_FRAMES_PER_DIRECTION),
     );
-    this.sprite.setDepth(10);
+    this.sprite.setOrigin(1, 1);
+    this.sprite.setDepth(depthForTileY(tileY));
   }
 
   get tile(): { x: number; y: number } {
@@ -82,10 +84,11 @@ export class Player {
       this.moving = true;
       this.stepToggle = !this.stepToggle;
       this.applyFrame(false);
+      this.sprite.setDepth(depthForTileY(y));
       this.scene.tweens.add({
         targets: this.sprite,
-        x: x * TILE_SIZE + TILE_SIZE / 2,
-        y: y * TILE_SIZE + TILE_SIZE / 2,
+        x: tileAnchorX(x),
+        y: tileAnchorY(y),
         duration: BASE_STEP_MS,
         onComplete: () => {
           this.moving = false;
@@ -155,7 +158,8 @@ export class Player {
   teleportTo(x: number, y: number) {
     this.tileX = x;
     this.tileY = y;
-    this.sprite.x = x * TILE_SIZE + TILE_SIZE / 2;
-    this.sprite.y = y * TILE_SIZE + TILE_SIZE / 2;
+    this.sprite.x = tileAnchorX(x);
+    this.sprite.y = tileAnchorY(y);
+    this.sprite.setDepth(depthForTileY(y));
   }
 }

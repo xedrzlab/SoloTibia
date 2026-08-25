@@ -23,6 +23,9 @@ export class BootScene extends Phaser.Scene {
     this.load.image("bush", `${base}/props/bush.png`);
     this.load.image("boulder", `${base}/props/boulder.png`);
     this.load.image("signpost", `${base}/props/signpost.png`);
+    this.load.image("barrel", `${base}/props/barrel.png`);
+    this.load.image("crate", `${base}/props/crate.png`);
+    this.load.image("well", `${base}/props/well.png`);
     this.load.image("building-weaponshop", `${base}/props/building-weaponshop.png`);
     this.load.image("building-cottage", `${base}/props/building-cottage.png`);
     this.load.image("building-house", `${base}/props/building-house.png`);
@@ -42,9 +45,9 @@ export class BootScene extends Phaser.Scene {
     });
     this.load.spritesheet("troll", `${base}/entities/troll.png`, TROLL_SHEET);
 
-    this.load.image("blacksmith", `${base}/npcs/blacksmith.png`);
-    this.load.image("herbalist", `${base}/npcs/herbalist.png`);
-    this.load.image("elder", `${base}/npcs/elder.png`);
+    this.load.image("npc-borin", `${base}/npcs/borin.png`);
+    this.load.image("npc-wren", `${base}/npcs/wren.png`);
+    this.load.image("npc-elder-corwin", `${base}/npcs/elder-corwin.png`);
 
     this.load.image("sword", `${base}/items/sword.png`);
     this.load.image("health-potion", `${base}/items/health-potion.png`);

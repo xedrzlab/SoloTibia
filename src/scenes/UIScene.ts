@@ -4,6 +4,7 @@ import {
   EVENTS,
   InventoryPayload,
   LogPayload,
+  OpenDialoguePayload,
   OpenShopPayload,
   PlayerStatsPayload,
   TargetPayload,
@@ -114,6 +115,10 @@ export class UIScene extends Phaser.Scene {
   private vocationPanel!: Phaser.GameObjects.Container;
   private vocationOpen = false;
 
+  private dialoguePanel!: Phaser.GameObjects.Container;
+  private dialogueOpen = false;
+  private currentDialogue: OpenDialoguePayload | null = null;
+
   constructor() {
     super({ key: "UI", active: false });
   }
@@ -130,6 +135,7 @@ export class UIScene extends Phaser.Scene {
     this.buildLog();
     this.buildShopPanel();
     this.buildVocationPanel();
+    this.buildDialoguePanel();
 
     bus.on(EVENTS.PLAYER_STATS, (p: PlayerStatsPayload) => this.onPlayerStats(p));
     bus.on(EVENTS.TARGET, (t: TargetPayload | null) => this.onTarget(t));
@@ -137,6 +143,7 @@ export class UIScene extends Phaser.Scene {
     bus.on(EVENTS.INVENTORY, (inv: InventoryPayload) => this.onInventory(inv));
     bus.on(EVENTS.OPEN_SHOP, (p: OpenShopPayload) => this.openShop(p.npcId, p.npcName));
     bus.on(EVENTS.OPEN_VOCATION_CHOICE, () => this.openVocationPanel());
+    bus.on(EVENTS.OPEN_DIALOGUE, (p: OpenDialoguePayload) => this.openDialogue(p));
 
     this.scale.on("resize", () => this.layout());
     this.layout();
@@ -144,7 +151,9 @@ export class UIScene extends Phaser.Scene {
 
   /** A UI panel is up — tell WorldScene to stop treating taps as world movement. */
   private syncModalState() {
-    bus.emit(EVENTS.MODAL_STATE, { open: this.inventoryOpen || this.shopOpen || this.vocationOpen });
+    bus.emit(EVENTS.MODAL_STATE, {
+      open: this.inventoryOpen || this.shopOpen || this.vocationOpen || this.dialogueOpen,
+    });
   }
 
   private buildTargetPanel() {
@@ -392,6 +401,95 @@ export class UIScene extends Phaser.Scene {
     this.syncModalState();
   }
 
+  private buildDialoguePanel() {
+    this.dialoguePanel = this.add.container(0, 0).setScrollFactor(0).setDepth(150).setVisible(false);
+  }
+
+  private openDialogue(payload: OpenDialoguePayload) {
+    this.currentDialogue = payload;
+    this.dialogueOpen = true;
+    this.dialoguePanel.setVisible(true);
+    this.renderDialoguePanel(payload.greeting);
+    this.syncModalState();
+  }
+
+  private closeDialogue() {
+    this.dialogueOpen = false;
+    this.dialoguePanel.setVisible(false);
+    this.currentDialogue = null;
+    this.syncModalState();
+  }
+
+  private readonly DIALOGUE_WIDTH = 280;
+  private readonly DIALOGUE_HEIGHT = 190;
+
+  private renderDialoguePanel(bodyText: string) {
+    this.dialoguePanel.removeAll(true);
+    const npc = this.currentDialogue;
+    if (!npc) return;
+    const width = this.DIALOGUE_WIDTH;
+    const height = this.DIALOGUE_HEIGHT;
+
+    const bg = this.add.rectangle(0, 0, width, height, COLORS.panelBg, 0.96).setOrigin(0, 0).setStrokeStyle(1, 0x3a3a3a);
+    const portraitBg = this.add.rectangle(10, 10, 48, 48, 0x000000, 0.3).setOrigin(0, 0);
+    const portrait = this.add.image(34, 34, npc.textureKey).setScale(1.3);
+    const name = this.add
+      .text(66, 14, npc.npcName, { fontFamily: "monospace", fontSize: "13px", color: "#e6c34a" })
+      .setOrigin(0, 0);
+    const body = this.add
+      .text(66, 34, bodyText, {
+        fontFamily: "monospace",
+        fontSize: "10px",
+        color: "#e2e2e2",
+        wordWrap: { width: width - 76 },
+      })
+      .setOrigin(0, 0);
+    const closeBtn = this.add
+      .text(width - 10, 8, "X", { fontFamily: "monospace", fontSize: "13px", color: "#e2e2e2" })
+      .setOrigin(1, 0)
+      .setInteractive({ useHandCursor: true });
+    closeBtn.on("pointerdown", () => this.closeDialogue());
+    this.dialoguePanel.add([bg, portraitBg, portrait, name, body, closeBtn]);
+
+    const buttonY = height - 34;
+    const buttons: { label: string; onTap: () => void }[] = [];
+    if (npc.role === "shop") {
+      buttons.push({
+        label: "Trade",
+        onTap: () => {
+          this.closeDialogue();
+          this.openShop(npc.npcId, npc.npcName);
+        },
+      });
+    } else {
+      buttons.push({ label: "My Path", onTap: () => bus.emit(EVENTS.REQUEST_VOCATION_TALK, { npcId: npc.npcId }) });
+    }
+    buttons.push({ label: "Job", onTap: () => this.renderDialoguePanel(npc.about) });
+    buttons.push({ label: "Bye", onTap: () => this.closeDialogue() });
+
+    const btnWidth = (width - 20 - (buttons.length - 1) * 8) / buttons.length;
+    let btnX = 10;
+    for (const button of buttons) {
+      const btnBg = this.add
+        .rectangle(btnX, buttonY, btnWidth, 26, 0x000000, 0.35)
+        .setOrigin(0, 0)
+        .setStrokeStyle(1, 0x3a3a3a)
+        .setInteractive({ useHandCursor: true });
+      const btnLabel = this.add
+        .text(btnX + btnWidth / 2, buttonY + 13, button.label, {
+          fontFamily: "monospace",
+          fontSize: "11px",
+          color: "#f0f0f0",
+        })
+        .setOrigin(0.5, 0.5);
+      btnBg.on("pointerdown", button.onTap);
+      this.dialoguePanel.add([btnBg, btnLabel]);
+      btnX += btnWidth + 8;
+    }
+
+    this.dialoguePanel.setSize(width, height);
+  }
+
   private buildLog() {
     for (let i = 0; i < 5; i++) {
       const text = this.add
@@ -478,6 +576,7 @@ export class UIScene extends Phaser.Scene {
 
     this.shopPanel.setPosition(w / 2 - 120, h / 2 - 150);
     this.vocationPanel.setPosition(w / 2 - 130, h / 2 - 150);
+    this.dialoguePanel.setPosition(w / 2 - this.DIALOGUE_WIDTH / 2, h / 2 - this.DIALOGUE_HEIGHT / 2 - 20);
 
     for (let i = 0; i < this.logLines.length; i++) {
       this.logLines[i].setPosition(12, h - 30 - (this.logLines.length - 1 - i) * 14);
