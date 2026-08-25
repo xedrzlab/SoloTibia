@@ -1,6 +1,14 @@
 import Phaser from "phaser";
 import { TILE_SIZE, MELEE_RANGE } from "../game/constants";
-import { forEachTile, isWalkable, MAP_WIDTH, MAP_HEIGHT, TEMPLE_SPAWN, MONSTER_SPAWNS } from "../data/tilemap";
+import {
+  forEachTile,
+  isWalkable,
+  MAP_WIDTH,
+  MAP_HEIGHT,
+  TEMPLE_SPAWN,
+  MONSTER_SPAWNS,
+  NPC_SPAWNS,
+} from "../data/tilemap";
 import { MONSTERS } from "../data/monsters";
 import { ITEMS } from "../data/items";
 import { Player } from "../game/entities/Player";
@@ -32,6 +40,13 @@ export class WorldScene extends Phaser.Scene {
       const def = MONSTERS[spawn.monsterId];
       return new Monster(this, def, spawn.x, spawn.y);
     });
+
+    // Decorative only for now — no dialogue/shop system yet (a later stage).
+    for (const npc of NPC_SPAWNS) {
+      this.add
+        .image(npc.x * TILE_SIZE + TILE_SIZE / 2, npc.y * TILE_SIZE + TILE_SIZE / 2, npc.textureKey)
+        .setDepth(4);
+    }
 
     const mapWidthPx = MAP_WIDTH * TILE_SIZE;
     const mapHeightPx = MAP_HEIGHT * TILE_SIZE;

@@ -76,4 +76,10 @@ export const MONSTER_SPAWNS: MonsterSpawn[] = [
   { monsterId: "rat", x: 9, y: 9 },
   { monsterId: "rat", x: 11, y: 9 },
   { monsterId: "cave_rat", x: 10, y: 10 },
+  { monsterId: "slime", x: 4, y: 11 },
+  { monsterId: "slime", x: 17, y: 11 },
+  { monsterId: "troll", x: 10, y: 12 },
 ];
+
+/** Decorative-only for now (no dialogue system yet) — see docs/GAME_DESIGN.md §5. */
+export const NPC_SPAWNS = [{ id: "jim", textureKey: "npc-jim", x: 9, y: 3 }];

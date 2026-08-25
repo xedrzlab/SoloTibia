@@ -13,6 +13,8 @@ export interface MonsterDef {
   name: string;
   textureKey: string;
   frameCount: number;
+  /** Set for sheets built by scripts/process-uploaded-assets.mjs (4 directions x N frames). Omit for simple non-directional 2-frame sheets. */
+  framesPerDirection?: number;
   hp: number;
   xp: number;
   minDamage: number;
@@ -52,6 +54,36 @@ export const MONSTERS: Record<string, MonsterDef> = {
     loot: [
       { itemId: "gold_coin", chance: 0.7, min: 2, max: 8 },
       { itemId: "health_potion", chance: 0.08, min: 1, max: 1 },
+    ],
+  },
+  slime: {
+    id: "slime",
+    name: "Slime",
+    textureKey: "slime",
+    frameCount: 2,
+    hp: 8,
+    xp: 3,
+    minDamage: 0,
+    maxDamage: 1,
+    attackIntervalMs: 2200,
+    fleeAtHpPct: 0.3,
+    loot: [{ itemId: "gold_coin", chance: 0.4, min: 1, max: 2 }],
+  },
+  troll: {
+    id: "troll",
+    name: "Troll",
+    textureKey: "troll",
+    frameCount: 12,
+    framesPerDirection: 3,
+    hp: 50,
+    xp: 25,
+    minDamage: 3,
+    maxDamage: 8,
+    attackIntervalMs: 1900,
+    fleeAtHpPct: 0,
+    loot: [
+      { itemId: "gold_coin", chance: 0.85, min: 10, max: 30 },
+      { itemId: "health_potion", chance: 0.15, min: 1, max: 1 },
     ],
   },
 };

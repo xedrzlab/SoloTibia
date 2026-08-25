@@ -9,17 +9,19 @@ import {
   expIntoCurrentLevel,
   expNeededForNextLevel,
 } from "../stats";
+import { Direction, directionFromDelta, directionalFrameIndex } from "../directionalSprite";
 
-const FRAME = { downIdle: 0, downStep: 1, upIdle: 2, upStep: 3, rightIdle: 4, rightStep: 5 };
-
-export type Facing = "down" | "up" | "left" | "right";
+// Matches the player sheet built by scripts/process-uploaded-assets.mjs:
+// 3 frames per direction (0 = idle, 1/2 = alternating walk steps).
+const PLAYER_FRAMES_PER_DIRECTION = 3;
 
 export class Player {
   sprite: Phaser.GameObjects.Sprite;
   tileX: number;
   tileY: number;
-  facing: Facing = "down";
+  facing: Direction = "down";
   moving = false;
+  private stepToggle = false;
 
   vocation: Vocation = "knight";
   level = 1;
@@ -53,7 +55,7 @@ export class Player {
       tileX * TILE_SIZE + TILE_SIZE / 2,
       tileY * TILE_SIZE + TILE_SIZE / 2,
       "player",
-      FRAME.downIdle,
+      directionalFrameIndex("down", 0, PLAYER_FRAMES_PER_DIRECTION),
     );
     this.sprite.setDepth(10);
   }
@@ -63,26 +65,12 @@ export class Player {
   }
 
   setFacing(dx: number, dy: number) {
-    if (dx === 0 && dy < 0) this.facing = "up";
-    else if (dx === 0 && dy > 0) this.facing = "down";
-    else if (dx < 0) this.facing = "left";
-    else if (dx > 0) this.facing = "right";
-  }
-
-  private frameFor(idle: boolean): number {
-    switch (this.facing) {
-      case "up":
-        return idle ? FRAME.upIdle : FRAME.upStep;
-      case "down":
-        return idle ? FRAME.downIdle : FRAME.downStep;
-      default:
-        return idle ? FRAME.rightIdle : FRAME.rightStep;
-    }
+    this.facing = directionFromDelta(dx, dy, this.facing);
   }
 
   private applyFrame(idle: boolean) {
-    this.sprite.setFlipX(this.facing === "left");
-    this.sprite.setFrame(this.frameFor(idle));
+    const frameInDirection = idle ? 0 : this.stepToggle ? 1 : 2;
+    this.sprite.setFrame(directionalFrameIndex(this.facing, frameInDirection, PLAYER_FRAMES_PER_DIRECTION));
   }
 
   /** Animate one tile step; resolves once the tween completes. */
@@ -92,6 +80,7 @@ export class Player {
       this.tileX = x;
       this.tileY = y;
       this.moving = true;
+      this.stepToggle = !this.stepToggle;
       this.applyFrame(false);
       this.scene.tweens.add({
         targets: this.sprite,

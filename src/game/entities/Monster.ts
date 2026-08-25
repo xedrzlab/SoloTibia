@@ -10,6 +10,7 @@ import {
 import { MonsterDef } from "../../data/monsters";
 import { findPath, chebyshevDistance, TileCoord } from "../pathfinding";
 import { rollDamage } from "../combat";
+import { Direction, directionFromDelta, directionalFrameIndex } from "../directionalSprite";
 
 const AI_TICK_MS = 400; // throttle pathfinding/decision-making for battery friendliness
 
@@ -20,6 +21,8 @@ export class Monster {
   hp: number;
   alive = true;
   moving = false;
+  facing: Direction = "down";
+  private stepToggle = false;
 
   private hpBarBg: Phaser.GameObjects.Rectangle;
   private hpBarFill: Phaser.GameObjects.Rectangle;
@@ -45,18 +48,18 @@ export class Monster {
     );
     this.sprite.setDepth(5);
 
-    this.hpBarBg = scene.add
-      .rectangle(this.sprite.x, this.sprite.y - 20, 24, 4, 0x000000, 0.6)
-      .setDepth(6)
-      .setVisible(false);
-    this.hpBarFill = scene.add
-      .rectangle(this.sprite.x, this.sprite.y - 20, 24, 4, 0xc9302f)
-      .setDepth(7)
-      .setVisible(false);
+    const barY = this.barY();
+    this.hpBarBg = scene.add.rectangle(this.sprite.x, barY, 24, 4, 0x000000, 0.6).setDepth(6).setVisible(false);
+    this.hpBarFill = scene.add.rectangle(this.sprite.x, barY, 24, 4, 0xc9302f).setDepth(7).setVisible(false);
   }
 
   get tile(): TileCoord {
     return { x: this.tileX, y: this.tileY };
+  }
+
+  /** A few px above the sprite's own top edge, so taller monsters (e.g. the troll) don't have their HP bar overlapping their head. */
+  private barY(): number {
+    return this.sprite.y - this.sprite.displayHeight / 2 - 6;
   }
 
   private updateHpBar() {
@@ -69,19 +72,37 @@ export class Monster {
   }
 
   private syncBarPosition() {
-    this.hpBarBg.setPosition(this.sprite.x, this.sprite.y - 20);
-    this.hpBarFill.y = this.sprite.y - 20;
+    const barY = this.barY();
+    this.hpBarBg.setPosition(this.sprite.x, barY);
+    this.hpBarFill.y = barY;
     this.hpBarFill.x = this.sprite.x - (24 - this.hpBarFill.width) / 2;
+  }
+
+  /** Directional sheets (framesPerDirection set) index by facing + idle/step; simple 2-frame sheets just toggle frame 0/1, flipped horizontally for movement direction. */
+  private applyFrame(idle: boolean) {
+    const perDir = this.def.framesPerDirection;
+    if (perDir) {
+      const frameInDirection = idle ? 0 : this.stepToggle ? 1 : 2;
+      this.sprite.setFrame(directionalFrameIndex(this.facing, frameInDirection, perDir));
+    } else {
+      this.sprite.setFrame(idle ? 0 : 1 % this.def.frameCount);
+    }
   }
 
   private stepTo(x: number, y: number): Promise<void> {
     const dx = x - this.tileX;
+    const dy = y - this.tileY;
     return new Promise((resolve) => {
-      if (dx !== 0) this.sprite.setFlipX(dx < 0);
+      if (this.def.framesPerDirection) {
+        this.facing = directionFromDelta(dx, dy, this.facing);
+      } else if (dx !== 0) {
+        this.sprite.setFlipX(dx < 0);
+      }
       this.tileX = x;
       this.tileY = y;
       this.moving = true;
-      this.sprite.setFrame(1 % this.def.frameCount);
+      this.stepToggle = !this.stepToggle;
+      this.applyFrame(false);
       this.scene.tweens.add({
         targets: this.sprite,
         x: x * TILE_SIZE + TILE_SIZE / 2,
@@ -90,7 +111,7 @@ export class Monster {
         onUpdate: () => this.syncBarPosition(),
         onComplete: () => {
           this.moving = false;
-          this.sprite.setFrame(0);
+          this.applyFrame(true);
           resolve();
         },
       });
@@ -125,7 +146,8 @@ export class Monster {
       this.spawnX * TILE_SIZE + TILE_SIZE / 2,
       this.spawnY * TILE_SIZE + TILE_SIZE / 2,
     );
-    this.sprite.setFrame(0);
+    this.facing = "down";
+    this.applyFrame(true);
     this.sprite.setVisible(true);
     this.updateHpBar();
   }

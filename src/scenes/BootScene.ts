@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { PLAYER_SHEET, TROLL_SHEET } from "../game/constants";
 
 export class BootScene extends Phaser.Scene {
   constructor() {
@@ -15,10 +16,7 @@ export class BootScene extends Phaser.Scene {
     this.load.image("void-wall", `${base}/tiles/void-wall.png`);
     this.load.image("temple-floor", `${base}/tiles/temple-floor.png`);
 
-    this.load.spritesheet("player", `${base}/entities/player.png`, {
-      frameWidth: 32,
-      frameHeight: 32,
-    });
+    this.load.spritesheet("player", `${base}/entities/player.png`, PLAYER_SHEET);
     this.load.spritesheet("rat", `${base}/entities/rat.png`, {
       frameWidth: 32,
       frameHeight: 32,
@@ -27,6 +25,13 @@ export class BootScene extends Phaser.Scene {
       frameWidth: 32,
       frameHeight: 32,
     });
+    this.load.spritesheet("slime", `${base}/entities/slime.png`, {
+      frameWidth: 32,
+      frameHeight: 32,
+    });
+    this.load.spritesheet("troll", `${base}/entities/troll.png`, TROLL_SHEET);
+
+    this.load.image("npc-jim", `${base}/npcs/jim.png`);
 
     this.load.image("sword", `${base}/items/sword.png`);
     this.load.image("health-potion", `${base}/items/health-potion.png`);

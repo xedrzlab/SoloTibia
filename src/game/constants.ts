@@ -15,3 +15,8 @@ export const RESPAWN_SAFE_DISTANCE = 6;
 export const MONSTER_RESPAWN_MS = 25_000;
 
 export const TARGET_FPS = 30;
+
+// Frame dimensions for directional sheets built by
+// scripts/process-uploaded-assets.mjs — must match its printed output.
+export const PLAYER_SHEET = { frameWidth: 25, frameHeight: 32 };
+export const TROLL_SHEET = { frameWidth: 39, frameHeight: 52 };
