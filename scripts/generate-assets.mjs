@@ -24,6 +24,79 @@ function voidWallTile() {
   return s;
 }
 
+/** A rocky mountain-peak tile: fills most of the tile, meant to tile as a blocking wall. */
+function mountainTile() {
+  const s = new Sprite(16, 16);
+  s.fillRect(0, 0, 16, 16, "#4a4550");
+  s.speckle(30, "#3a3640", 201);
+  // jagged peak silhouette via overlapping triangles (approximated with lines+fills)
+  for (let x = 0; x < 16; x++) {
+    const peakHeight = 3 + Math.round(3 * Math.abs(Math.sin(x * 0.7 + 1)));
+    s.fillRect(x, 0, 1, peakHeight, "#5c5666");
+  }
+  s.speckle(10, "#e8e8ee", 202); // snow flecks near the top
+  s.fillRect(0, 14, 16, 2, "#2c2832");
+  return s;
+}
+
+/** A worn travel path, distinct from raw dirt — lighter, more uniform, with faint wheel-rut lines. */
+function roadTile() {
+  const s = new Sprite(16, 16);
+  s.fillRect(0, 0, 16, 16, "#8a7860");
+  s.speckle(50, "#7d6c56", 301);
+  s.speckle(20, "#96856c", 302);
+  s.fillRect(3, 0, 1, 16, "#7d6c56");
+  s.fillRect(12, 0, 1, 16, "#7d6c56");
+  return s;
+}
+
+// ---------------------------------------------------------------------------
+// Environment props (standalone, transparent, collidable decoration)
+// ---------------------------------------------------------------------------
+
+function treeSprite() {
+  const s = new Sprite(16, 16);
+  // trunk
+  s.fillRect(7, 10, 2, 5, "#4a2e18");
+  s.fillRect(7, 10, 1, 5, "#3a2312");
+  // foliage: layered circles for a rounded canopy with shading
+  s.fillCircle(8, 7, 6, "#1f5c2e");
+  s.fillCircle(8, 6, 5.4, "#2f7a3e");
+  s.fillCircle(6.5, 5, 3, "#3f9450");
+  s.fillCircle(6, 4.3, 1.4, "#6fc47f");
+  return s;
+}
+
+function bushSprite() {
+  const s = new Sprite(16, 16);
+  s.fillEllipse(8, 11, 6, 3, "#193d1f");
+  s.fillEllipse(8, 10, 5.6, 3.6, "#2f6b38");
+  s.fillEllipse(6.5, 9, 3, 2.2, "#4a8f52");
+  s.fillEllipse(6, 8.4, 1.3, 0.9, "#79c283");
+  return s;
+}
+
+function boulderSprite() {
+  const s = new Sprite(16, 16);
+  s.fillEllipse(8, 12.5, 6, 1.6, "#14110f"); // ground shadow
+  s.fillEllipse(8, 9, 5.5, 4.4, "#4a4650");
+  s.fillEllipse(8, 8.3, 5, 3.9, "#5c5762");
+  s.fillEllipse(6.3, 6.7, 2.4, 1.7, "#7a7480");
+  s.fillEllipse(5.6, 6.2, 1, 0.6, "#a29cac");
+  return s;
+}
+
+function signpostSprite() {
+  const s = new Sprite(16, 16);
+  s.fillRect(7, 6, 2, 8, "#4a2e18");
+  s.fillRect(7, 6, 1, 8, "#3a2312");
+  s.fillRect(2, 3, 12, 5, "#8a6a3d");
+  s.fillRect(2, 3, 12, 1, "#a3814f");
+  s.fillRect(2, 7, 12, 1, "#5a3d22");
+  s.line(4, 5, 10, 5, "#5a3d22");
+  return s;
+}
+
 // ---------------------------------------------------------------------------
 // Monsters
 // ---------------------------------------------------------------------------
@@ -157,6 +230,13 @@ function appIcon(size) {
 // ---------------------------------------------------------------------------
 
 saveSprite(voidWallTile(), SCALE, `${OUT}/tiles/void-wall.png`);
+saveSprite(mountainTile(), SCALE, `${OUT}/tiles/mountain.png`);
+saveSprite(roadTile(), SCALE, `${OUT}/tiles/road.png`);
+
+saveSprite(treeSprite(), SCALE, `${OUT}/props/tree.png`);
+saveSprite(bushSprite(), SCALE, `${OUT}/props/bush.png`);
+saveSprite(boulderSprite(), SCALE, `${OUT}/props/boulder.png`);
+saveSprite(signpostSprite(), SCALE, `${OUT}/props/signpost.png`);
 
 const ratFrames = [ratFrame({ step: 0 }), ratFrame({ step: 1 })];
 const ratMeta = saveSpriteSheet(ratFrames, SCALE, `${OUT}/entities/rat.png`);

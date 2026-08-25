@@ -35,10 +35,44 @@
       canvas {
         touch-action: none;
       }
+      #rotate-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        background: #0b0b0b;
+        color: #f0f0f0;
+        font-family: monospace;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 24px;
+      }
+      #rotate-overlay.visible {
+        display: flex;
+      }
+      #rotate-overlay .icon {
+        font-size: 48px;
+        margin-bottom: 16px;
+        animation: rotate-spin 2s linear infinite;
+      }
+      @keyframes rotate-spin {
+        from {
+          transform: rotate(0deg);
+        }
+        to {
+          transform: rotate(180deg);
+        }
+      }
     </style>
   </head>
   <body>
     <div id="app"></div>
+    <div id="rotate-overlay">
+      <div class="icon">⟳</div>
+      <p>SoloTibia is landscape-only.<br />Please rotate your device.</p>
+    </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

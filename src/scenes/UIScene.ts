@@ -1,6 +1,16 @@
 import Phaser from "phaser";
-import { bus, EVENTS, InventoryPayload, LogPayload, PlayerStatsPayload, TargetPayload } from "../game/events";
+import {
+  bus,
+  EVENTS,
+  InventoryPayload,
+  LogPayload,
+  OpenShopPayload,
+  PlayerStatsPayload,
+  TargetPayload,
+} from "../game/events";
 import { ITEMS } from "../data/items";
+import { SHOPS } from "../data/shops";
+import { VOCATION_DESCRIPTIONS, VOCATION_NAMES, ChosenVocation } from "../game/stats";
 
 const COLORS = {
   panelBg: 0x151515,
@@ -97,6 +107,13 @@ export class UIScene extends Phaser.Scene {
   private inventoryPanel!: Phaser.GameObjects.Container;
   private inventoryOpen = false;
 
+  private shopPanel!: Phaser.GameObjects.Container;
+  private shopOpen = false;
+  private currentShop: { npcId: string; npcName: string } | null = null;
+
+  private vocationPanel!: Phaser.GameObjects.Container;
+  private vocationOpen = false;
+
   constructor() {
     super({ key: "UI", active: false });
   }
@@ -111,14 +128,23 @@ export class UIScene extends Phaser.Scene {
     this.buildInventoryToggle();
     this.buildInventoryPanel();
     this.buildLog();
+    this.buildShopPanel();
+    this.buildVocationPanel();
 
     bus.on(EVENTS.PLAYER_STATS, (p: PlayerStatsPayload) => this.onPlayerStats(p));
     bus.on(EVENTS.TARGET, (t: TargetPayload | null) => this.onTarget(t));
     bus.on(EVENTS.LOG, (l: LogPayload) => this.pushLog(l));
     bus.on(EVENTS.INVENTORY, (inv: InventoryPayload) => this.onInventory(inv));
+    bus.on(EVENTS.OPEN_SHOP, (p: OpenShopPayload) => this.openShop(p.npcId, p.npcName));
+    bus.on(EVENTS.OPEN_VOCATION_CHOICE, () => this.openVocationPanel());
 
     this.scale.on("resize", () => this.layout());
     this.layout();
+  }
+
+  /** A UI panel is up — tell WorldScene to stop treating taps as world movement. */
+  private syncModalState() {
+    bus.emit(EVENTS.MODAL_STATE, { open: this.inventoryOpen || this.shopOpen || this.vocationOpen });
   }
 
   private buildTargetPanel() {
@@ -169,6 +195,7 @@ export class UIScene extends Phaser.Scene {
     bg.on("pointerdown", () => {
       this.inventoryOpen = !this.inventoryOpen;
       this.inventoryPanel.setVisible(this.inventoryOpen);
+      this.syncModalState();
     });
     this.inventoryToggle = { bg, text };
   }
@@ -214,6 +241,155 @@ export class UIScene extends Phaser.Scene {
     }
 
     this.inventoryPanel.setSize(width, height);
+  }
+
+  private buildShopPanel() {
+    this.shopPanel = this.add.container(0, 0).setScrollFactor(0).setDepth(150).setVisible(false);
+  }
+
+  private openShop(npcId: string, npcName: string) {
+    this.currentShop = { npcId, npcName };
+    this.shopOpen = true;
+    this.shopPanel.setVisible(true);
+    this.renderShopPanel();
+    this.syncModalState();
+  }
+
+  private closeShop() {
+    this.shopOpen = false;
+    this.shopPanel.setVisible(false);
+    this.syncModalState();
+  }
+
+  private renderShopPanel() {
+    this.shopPanel.removeAll(true);
+    if (!this.currentShop) return;
+    const shop = SHOPS[this.currentShop.npcId];
+    if (!shop) return;
+
+    const gold = this.inventory["gold_coin"] ?? 0;
+    const sellRows = shop.sells;
+    const buyRows = shop.buys.filter((o) => (this.inventory[o.itemId] ?? 0) > 0);
+
+    const width = 240;
+    const rowHeight = 30;
+    const headerHeight = 60;
+    const sectionGap = sellRows.length > 0 && buyRows.length > 0 ? 20 : 0;
+    const height = headerHeight + sellRows.length * rowHeight + buyRows.length * rowHeight + sectionGap + 16;
+
+    const bg = this.add.rectangle(0, 0, width, height, COLORS.panelBg, 0.95).setOrigin(0, 0).setStrokeStyle(1, 0x3a3a3a);
+    const title = this.add
+      .text(10, 8, `${this.currentShop.npcName}`, { fontFamily: "monospace", fontSize: "13px", color: "#f0f0f0" })
+      .setOrigin(0, 0);
+    const goldText = this.add
+      .text(10, 26, `Gold: ${gold}`, { fontFamily: "monospace", fontSize: "11px", color: "#e6c34a" })
+      .setOrigin(0, 0);
+    const closeBtn = this.add
+      .text(width - 10, 8, "X", { fontFamily: "monospace", fontSize: "13px", color: "#e2e2e2" })
+      .setOrigin(1, 0)
+      .setInteractive({ useHandCursor: true });
+    closeBtn.on("pointerdown", () => this.closeShop());
+    this.shopPanel.add([bg, title, goldText, closeBtn]);
+
+    let y = headerHeight;
+    for (const offer of sellRows) {
+      const item = ITEMS[offer.itemId];
+      const row = this.add
+        .rectangle(6, y, width - 12, rowHeight - 4, 0x000000, 0.25)
+        .setOrigin(0, 0)
+        .setInteractive({ useHandCursor: true });
+      const icon = this.add.image(20, y + (rowHeight - 4) / 2, item.textureKey).setScale(0.85);
+      const label = this.add
+        .text(36, y + (rowHeight - 4) / 2, `Buy ${item.name} — ${offer.price}g`, {
+          fontFamily: "monospace",
+          fontSize: "11px",
+          color: "#f0f0f0",
+        })
+        .setOrigin(0, 0.5);
+      row.on("pointerdown", () => bus.emit(EVENTS.BUY_ITEM, { npcId: this.currentShop!.npcId, itemId: offer.itemId }));
+      this.shopPanel.add([row, icon, label]);
+      y += rowHeight;
+    }
+
+    y += sectionGap;
+    for (const offer of buyRows) {
+      const item = ITEMS[offer.itemId];
+      const owned = this.inventory[offer.itemId] ?? 0;
+      const row = this.add
+        .rectangle(6, y, width - 12, rowHeight - 4, 0x000000, 0.25)
+        .setOrigin(0, 0)
+        .setInteractive({ useHandCursor: true });
+      const icon = this.add.image(20, y + (rowHeight - 4) / 2, item.textureKey).setScale(0.85);
+      const label = this.add
+        .text(36, y + (rowHeight - 4) / 2, `Sell ${item.name} (x${owned}) — ${offer.price}g`, {
+          fontFamily: "monospace",
+          fontSize: "11px",
+          color: "#f0f0f0",
+        })
+        .setOrigin(0, 0.5);
+      row.on("pointerdown", () => bus.emit(EVENTS.SELL_ITEM, { npcId: this.currentShop!.npcId, itemId: offer.itemId }));
+      this.shopPanel.add([row, icon, label]);
+      y += rowHeight;
+    }
+
+    this.shopPanel.setSize(width, height);
+  }
+
+  private buildVocationPanel() {
+    this.vocationPanel = this.add.container(0, 0).setScrollFactor(0).setDepth(150).setVisible(false);
+    const width = 260;
+    const vocations: ChosenVocation[] = ["knight", "paladin", "sorcerer", "druid"];
+    const rowHeight = 46;
+    const height = 40 + vocations.length * rowHeight + 10;
+
+    const bg = this.add.rectangle(0, 0, width, height, COLORS.panelBg, 0.96).setOrigin(0, 0).setStrokeStyle(1, 0x3a3a3a);
+    const title = this.add
+      .text(10, 8, "Choose your path", { fontFamily: "monospace", fontSize: "13px", color: "#f0f0f0" })
+      .setOrigin(0, 0);
+    const closeBtn = this.add
+      .text(width - 10, 8, "X", { fontFamily: "monospace", fontSize: "13px", color: "#e2e2e2" })
+      .setOrigin(1, 0)
+      .setInteractive({ useHandCursor: true });
+    closeBtn.on("pointerdown", () => this.closeVocationPanel());
+    this.vocationPanel.add([bg, title, closeBtn]);
+
+    let y = 32;
+    for (const vocation of vocations) {
+      const row = this.add
+        .rectangle(6, y, width - 12, rowHeight - 4, 0x000000, 0.25)
+        .setOrigin(0, 0)
+        .setInteractive({ useHandCursor: true });
+      const name = this.add
+        .text(12, y + 4, VOCATION_NAMES[vocation], { fontFamily: "monospace", fontSize: "12px", color: "#e6c34a" })
+        .setOrigin(0, 0);
+      const desc = this.add
+        .text(12, y + 20, VOCATION_DESCRIPTIONS[vocation], {
+          fontFamily: "monospace",
+          fontSize: "9px",
+          color: "#cccccc",
+          wordWrap: { width: width - 24 },
+        })
+        .setOrigin(0, 0);
+      row.on("pointerdown", () => {
+        bus.emit(EVENTS.CHOOSE_VOCATION, { vocation });
+        this.closeVocationPanel();
+      });
+      this.vocationPanel.add([row, name, desc]);
+      y += rowHeight;
+    }
+    this.vocationPanel.setSize(width, height);
+  }
+
+  private openVocationPanel() {
+    this.vocationOpen = true;
+    this.vocationPanel.setVisible(true);
+    this.syncModalState();
+  }
+
+  private closeVocationPanel() {
+    this.vocationOpen = false;
+    this.vocationPanel.setVisible(false);
+    this.syncModalState();
   }
 
   private buildLog() {
@@ -274,6 +450,7 @@ export class UIScene extends Phaser.Scene {
       slot.icon.setAlpha(count > 0 ? 1 : 0.35);
     }
     this.renderInventoryPanel(); // keep panel content fresh even while hidden
+    if (this.shopOpen) this.renderShopPanel();
   }
 
   private layout() {
@@ -298,6 +475,9 @@ export class UIScene extends Phaser.Scene {
     this.inventoryToggle.bg.setPosition(w - 40, 20);
     this.inventoryToggle.text.setPosition(w - 40, 20);
     this.inventoryPanel.setPosition(w - 232, 56);
+
+    this.shopPanel.setPosition(w / 2 - 120, h / 2 - 150);
+    this.vocationPanel.setPosition(w / 2 - 130, h / 2 - 150);
 
     for (let i = 0; i < this.logLines.length; i++) {
       this.logLines[i].setPosition(12, h - 30 - (this.logLines.length - 1 - i) * 14);

@@ -15,6 +15,17 @@ export class BootScene extends Phaser.Scene {
     this.load.image("water", `${base}/tiles/water.png`);
     this.load.image("void-wall", `${base}/tiles/void-wall.png`);
     this.load.image("temple-floor", `${base}/tiles/temple-floor.png`);
+    this.load.image("rocky-ground", `${base}/tiles/rocky-ground.png`);
+    this.load.image("mountain", `${base}/tiles/mountain.png`);
+    this.load.image("road", `${base}/tiles/road.png`);
+
+    this.load.image("tree", `${base}/props/tree.png`);
+    this.load.image("bush", `${base}/props/bush.png`);
+    this.load.image("boulder", `${base}/props/boulder.png`);
+    this.load.image("signpost", `${base}/props/signpost.png`);
+    this.load.image("building-weaponshop", `${base}/props/building-weaponshop.png`);
+    this.load.image("building-cottage", `${base}/props/building-cottage.png`);
+    this.load.image("building-house", `${base}/props/building-house.png`);
 
     this.load.spritesheet("player", `${base}/entities/player.png`, PLAYER_SHEET);
     this.load.spritesheet("rat", `${base}/entities/rat.png`, {
@@ -31,7 +42,9 @@ export class BootScene extends Phaser.Scene {
     });
     this.load.spritesheet("troll", `${base}/entities/troll.png`, TROLL_SHEET);
 
-    this.load.image("npc-jim", `${base}/npcs/jim.png`);
+    this.load.image("blacksmith", `${base}/npcs/blacksmith.png`);
+    this.load.image("herbalist", `${base}/npcs/herbalist.png`);
+    this.load.image("elder", `${base}/npcs/elder.png`);
 
     this.load.image("sword", `${base}/items/sword.png`);
     this.load.image("health-potion", `${base}/items/health-potion.png`);

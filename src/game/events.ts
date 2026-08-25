@@ -10,6 +10,12 @@ export const EVENTS = {
   LOG: "log",
   INVENTORY: "inventory",
   USE_ITEM: "use-item",
+  OPEN_SHOP: "open-shop",
+  BUY_ITEM: "buy-item",
+  SELL_ITEM: "sell-item",
+  OPEN_VOCATION_CHOICE: "open-vocation-choice",
+  CHOOSE_VOCATION: "choose-vocation",
+  MODAL_STATE: "modal-state",
 } as const;
 
 export interface PlayerStatsPayload {
@@ -42,4 +48,27 @@ export interface InventoryPayload {
 
 export interface UseItemPayload {
   itemId: string;
+}
+
+export interface OpenShopPayload {
+  npcId: string;
+  npcName: string;
+}
+
+export interface BuyItemPayload {
+  npcId: string;
+  itemId: string;
+}
+
+export interface SellItemPayload {
+  npcId: string;
+  itemId: string;
+}
+
+export interface ChooseVocationPayload {
+  vocation: string;
+}
+
+export interface ModalStatePayload {
+  open: boolean;
 }

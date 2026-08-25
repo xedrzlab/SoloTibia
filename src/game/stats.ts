@@ -1,9 +1,10 @@
 // Vocation growth rates and the experience curve, taken from
-// docs/GAME_DESIGN.md §2. Only Knight is playable in this first slice;
-// the table stays vocation-keyed so adding vocation selection later is a
-// data change, not a rewrite.
+// docs/GAME_DESIGN.md §2. A character starts as "none" (pre-vocation, matching
+// the level-8 choice gate) and picks one of the four real vocations via the
+// Elder in town once they reach VOCATION_CHOICE_LEVEL.
 
-export type Vocation = "knight" | "paladin" | "sorcerer" | "druid";
+export type Vocation = "none" | "knight" | "paladin" | "sorcerer" | "druid";
+export type ChosenVocation = Exclude<Vocation, "none">;
 
 export interface VocationGrowth {
   hpPerLevel: number;
@@ -12,10 +13,25 @@ export interface VocationGrowth {
 }
 
 export const VOCATIONS: Record<Vocation, VocationGrowth> = {
+  none: { hpPerLevel: 8, manaPerLevel: 10, capacityPerLevel: 15 },
   knight: { hpPerLevel: 15, manaPerLevel: 5, capacityPerLevel: 25 },
   paladin: { hpPerLevel: 10, manaPerLevel: 15, capacityPerLevel: 20 },
   sorcerer: { hpPerLevel: 5, manaPerLevel: 30, capacityPerLevel: 10 },
   druid: { hpPerLevel: 5, manaPerLevel: 30, capacityPerLevel: 10 },
+};
+
+export const VOCATION_NAMES: Record<ChosenVocation, string> = {
+  knight: "Knight",
+  paladin: "Paladin",
+  sorcerer: "Sorcerer",
+  druid: "Druid",
+};
+
+export const VOCATION_DESCRIPTIONS: Record<ChosenVocation, string> = {
+  knight: "Melee tank. Highest HP, heavy armor, strong in a straight fight.",
+  paladin: "Ranged hybrid. Balanced HP and mana, fights from a distance.",
+  sorcerer: "Offensive caster. Lowest HP, highest mana, powerful spells.",
+  druid: "Support caster. Lowest HP, highest mana, healing and control.",
 };
 
 const BASE_HP = 150;

@@ -4,11 +4,15 @@ import { BootScene } from "./scenes/BootScene";
 import { WorldScene } from "./scenes/WorldScene";
 import { UIScene } from "./scenes/UIScene";
 import { TARGET_FPS } from "./game/constants";
+import { initOrientationLock } from "./game/orientationLock";
 
 registerSW({ immediate: true });
 
 const game = new Phaser.Game({
-  type: Phaser.AUTO,
+  // Real users always get Phaser.AUTO (WebGL where available — better perf).
+  // A `?renderer=canvas` override exists purely so this can be visually
+  // verified in headless test environments where WebGL readback can hang.
+  type: new URLSearchParams(location.search).get("renderer") === "canvas" ? Phaser.CANVAS : Phaser.AUTO,
   parent: "app",
   backgroundColor: "#0b0b0b",
   scale: {
@@ -27,12 +31,23 @@ const game = new Phaser.Game({
   scene: [BootScene, WorldScene, UIScene],
 });
 
-// Battery: fully stop the render/update loop when the tab/app is backgrounded
-// instead of continuing to tick offscreen.
+// Battery + landscape-only: fully stop the render/update loop whenever the
+// tab is backgrounded OR the device is in portrait — two independent
+// conditions, combined here so neither one's "wake" can undo the other's
+// "sleep".
+let tabHidden = document.hidden;
+let inPortrait = false;
+function syncLoopState() {
+  if (tabHidden || inPortrait) game.loop.sleep();
+  else game.loop.wake();
+}
+
 document.addEventListener("visibilitychange", () => {
-  if (document.hidden) {
-    game.loop.sleep();
-  } else {
-    game.loop.wake();
-  }
+  tabHidden = document.hidden;
+  syncLoopState();
+});
+
+initOrientationLock((portrait) => {
+  inPortrait = portrait;
+  syncLoopState();
 });

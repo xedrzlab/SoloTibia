@@ -23,7 +23,7 @@ export class Player {
   moving = false;
   private stepToggle = false;
 
-  vocation: Vocation = "knight";
+  vocation: Vocation = "none";
   level = 1;
   exp = 0;
   hp: number;
@@ -109,6 +109,15 @@ export class Player {
       return { leveledUp: true };
     }
     return { leveledUp: false };
+  }
+
+  setVocation(vocation: Vocation) {
+    this.vocation = vocation;
+    this.maxHp = maxHpFor(this.vocation, this.level);
+    this.maxMana = maxManaFor(this.vocation, this.level);
+    this.maxCapacity = maxCapacityFor(this.vocation, this.level);
+    this.hp = this.maxHp;
+    this.mana = this.maxMana;
   }
 
   expIntoLevel(): number {

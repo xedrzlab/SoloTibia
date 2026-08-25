@@ -16,6 +16,12 @@ export const MONSTER_RESPAWN_MS = 25_000;
 
 export const TARGET_FPS = 30;
 
+// Level at which a character may choose a vocation (docs/GAME_DESIGN.md §2).
+export const VOCATION_CHOICE_LEVEL = 8;
+
+// How close (chebyshev, in tiles) the player must be to an NPC to interact.
+export const NPC_INTERACT_RANGE = 3;
+
 // Frame dimensions for directional sheets built by
 // scripts/process-uploaded-assets.mjs — must match its printed output.
 export const PLAYER_SHEET = { frameWidth: 25, frameHeight: 32 };

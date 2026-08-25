@@ -13,6 +13,7 @@ const OUT = "public/assets";
 mkdirSync(`${OUT}/entities`, { recursive: true });
 mkdirSync(`${OUT}/tiles`, { recursive: true });
 mkdirSync(`${OUT}/npcs`, { recursive: true });
+mkdirSync(`${OUT}/props`, { recursive: true });
 
 const DIRECTIONS = ["down", "left", "right", "up"];
 
@@ -117,11 +118,46 @@ results.troll = await buildDirectionalSheet({
   outPath: `${OUT}/entities/troll.png`,
 });
 
-// --- NPC "jim": static decorative figure for now (no dialogue system yet). ---
+// --- NPC "jim": the Blacksmith (weapons/armor). Two recolors give us two more
+// distinct-looking shopkeepers from the same well-shaded base art. ---
 results.jim = await buildStaticSprite({
   path: `${RAW}/npcs/jim.png`,
   targetHeight: 48,
-  outPath: `${OUT}/npcs/jim.png`,
+  outPath: `${OUT}/npcs/blacksmith.png`,
+});
+
+async function recoloredNpc(tint, outPath) {
+  const box = await contentBBox(`${RAW}/npcs/jim.png`);
+  const targetHeight = 48;
+  const scale = targetHeight / box.height;
+  const targetWidth = Math.round(box.width * scale);
+  await sharp(`${RAW}/npcs/jim.png`)
+    .extract(box)
+    .resize(targetWidth, targetHeight, { fit: "fill" })
+    .tint(tint)
+    .png()
+    .toFile(outPath);
+  return { width: targetWidth, height: targetHeight };
+}
+
+results.herbalist = await recoloredNpc({ r: 120, g: 195, b: 130 }, `${OUT}/npcs/herbalist.png`);
+results.elder = await recoloredNpc({ r: 150, g: 130, b: 220 }, `${OUT}/npcs/elder.png`);
+
+// --- Building facades: decorative backdrops for shop NPCs in town. ---
+results.building1 = await buildStaticSprite({
+  path: `${RAW}/houses/hus1.png`,
+  targetHeight: 110,
+  outPath: `${OUT}/props/building-house.png`,
+});
+results.building2 = await buildStaticSprite({
+  path: `${RAW}/houses/hus2.png`,
+  targetHeight: 110,
+  outPath: `${OUT}/props/building-cottage.png`,
+});
+results.weaponShop = await buildStaticSprite({
+  path: `${RAW}/houses/weaponshop1.png`,
+  targetHeight: 110,
+  outPath: `${OUT}/props/building-weaponshop.png`,
 });
 
 // --- Floor / wall tiles: already clean 32x32 art, just copy/rename. ---
@@ -137,7 +173,14 @@ await copyTile("water_tile32.png", "water.png");
 // Wall art is a 128x128 tileable texture; downscale to our 32px tile grid.
 await sharp(`${RAW}/walls/wall_128_straight.png`).resize(32, 32).png().toFile(`${OUT}/tiles/stone-wall.png`);
 
+// Rocky ground for the mountain hunting ground (already 32x32, opaque).
+async function copyProp(srcName, outName) {
+  await sharp(`${RAW}/props/${srcName}`).png().toFile(`${OUT}/tiles/${outName}`);
+}
+await copyProp("dirtwithstones.png", "rocky-ground.png");
+await copyProp("dirtwithstones2.png", "rocky-ground-alt.png");
+
 console.log("Processed uploaded asset pack:");
 console.log(JSON.stringify(results, null, 2));
-console.log("Tiles copied: grass, dirt, cave-floor, temple-floor, water, stone-wall");
+console.log("Tiles copied: grass, dirt, cave-floor, temple-floor, water, stone-wall, rocky-ground(+alt)");
 console.log("void-wall.png left as the procedural version (no matching art in the pack).");
