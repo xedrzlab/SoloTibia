@@ -1,8 +1,12 @@
-// The world: a safe starting town (Oakhollow) with shop NPCs, surrounded by
-// three hunting grounds — a mountain to the north, plains to the south, and
-// an underground cave reached via a trail off the plains. Built procedurally
-// with MapBuilder (regions/roads/scatter) rather than hand-typed ASCII, since
-// a map this size can't be kept aligned by hand reliably.
+// The world: Oakhollow, a small starter island. Water rings the whole map;
+// the interior is a walled town at the centre with a farm on the south
+// shore. Everything the player needs to learn the game is inside the wall
+// or a short walk south of it. Built procedurally with MapBuilder rather
+// than hand-typed ASCII — a map this size can't be kept aligned by hand
+// reliably.
+//
+// Monsters are intentionally absent while the tutorial area is being built
+// out; see MONSTER_SPAWNS below.
 
 import { MapBuilder } from "../game/mapBuilder";
 import type { TreeSpecies } from "./assets";
@@ -10,90 +14,87 @@ import type { TreeSpecies } from "./assets";
 export const MAP_WIDTH = 70;
 export const MAP_HEIGHT = 50;
 
-const b = new MapBuilder(MAP_WIDTH, MAP_HEIGHT, "#");
+const b = new MapBuilder(MAP_WIDTH, MAP_HEIGHT, "~"); // start as ocean
 
-// --- Base terrain ---
-b.rect(1, 1, MAP_WIDTH - 2, MAP_HEIGHT - 2, "."); // grass everywhere inside the border
-b.rect(1, 1, MAP_WIDTH - 2, 17, "g"); // mountain region: rocky ground base (rows 1-17)
-// plains region (rows 34-48) stays grass — no overlay needed
+// ---------------------------------------------------------------------------
+// Island shape
+// ---------------------------------------------------------------------------
 
-// --- Roads: one north-south spine through town, one east-west town street ---
-b.vline(34, 1, 47, "R", 2); // x34-35, full height
-b.hline(22, 25, 24, "R", 2); // y25-26, across town
+// Elliptical land mass, sand-ringed at the coast so grass never touches water
+// directly. Values tuned so the island fills the frame with a comfortable
+// margin of open water on every side.
+const ISLAND_CX = 35;
+const ISLAND_CY = 25;
+const ISLAND_RX = 30;
+const ISLAND_RY = 21;
 
-// --- Town plaza (safe zone, drawn after roads so the plaza wins at the crossing) ---
-b.rect(31, 22, 7, 6, "T");
+function ellipseValue(x: number, y: number, rx: number, ry: number): number {
+  const nx = (x - ISLAND_CX) / rx;
+  const ny = (y - ISLAND_CY) / ry;
+  return nx * nx + ny * ny;
+}
+
+for (let yy = 0; yy < MAP_HEIGHT; yy++) {
+  for (let xx = 0; xx < MAP_WIDTH; xx++) {
+    const inner = ellipseValue(xx, yy, ISLAND_RX, ISLAND_RY);
+    if (inner <= 1) {
+      b.set(xx, yy, ".");
+    } else if (ellipseValue(xx, yy, ISLAND_RX + 1.6, ISLAND_RY + 1.4) <= 1) {
+      b.set(xx, yy, "D"); // sandy coast where the grass meets the surf
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Town — walled compound in the middle of the island
+// ---------------------------------------------------------------------------
+
+// Town bounding rectangle (inside the ring wall).
+const TOWN = { x: 21, y: 13, w: 28, h: 24 };
+const WALL_GATES = {
+  north: { x: 34, w: 2 },
+  south: { x: 34, w: 2 },
+  east: { y: 24, h: 2 },
+  west: { y: 24, h: 2 },
+};
+
+// Ring wall on the border of the town rectangle, then punch gate openings.
+b.border(TOWN.x, TOWN.y, TOWN.w, TOWN.h, "W");
+for (let i = 0; i < WALL_GATES.north.w; i++) {
+  b.set(WALL_GATES.north.x + i, TOWN.y, "R");
+  b.set(WALL_GATES.south.x + i, TOWN.y + TOWN.h - 1, "R");
+}
+for (let i = 0; i < WALL_GATES.east.h; i++) {
+  b.set(TOWN.x + TOWN.w - 1, WALL_GATES.east.y + i, "R");
+  b.set(TOWN.x, WALL_GATES.west.y + i, "R");
+}
+
+// Cobble streets: a north-south spine through both gates, and an east-west
+// cross street through the west and east gates.
+b.rect(34, TOWN.y, 2, TOWN.h, "R");
+b.rect(TOWN.x, 24, TOWN.w, 2, "R");
+
+// Central plaza (safe zone) at the crossroads — laid after the roads so its
+// tile wins at the intersection.
+const PLAZA = { x: 30, y: 21, w: 10, h: 8 };
+b.rect(PLAZA.x, PLAZA.y, PLAZA.w, PLAZA.h, "T");
 export const TEMPLE_SPAWN = { x: 34, y: 24 };
 
-// --- Mountain hunting ground: scattered blocking peaks over the rocky ground ---
-b.scatter(1, 1, MAP_WIDTH - 2, 17, "M", ["g"], 0.18, 501);
+// Dirt alleys threading between the housing blocks, so a walker isn't stuck
+// on the cobble grid alone. Kept off the plaza itself.
+b.rect(24, 17, 6, 1, "D"); // between north-west shops and outer wall
+b.rect(40, 17, 6, 1, "D");
+b.rect(24, 31, 6, 1, "D"); // between south houses and outer wall
+b.rect(40, 31, 6, 1, "D");
+b.rect(28, 15, 1, 4, "D"); // vertical alley connecting the melee-shop block
+b.rect(41, 15, 1, 4, "D"); // vertical alley on the ranged-shop block
+b.rect(28, 30, 1, 4, "D"); // and mirrored below
+b.rect(41, 30, 1, 4, "D");
 
-// --- Mountain approach: dead trees and loose stone, nothing green ---
-b.scatter(1, 1, MAP_WIDTH - 2, 17, "y", ["g"], 0.02, 520);
+// ---------------------------------------------------------------------------
+// Buildings — three shops, a temple hall and a couple of houses inside the wall
+// ---------------------------------------------------------------------------
 
-// --- Plains hunting ground: trees/bushes/rocks scattered over grass ---
-b.scatter(1, 34, MAP_WIDTH - 2, 15, "t", ["."], 0.06, 601);
-b.scatter(1, 34, MAP_WIDTH - 2, 15, "b", ["."], 0.035, 602);
-b.scatter(1, 34, MAP_WIDTH - 2, 15, "o", ["."], 0.02, 603);
-b.scatter(1, 34, MAP_WIDTH - 2, 15, "r", ["."], 0.015, 606);
-// Walkable ground cover: dressing that doesn't cost the player any space.
-b.scatter(1, 34, MAP_WIDTH - 2, 15, "f", ["."], 0.05, 607);
-b.scatter(1, 34, MAP_WIDTH - 2, 15, "n", ["."], 0.03, 608);
-// light decoration on the approach bands between town and each hunting ground
-b.scatter(1, 18, MAP_WIDTH - 2, 4, "t", ["."], 0.03, 604);
-b.scatter(1, 29, MAP_WIDTH - 2, 5, "t", ["."], 0.03, 605);
-b.scatter(1, 29, MAP_WIDTH - 2, 5, "f", ["."], 0.04, 609);
-
-// --- A pine wood in the south-west, dense enough to read as its own place ---
-b.scatter(3, 36, 18, 12, "p", ["."], 0.16, 610);
-b.scatter(3, 36, 18, 12, "m", ["."], 0.05, 611); // mushrooms in the shade
-b.scatter(3, 36, 18, 12, "u", ["."], 0.02, 612); // stumps: someone has been logging
-
-// --- Millpond: the plains landmark, and the only moving water in the world ---
-const POND = { x: 52, y: 36, w: 11, h: 8 };
-for (let yy = POND.y; yy < POND.y + POND.h; yy++) {
-  for (let xx = POND.x; xx < POND.x + POND.w; xx++) {
-    // Round the corners so the pond reads as a body of water, not a bathtub.
-    const nx = (xx - (POND.x + POND.w / 2 - 0.5)) / (POND.w / 2);
-    const ny = (yy - (POND.y + POND.h / 2 - 0.5)) / (POND.h / 2);
-    if (nx * nx + ny * ny <= 1) b.set(xx, yy, "~");
-  }
-}
-// A sandy shore where the grass meets the water.
-for (let yy = POND.y - 1; yy <= POND.y + POND.h; yy++) {
-  for (let xx = POND.x - 1; xx <= POND.x + POND.w; xx++) {
-    if (b.get(xx, yy) !== ".") continue;
-    const touchesWater = [
-      [1, 0],
-      [-1, 0],
-      [0, 1],
-      [0, -1],
-      [1, 1],
-      [-1, -1],
-      [1, -1],
-      [-1, 1],
-    ].some(([dx, dy]) => b.get(xx + dx, yy + dy) === "~");
-    if (touchesWater) b.set(xx, yy, "D");
-  }
-}
-
-// --- Underground cave (reached by trail off the plains) ---
-const CAVE = { x: 12, y: 36, w: 15, h: 12 };
-b.border(CAVE.x, CAVE.y, CAVE.w, CAVE.h, "W");
-b.rect(CAVE.x + 1, CAVE.y + 1, CAVE.w - 2, CAVE.h - 2, "C");
-b.set(19, CAVE.y, "C"); // entrance gap in the north wall
-
-// Trail connecting the cave entrance up to the main road.
-b.path(
-  [
-    { x: 19, y: 35 },
-    { x: 19, y: 33 },
-    { x: 34, y: 33 },
-  ],
-  "D",
-);
-
-// --- Buildings (decorative image + a blocked tile footprint underneath) ---
 export interface BuildingPlacement {
   textureKey: string;
   footprintX: number;
@@ -103,32 +104,93 @@ export interface BuildingPlacement {
 }
 
 export const BUILDINGS: BuildingPlacement[] = [
-  { textureKey: "building-forge", footprintX: 26, footprintY: 20, footprintW: 3, footprintH: 3 },
-  { textureKey: "building-cottage", footprintX: 40, footprintY: 20, footprintW: 3, footprintH: 3 },
-  { textureKey: "building-house", footprintX: 36, footprintY: 29, footprintW: 3, footprintH: 3 },
-  { textureKey: "building-guardpost", footprintX: 22, footprintY: 29, footprintW: 3, footprintH: 3 },
+  // Melee shop — Borin the Blacksmith. Weapons and armour: the forge sprite.
+  { textureKey: "building-forge", footprintX: 25, footprintY: 15, footprintW: 3, footprintH: 3 },
+  // Ranged shop — Fenn the Fletcher. The cottage doubles as her workshop.
+  { textureKey: "building-cottage", footprintX: 42, footprintY: 15, footprintW: 3, footprintH: 3 },
+  // Magic shop — Wren the Apothecary. Wands, potions and jewellery.
+  { textureKey: "building-house", footprintX: 25, footprintY: 32, footprintW: 3, footprintH: 3 },
+  // Elder Corwin's cottage — the vocation NPC.
+  { textureKey: "building-cottage", footprintX: 42, footprintY: 32, footprintW: 3, footprintH: 3 },
+  // The guard post covers the north gate.
+  { textureKey: "building-guardpost", footprintX: 32, footprintY: 15, footprintW: 3, footprintH: 3 },
+  // A civilian house on the south block, so the plaza doesn't sit alone.
+  { textureKey: "building-house", footprintX: 36, footprintY: 32, footprintW: 3, footprintH: 3 },
+
+  // --- The farm, outside the south gate --------------------------------
+  // Farmer's cottage on the south road, gable facing the town.
+  { textureKey: "building-cottage", footprintX: 32, footprintY: 41, footprintW: 3, footprintH: 3 },
 ];
 for (const building of BUILDINGS) {
   b.rect(building.footprintX, building.footprintY, building.footprintW, building.footprintH, "W");
 }
 
-// --- Dirt walkways connecting each building's doorway to the town street ---
-b.vline(27, 24, 1, "D"); // blacksmith -> street
-b.vline(41, 24, 1, "D"); // herbalist -> street
-b.set(38, 28, "D"); // elder's house -> plaza
-b.vline(23, 27, 2, "D"); // guard house -> street
+// Short dirt walkways from each shop / cottage door out onto the street.
+b.set(26, 18, "D"); // Borin -> alley
+b.set(43, 18, "D"); // Fenn -> alley
+b.set(26, 31, "D"); // Wren -> alley
+b.set(43, 31, "D"); // Corwin -> alley
+b.set(37, 31, "D"); // civilian house -> alley
 
-// --- Plaza well (town centerpiece, off the crossroads) ---
-b.set(32, 24, "w");
+// Plaza well, off the crossroads centre.
+b.set(32, 23, "w");
 
-// --- Barrels & crates (shop-yard clutter) ---
-b.set(25, 20, "k"); // barrel, west of the blacksmith
-b.set(25, 21, "x"); // crate, west of the blacksmith
-b.set(43, 20, "k"); // barrel, east of the herbalist
-b.set(43, 21, "x"); // crate, east of the herbalist
-b.set(39, 29, "k"); // barrel, east of the elder's house
+// ---------------------------------------------------------------------------
+// Farm — outside the south gate, on the way to the shore
+// ---------------------------------------------------------------------------
 
-// --- Props: what makes a location read as a place rather than as terrain ---
+// South road extends from the town's south gate out toward the farm.
+b.rect(34, TOWN.y + TOWN.h, 2, 8, "R");
+
+// Sheep pen: a fenced grass square with a gate opening on its north side, so
+// the player walking down from the south gate can see the animals immediately.
+const PEN = { x: 38, y: 40, w: 8, h: 6 };
+// The pen is grass, not a special ground — sheep graze on grass. The visual
+// fencing is done via PROP fence tiles below rather than terrain, so the
+// interior stays walkable ground and grazing sprites read against grass.
+
+// Chicken yard just west of the farmer's cottage, small and cluttered.
+const YARD = { x: 26, y: 41, w: 5, h: 4 };
+// Same story — the yard's ground stays grass; the coop is a prop.
+
+// A dirt path from the south road out to the pen entrance.
+b.rect(36, 42, 2, 1, "D");
+b.rect(37, 42, 1, 1, "D");
+
+// ---------------------------------------------------------------------------
+// Coastline detail — a small dock and beach features
+// ---------------------------------------------------------------------------
+
+// A pier of dirt tiles into the south water, giving the coast a point of
+// interest. Kept short so a curious player can walk to the end and turn back.
+b.rect(35, 47, 1, 2, "D");
+
+// ---------------------------------------------------------------------------
+// Vegetation — dressing the island around the town
+// ---------------------------------------------------------------------------
+
+// Deciduous woods on the west side of the island, dense but not walled.
+b.scatter(2, 4, 18, 20, "t", ["."], 0.14, 700);
+b.scatter(2, 4, 18, 20, "b", ["."], 0.05, 701);
+b.scatter(2, 4, 18, 20, "f", ["."], 0.04, 702);
+
+// Pine wood on the east side, a different colour so the island has variety.
+b.scatter(50, 4, 18, 20, "p", ["."], 0.14, 720);
+b.scatter(50, 4, 18, 20, "m", ["."], 0.05, 721);
+b.scatter(50, 4, 18, 20, "f", ["."], 0.03, 722);
+
+// Ground cover in the town approach rings, so grass isn't uniform there.
+b.scatter(TOWN.x - 3, TOWN.y - 3, TOWN.w + 6, TOWN.h + 6, "f", ["."], 0.03, 730);
+b.scatter(TOWN.x - 3, TOWN.y - 3, TOWN.w + 6, TOWN.h + 6, "n", ["."], 0.02, 731);
+
+// Southern shore: sparser trees, more open — the farm needs elbow room.
+b.scatter(2, 32, MAP_WIDTH - 4, 15, "t", ["."], 0.03, 740);
+b.scatter(2, 32, MAP_WIDTH - 4, 15, "f", ["."], 0.05, 741);
+
+// ---------------------------------------------------------------------------
+// Props — what makes a location read as a place rather than as terrain
+// ---------------------------------------------------------------------------
+
 export interface PropPlacement {
   textureKey: string;
   x: number;
@@ -137,41 +199,78 @@ export interface PropPlacement {
   blocks?: boolean;
 }
 
+// Build the fence line around the sheep pen, with a gate opening in the top
+// row (the gate itself is a decorative prop at that gap so the eye still
+// reads a boundary).
+const penFences: PropPlacement[] = [];
+const PEN_GATE_X = PEN.x + Math.floor(PEN.w / 2); // gate opening on the north side
+for (let xx = PEN.x; xx < PEN.x + PEN.w; xx++) {
+  if (xx !== PEN_GATE_X && xx !== PEN_GATE_X + 1) {
+    penFences.push({ textureKey: "fence", x: xx, y: PEN.y, blocks: true }); // north
+  }
+  penFences.push({ textureKey: "fence", x: xx, y: PEN.y + PEN.h - 1, blocks: true }); // south
+}
+for (let yy = PEN.y + 1; yy < PEN.y + PEN.h - 1; yy++) {
+  penFences.push({ textureKey: "fence", x: PEN.x, y: yy, blocks: true }); // west
+  penFences.push({ textureKey: "fence", x: PEN.x + PEN.w - 1, y: yy, blocks: true }); // east
+}
+// The gate leaf sits at the opening — walkable through, but visually a gate.
+penFences.push({ textureKey: "fence-gate", x: PEN_GATE_X + 1, y: PEN.y });
+
+// Chicken yard fences with a gap on the south side toward the cottage door.
+const yardFences: PropPlacement[] = [];
+for (let xx = YARD.x; xx < YARD.x + YARD.w; xx++) {
+  yardFences.push({ textureKey: "fence", x: xx, y: YARD.y, blocks: true });
+  if (xx !== YARD.x + 2) yardFences.push({ textureKey: "fence", x: xx, y: YARD.y + YARD.h - 1, blocks: true });
+}
+for (let yy = YARD.y + 1; yy < YARD.y + YARD.h - 1; yy++) {
+  yardFences.push({ textureKey: "fence", x: YARD.x, y: yy, blocks: true });
+  yardFences.push({ textureKey: "fence", x: YARD.x + YARD.w - 1, y: yy, blocks: true });
+}
+
 export const PROPS: PropPlacement[] = [
-  // Borin's forge yard: the tools of the trade, left outside.
-  { textureKey: "weapon-rack", x: 25, y: 22, blocks: true },
-  { textureKey: "sack", x: 29, y: 21, blocks: true },
+  ...penFences,
+  ...yardFences,
 
-  // The old mine: a working face, abandoned mid-shift.
-  { textureKey: "cart", x: 17, y: 35, blocks: true },
-  { textureKey: "crate", x: 21, y: 35, blocks: true },
-  { textureKey: "sack", x: 21, y: 34, blocks: true },
-  { textureKey: "torch", x: 18, y: 36, blocks: true },
-  { textureKey: "torch", x: 20, y: 36, blocks: true },
+  // --- Sheep in the pen (background dressing, not creatures) -----------
+  { textureKey: "sheep", x: 40, y: 42 },
+  { textureKey: "sheep", x: 43, y: 43 },
+  { textureKey: "sheep", x: 41, y: 44 },
+  { textureKey: "sheep", x: 44, y: 42 },
 
-  // Millpond shore: somewhere to sit, and the remains of a fire.
-  { textureKey: "bench", x: 51, y: 40, blocks: true },
-  { textureKey: "campfire", x: 50, y: 42, blocks: true },
-  { textureKey: "barrel", x: 64, y: 39, blocks: true },
+  // --- Chickens pecking in the yard ------------------------------------
+  { textureKey: "chicken", x: 27, y: 42 },
+  { textureKey: "chicken", x: 29, y: 43 },
+  { textureKey: "chicken", x: 28, y: 44 },
+  { textureKey: "chicken", x: 30, y: 42 },
 
-  // A graveyard behind the guard post.
-  { textureKey: "gravestone", x: 19, y: 29, blocks: true },
-  { textureKey: "gravestone", x: 21, y: 30, blocks: true },
-  { textureKey: "gravestone", x: 19, y: 32, blocks: true },
-  { textureKey: "fence", x: 18, y: 28 },
-  { textureKey: "fence", x: 20, y: 28 },
-  { textureKey: "fence", x: 22, y: 28 },
+  // --- Cats around town: alleys, plaza, on a barrel --------------------
+  { textureKey: "cat", x: 26, y: 20 },
+  { textureKey: "cat", x: 43, y: 20 },
+  { textureKey: "cat", x: 33, y: 27 },
+  { textureKey: "cat", x: 39, y: 33 },
 
-  // An abandoned camp deep in the pine wood — someone was out here.
-  { textureKey: "campfire", x: 9, y: 42, blocks: true },
-  { textureKey: "crate", x: 8, y: 43, blocks: true },
-  { textureKey: "chest", x: 11, y: 43, blocks: true },
+  // --- Shop dressing ---------------------------------------------------
+  { textureKey: "weapon-rack", x: 24, y: 17, blocks: true }, // outside Borin's forge
+  { textureKey: "sack", x: 28, y: 17, blocks: true },
+  { textureKey: "barrel", x: 42, y: 17, blocks: true }, // outside Fenn's shop
+  { textureKey: "crate", x: 45, y: 17, blocks: true },
+  { textureKey: "barrel", x: 24, y: 34, blocks: true }, // outside Wren's apothecary
+  { textureKey: "crate", x: 28, y: 34, blocks: true },
+  { textureKey: "sack", x: 45, y: 34, blocks: true }, // outside Elder Corwin's
 
-  // Town street lighting and seating.
-  { textureKey: "torch", x: 33, y: 27, blocks: true },
-  { textureKey: "torch", x: 36, y: 27, blocks: true },
-  { textureKey: "bench", x: 31, y: 21, blocks: true },
-  { textureKey: "bench", x: 38, y: 21, blocks: true },
+  // --- Plaza dressing --------------------------------------------------
+  { textureKey: "torch", x: 32, y: 22, blocks: true },
+  { textureKey: "torch", x: 37, y: 22, blocks: true },
+  { textureKey: "torch", x: 32, y: 28, blocks: true },
+  { textureKey: "torch", x: 37, y: 28, blocks: true },
+  { textureKey: "bench", x: 34, y: 21, blocks: true },
+  { textureKey: "bench", x: 36, y: 27, blocks: true },
+
+  // --- Farm dressing ---------------------------------------------------
+  { textureKey: "sack", x: 32, y: 44, blocks: true }, // outside the farmer's cottage
+  { textureKey: "crate", x: 34, y: 44, blocks: true },
+  { textureKey: "chest", x: 30, y: 43, blocks: true }, // inside the chicken yard
 ];
 
 // Collision is kept out of the tile grid on purpose: a prop should be able to
@@ -183,31 +282,36 @@ for (const prop of PROPS) {
   if (prop.blocks) blockedCells.add(`${prop.x},${prop.y}`);
 }
 
-// --- Signposts (decorative, non-blocking, placed just off the road) ---
+// ---------------------------------------------------------------------------
+// Signposts (decorative, non-blocking, placed just off the road)
+// ---------------------------------------------------------------------------
+
 export interface SignPlacement {
   x: number;
   y: number;
   text: string;
 }
 export const SIGNS: SignPlacement[] = [
-  { x: 33, y: 17, text: "North: the Highlands" },
-  { x: 33, y: 33, text: "South: the Lowlands" },
-  { x: 18, y: 35, text: "West: the Old Mine" },
-  { x: 29, y: 21, text: "Borin's Forge" },
-  { x: 39, y: 21, text: "Wren's Apothecary" },
-  { x: 35, y: 29, text: "Elder Corwin's House" },
-  { x: 25, y: 30, text: "Guard Post" },
+  { x: 33, y: 14, text: "Oakhollow — welcome, traveller." },
+  { x: 33, y: 38, text: "South: the farm and the shore." },
+  { x: 26, y: 18, text: "Borin's Forge — weapons & armour." },
+  { x: 43, y: 18, text: "Fenn's Fletchery — bows & arrows." },
+  { x: 26, y: 31, text: "Wren's Apothecary — magic & remedies." },
+  { x: 43, y: 31, text: "Elder Corwin — a path to walk." },
 ];
-// Signs are rendered as their own sprite in WorldScene (on top of whatever
-// terrain is already there — grass, road, trail) rather than as a grid tile,
-// since a sign's underlying terrain varies by placement.
 
-// --- NPCs (shops + the vocation guide) ---
+// ---------------------------------------------------------------------------
+// NPCs — three shopkeepers, one vocation guide, and a couple of farm workers
+// as background "props" (no interaction).
+// ---------------------------------------------------------------------------
+
+export type NpcRole = "shop" | "vocation" | "ambient";
+
 export interface NpcSpawn {
   id: string;
   name: string;
   textureKey: string;
-  role: "shop" | "vocation";
+  role: NpcRole;
   greeting: string;
   about: string;
   x: number;
@@ -220,21 +324,33 @@ export const NPC_SPAWNS: NpcSpawn[] = [
     name: "Borin",
     textureKey: "npc-borin",
     role: "shop",
-    greeting: "Need something forged, traveler?",
+    greeting: "Steel or leather, traveller?",
     about:
-      "I've been the blacksmith here in Oakhollow for twenty years. Swords, armor — if it's metal, I can shape it.",
+      "I've been the blacksmith here in Oakhollow for twenty years. Swords, axes, plate — if it's for a close fight, I forge it.",
     x: 27,
-    y: 23,
+    y: 19,
   },
   {
-    id: "herbalist",
+    id: "fletcher",
+    name: "Fenn",
+    textureKey: "npc-fenn",
+    role: "shop",
+    greeting: "Bows, arrows, quivers — take your pick.",
+    about:
+      "I fletch arrows and string bows. If you'd sooner keep the fight at a distance, this is the shop.",
+    x: 44,
+    y: 19,
+  },
+  {
+    id: "apothecary",
     name: "Wren",
     textureKey: "npc-wren",
     role: "shop",
-    greeting: "Oh! A visitor. Looking for potions?",
-    about: "I gather herbs out on the plains and brew what remedies I can. Health, mana... a bit of everything.",
-    x: 41,
-    y: 23,
+    greeting: "Wands, potions, a charm or two — I have them all.",
+    about:
+      "The apothecary handles anything with mana in it: wands for the caster, potions for the tired, and a jewel to keep death at arm's length.",
+    x: 27,
+    y: 34,
   },
   {
     id: "elder",
@@ -243,89 +359,82 @@ export const NPC_SPAWNS: NpcSpawn[] = [
     role: "vocation",
     greeting: "Welcome, young one.",
     about:
-      "I have watched many adventurers pass through Oakhollow and find their calling. In time, perhaps, you will find yours too.",
-    x: 37,
-    y: 28,
+      "I have watched many adventurers pass through Oakhollow and find their calling. When you are ready, come find me and we'll speak of yours.",
+    x: 44,
+    y: 34,
+  },
+
+  // Farmers walk around their yard — background dressing, no dialogue attached.
+  // Rendered by the same NPC path so anchoring and depth-sort work out of the
+  // box; the "ambient" role tells the interaction code to ignore them.
+  {
+    id: "farmer_gil",
+    name: "Farmer",
+    textureKey: "npc-farmer-01",
+    role: "ambient",
+    greeting: "",
+    about: "",
+    x: 32,
+    y: 45,
+  },
+  {
+    id: "farmer_ana",
+    name: "Farmhand",
+    textureKey: "npc-farmer-02",
+    role: "ambient",
+    greeting: "",
+    about: "",
+    x: 44,
+    y: 45,
   },
 ];
 
-// --- Monster spawns (none in town — mountain/plains/cave only) ---
+// ---------------------------------------------------------------------------
+// Monsters — none, while the tutorial area is being built. Restore by moving
+// entries out of DISABLED_MONSTER_SPAWNS back into MONSTER_SPAWNS.
+// ---------------------------------------------------------------------------
+
 export interface MonsterSpawn {
   monsterId: string;
   x: number;
   y: number;
 }
 
-// Monsters are disabled while the starting/tutorial area is being built out —
-// combat is intentionally off the table for now, so the world reads as a quiet
-// tutorial space rather than a hunting ground. Restore by moving entries out
-// of DISABLED_MONSTER_SPAWNS below back into MONSTER_SPAWNS.
 export const MONSTER_SPAWNS: MonsterSpawn[] = [];
 
 const DISABLED_MONSTER_SPAWNS: MonsterSpawn[] = [
-  // Mountain — Trolls
   { monsterId: "troll", x: 12, y: 8 },
-  { monsterId: "troll", x: 55, y: 6 },
-  { monsterId: "troll", x: 34, y: 4 },
-  // Plains — Rats & Slimes
   { monsterId: "rat", x: 45, y: 40 },
-  { monsterId: "rat", x: 55, y: 44 },
   { monsterId: "slime", x: 50, y: 38 },
-  { monsterId: "slime", x: 60, y: 42 },
-  { monsterId: "rat", x: 38, y: 46 },
-  // Underground cave — Rats & Cave Rats
-  { monsterId: "rat", x: 16, y: 40 },
-  { monsterId: "rat", x: 22, y: 42 },
-  { monsterId: "cave_rat", x: 18, y: 44 },
-  { monsterId: "cave_rat", x: 24, y: 39 },
 ];
-void DISABLED_MONSTER_SPAWNS; // silence unused-var while spawns are paused
+void DISABLED_MONSTER_SPAWNS;
 
 // Force every point-feature tile back to its intended terrain, in case a
 // scatter pass (which runs earlier) happened to land on the same cell.
 for (const prop of PROPS) {
-  // Props sit on open ground; a scattered tree on the same cell would render
-  // through them and block the square twice over.
   if (b.get(prop.x, prop.y) === "t" || b.get(prop.x, prop.y) === "p" || b.get(prop.x, prop.y) === "b") {
     b.set(prop.x, prop.y, ".");
   }
 }
 for (const npc of NPC_SPAWNS) b.set(npc.x, npc.y, ".");
-for (const spawn of MONSTER_SPAWNS) {
-  const inMountain = spawn.y <= 17;
-  const inCave = spawn.x >= CAVE.x + 1 && spawn.x < CAVE.x + CAVE.w - 1 && spawn.y >= CAVE.y + 1 && spawn.y < CAVE.y + CAVE.h - 1;
-  b.set(spawn.x, spawn.y, inCave ? "C" : inMountain ? "g" : ".");
-}
 b.set(TEMPLE_SPAWN.x, TEMPLE_SPAWN.y, "T");
 
+// ---------------------------------------------------------------------------
+// Tile legend and lookup helpers (unchanged behaviourally from the earlier
+// map — same characters mean the same tiles).
 // ---------------------------------------------------------------------------
 
 export interface TileInfo {
   walkable: boolean;
   textureKey: string;
-  /**
-   * Interchangeable versions of textureKey. The renderer picks one per cell
-   * from the cell's coordinates, so large stretches of ground break up
-   * without ever looking randomly noisy — and the choice is stable between
-   * runs, since it's derived rather than rolled.
-   */
   variants?: string[];
-  /** A transparent-background decoration drawn on top of textureKey (e.g. a tree over grass). */
   overlayKey?: string;
-  /** Interchangeable versions of overlayKey — several tree species on one map char. */
   overlayVariants?: string[];
-  /** Drawn as an animated sprite rather than baked into the static tile layer. */
   animated?: boolean;
-  /** Spawns a layered tree (trunk + canopy + detail) standing on this cell. */
   tree?: TreeSpecies;
-  safe: boolean; // protection-zone tiles: no monster aggro, valid respawn point
+  safe: boolean;
 }
 
-/**
- * A cheap integer hash of a cell's position. Used to pick tile and overlay
- * variants: stable between runs, and it doesn't line up into visible stripes
- * the way (x + y) would.
- */
 function cellHash(x: number, y: number): number {
   return Math.abs(Math.imul(x * 374761393 + y * 668265263, 1274126177)) >>> 0;
 }
@@ -337,7 +446,6 @@ export function variantForCell(tile: TileInfo, x: number, y: number): string {
 
 export function overlayForCell(tile: TileInfo, x: number, y: number): string | undefined {
   if (tile.overlayVariants && tile.overlayVariants.length > 0) {
-    // Offset the hash so a cell doesn't pick "first of both lists" every time.
     return tile.overlayVariants[cellHash(x + 7, y + 13) % tile.overlayVariants.length];
   }
   return tile.overlayKey;
@@ -355,11 +463,7 @@ const LEGEND: Record<string, TileInfo> = {
   M: { walkable: false, textureKey: "mountain", safe: false },
   R: { walkable: true, textureKey: "road", safe: false },
 
-  // Blocking vegetation and stone. These only ever scatter onto grass ('.')
-  // cells (see the scatter() calls above), so grass is the correct base.
-  // Trees draw nothing here but their ground: the trunk and canopy are built
-  // as separate sprites in WorldScene so the canopy can sort above a player
-  // standing behind the tree.
+  // Blocking vegetation and stone.
   t: { walkable: false, textureKey: "grass", variants: ["grass", "grass-2"], tree: "oak", safe: false },
   p: { walkable: false, textureKey: "grass", variants: ["grass", "grass-2"], tree: "pine", safe: false },
   y: { walkable: false, textureKey: "rocky-ground", tree: "dead", safe: false },
@@ -374,8 +478,7 @@ const LEGEND: Record<string, TileInfo> = {
   r: { walkable: false, textureKey: "grass", variants: ["grass", "grass-3"], overlayKey: "rock-medium", safe: false },
   u: { walkable: false, textureKey: "grass", overlayKey: "stump", safe: false },
 
-  // Walkable ground cover — detail the player can stand on, so the world can
-  // be dressed without carving up the walkable space.
+  // Walkable ground cover.
   f: { walkable: true, textureKey: "grass", variants: ["grass", "grass-2"], overlayKey: "flowers", safe: false },
   m: { walkable: true, textureKey: "grass", overlayKey: "mushrooms", safe: false },
   n: { walkable: true, textureKey: "grass", variants: ["grass", "grass-3"], overlayKey: "rock-small", safe: false },

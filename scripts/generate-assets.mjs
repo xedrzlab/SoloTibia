@@ -1629,6 +1629,200 @@ function elderFrame() {
   return s;
 }
 
+/** Fenn the Fletcher: green cloak, quiver over the shoulder, bow at the hip. */
+function fennFrame() {
+  const s = new Sprite(16, 16);
+  const cloak = "#3a6b2a";
+  const cloakDark = "#254a1a";
+  const skin = "#e0b58a";
+  const boot = "#4a2f1a";
+  const bow = "#8a6a3d";
+
+  // boots + trousers, seen under the tunic hem
+  s.fillRect(6, 12, 2, 2, boot);
+  s.fillRect(8, 12, 2, 2, boot);
+  s.fillRect(6, 10, 2, 2, "#5a4028");
+  s.fillRect(8, 10, 2, 2, "#5a4028");
+  // tunic body, belted
+  s.fillRect(4, 6, 8, 5, cloak);
+  s.fillRect(4, 6, 8, 1, cloakDark);
+  s.fillRect(4, 10, 8, 1, "#4a2f1a"); // belt
+  // arms
+  s.fillRect(3, 7, 1, 3, cloak);
+  s.fillRect(12, 7, 1, 3, cloak);
+  // hood + face
+  s.fillCircle(8, 3, 2.8, cloakDark);
+  s.fillEllipse(8, 4, 1.8, 1.5, skin);
+  s.setPixel(7, 4, "#241a12");
+  s.setPixel(9, 4, "#241a12");
+  // quiver over the right shoulder, arrows fletched grey
+  s.fillRect(11, 3, 2, 5, "#5a3d22");
+  s.setPixel(11, 3, "#c9c9c9");
+  s.setPixel(12, 3, "#c9c9c9");
+  s.setPixel(13, 3, "#c9c9c9");
+  // slung bow at the left hip
+  s.line(2, 8, 2, 12, bow);
+  s.setPixel(1, 8, bow);
+  s.setPixel(1, 12, bow);
+  s.line(2, 8, 2, 12, "#e8e0c8"); // bowstring, subtle
+  return s;
+}
+
+/** Farmer: straw hat, roll-sleeve tunic, brown apron. Background prop, no dialogue. */
+function farmerFrame(variant = 0) {
+  const s = new Sprite(16, 16);
+  const skin = "#c98a5c";
+  const straw = "#c9a24a";
+  const strawDark = "#8a6a1a";
+  const tunic = variant === 0 ? "#a89060" : "#7a5c3e";
+  const tunicDark = variant === 0 ? "#7a6338" : "#5a3d22";
+  const trousers = "#3a2717";
+
+  s.fillRect(6, 12, 2, 2, trousers);
+  s.fillRect(8, 12, 2, 2, trousers);
+  // tunic body
+  s.fillRect(4, 6, 8, 6, tunic);
+  s.fillRect(4, 6, 8, 1, tunicDark);
+  // apron front
+  s.fillRect(6, 7, 4, 5, "#8a6a3d");
+  s.fillRect(6, 7, 4, 1, "#5a3d22");
+  // arms (skin at forearm)
+  s.fillRect(3, 7, 1, 3, tunic);
+  s.fillRect(12, 7, 1, 3, tunic);
+  s.setPixel(3, 10, skin);
+  s.setPixel(12, 10, skin);
+  // head
+  s.fillCircle(8, 3, 2.4, skin);
+  s.setPixel(7, 3, "#241a12");
+  s.setPixel(9, 3, "#241a12");
+  // straw hat brim + crown
+  s.fillRect(4, 1, 8, 1, straw);
+  s.fillRect(4, 2, 8, 1, strawDark);
+  s.fillRect(6, 0, 4, 1, straw);
+  return s;
+}
+
+/**
+ * Small farm animals — chickens, sheep, cats. Rendered as one-tile sprites,
+ * intentionally short and low-detail so they sit as background dressing
+ * beside the player rather than reading as gameplay enemies. Anchored at
+ * the bottom-right like everything else so their tile aligns with prop
+ * placement (see tileAnchor / origin(1,1) in WorldScene).
+ */
+function chickenSprite() {
+  const s = new Sprite(16, 16);
+  const body = "#e8e4d4";
+  const bodyDark = "#b8b4a4";
+  const beak = "#e6c34a";
+  const comb = "#c9302f";
+  // ground shadow
+  s.fillEllipse(8, 13, 2.8, 0.9, "#000000");
+  // body
+  s.fillEllipse(8, 11, 3, 2, body);
+  s.fillEllipse(8, 12, 3, 1, bodyDark);
+  // head
+  s.fillCircle(10, 9, 1.5, body);
+  s.setPixel(11, 9, "#1a1a1a"); // eye
+  // beak + comb
+  s.setPixel(12, 9, beak);
+  s.setPixel(10, 7, comb);
+  s.setPixel(11, 7, comb);
+  // legs
+  s.setPixel(7, 13, beak);
+  s.setPixel(9, 13, beak);
+  return s;
+}
+
+function sheepSprite() {
+  const s = new Sprite(16, 16);
+  const fleece = "#e4e0d0";
+  const fleeceHi = "#f4f0e0";
+  const fleeceLo = "#b8b4a4";
+  const face = "#3a2a1c";
+  // ground shadow
+  s.fillEllipse(8, 14, 4.5, 1.1, "#000000");
+  // fleece body
+  s.fillEllipse(8, 11, 5, 2.6, fleece);
+  s.fillEllipse(8, 10, 4.5, 2, fleeceHi);
+  // bumps around the silhouette for the woolly look
+  s.setPixel(4, 10, fleeceHi);
+  s.setPixel(6, 8, fleeceHi);
+  s.setPixel(9, 8, fleeceHi);
+  s.setPixel(12, 10, fleeceHi);
+  s.setPixel(4, 12, fleeceLo);
+  s.setPixel(12, 12, fleeceLo);
+  // dark face
+  s.fillCircle(4, 10, 1.5, face);
+  s.setPixel(4, 10, "#f0f0f0"); // eye
+  // dark legs
+  s.fillRect(5, 13, 1, 1, face);
+  s.fillRect(7, 13, 1, 1, face);
+  s.fillRect(10, 13, 1, 1, face);
+  s.fillRect(12, 13, 1, 1, face);
+  return s;
+}
+
+function catSprite() {
+  const s = new Sprite(16, 16);
+  const fur = "#c9762a";
+  const furDark = "#8a4a1a";
+  const furLo = "#5a2f0a";
+  // ground shadow
+  s.fillEllipse(8, 13, 3, 0.8, "#000000");
+  // body
+  s.fillEllipse(9, 11, 3.4, 1.6, fur);
+  s.fillEllipse(9, 11, 3.4, 1.4, fur);
+  // stripes
+  s.setPixel(8, 10, furDark);
+  s.setPixel(10, 10, furDark);
+  // head
+  s.fillCircle(5, 9, 1.7, fur);
+  // ears
+  s.setPixel(4, 7, fur);
+  s.setPixel(6, 7, fur);
+  s.setPixel(4, 8, furDark);
+  s.setPixel(6, 8, furDark);
+  // eyes + nose
+  s.setPixel(4, 9, "#1a2a1a");
+  s.setPixel(6, 9, "#1a2a1a");
+  s.setPixel(5, 10, furLo);
+  // tail curling up-back
+  s.setPixel(12, 11, fur);
+  s.setPixel(13, 10, fur);
+  s.setPixel(13, 9, fur);
+  // legs
+  s.setPixel(6, 13, furLo);
+  s.setPixel(9, 13, furLo);
+  s.setPixel(11, 13, furLo);
+  return s;
+}
+
+/** Wooden gate: a fence with the middle rail replaced by an open swing. */
+function fenceGateSprite() {
+  const s = new Sprite(16, 16);
+  const wood = "#8a6a3d";
+  const woodDark = "#5a3d22";
+  const iron = "#4a4650";
+  // posts
+  s.fillRect(1, 6, 2, 8, wood);
+  s.fillRect(13, 6, 2, 8, wood);
+  s.fillRect(1, 6, 2, 1, woodDark);
+  s.fillRect(13, 6, 2, 1, woodDark);
+  // ground shadow
+  s.fillRect(1, 14, 2, 1, "#0a0a0a");
+  s.fillRect(13, 14, 2, 1, "#0a0a0a");
+  // gate leaf angled slightly ajar, hinged to the left post
+  s.fillRect(3, 8, 5, 1, wood);
+  s.fillRect(3, 11, 5, 1, wood);
+  s.fillRect(3, 8, 1, 4, wood);
+  s.fillRect(7, 8, 1, 4, wood);
+  // hinges + latch
+  s.setPixel(3, 9, iron);
+  s.setPixel(3, 11, iron);
+  s.setPixel(7, 10, iron);
+  return s;
+}
+
 // ---------------------------------------------------------------------------
 // Monsters
 // ---------------------------------------------------------------------------
@@ -2056,6 +2250,12 @@ saveSprite(gravestoneSprite(), SCALE, `${OUT}/props/gravestone_01.png`);
 saveSprite(chestSprite(), SCALE, `${OUT}/props/chest_01.png`);
 saveSprite(sackSprite(), SCALE, `${OUT}/props/sack_01.png`);
 saveSprite(weaponRackSprite(), SCALE, `${OUT}/props/weapon_rack_01.png`);
+saveSprite(fenceGateSprite(), SCALE, `${OUT}/props/fence_gate_01.png`);
+
+// --- farm animals (background dressing) ----------------------------------
+saveSprite(chickenSprite(), SCALE, `${OUT}/props/animal_chicken_01.png`);
+saveSprite(sheepSprite(), SCALE, `${OUT}/props/animal_sheep_01.png`);
+saveSprite(catSprite(), SCALE, `${OUT}/props/animal_cat_01.png`);
 
 // --- buildings -----------------------------------------------------------
 saveSprite(buildingForge(), SCALE, `${OUT}/buildings/forge_01.png`);
@@ -2074,6 +2274,9 @@ for (const [layer, makeFrame] of Object.entries(PLAYER_LAYERS)) {
 saveSprite(borinFrame(), SCALE, `${OUT}/characters/npc_borin.png`);
 saveSprite(wrenFrame(), SCALE, `${OUT}/characters/npc_wren.png`);
 saveSprite(elderFrame(), SCALE, `${OUT}/characters/npc_corwin.png`);
+saveSprite(fennFrame(), SCALE, `${OUT}/characters/npc_fenn.png`);
+saveSprite(farmerFrame(0), SCALE, `${OUT}/characters/npc_farmer_01.png`);
+saveSprite(farmerFrame(1), SCALE, `${OUT}/characters/npc_farmer_02.png`);
 
 // --- creatures -----------------------------------------------------------
 const trollMeta = saveSpriteSheet(directionalFrames(trollFrame), SCALE, `${OUT}/creatures/troll_sheet.png`);

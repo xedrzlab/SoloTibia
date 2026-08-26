@@ -1,3 +1,7 @@
+// Three shops, split by fighting style. Each keeps its own inventory — a
+// magic buyer isn't going to trade in a sword, and a blacksmith won't touch a
+// wand — which is what the world tells the player through the shop signs.
+
 export interface ShopOffer {
   itemId: string;
   price: number;
@@ -10,16 +14,13 @@ export interface ShopDef {
 }
 
 export const SHOPS: Record<string, ShopDef> = {
+  // Borin — everything for a close fight. Weapons, shields, armour, helmets,
+  // legs, boots. Also stocks the everyday carry containers.
   blacksmith: {
     npcId: "blacksmith",
-    // Borin covers all three fighting styles: melee steel, a bow and arrows
-    // for distance, and a wand for anyone training magic.
     sells: [
       { itemId: "sword", price: 50 },
       { itemId: "axe", price: 70 },
-      { itemId: "bow", price: 90 },
-      { itemId: "arrow", price: 3 },
-      { itemId: "wand_of_vortex", price: 120 },
       { itemId: "wooden_shield", price: 40 },
       { itemId: "steel_shield", price: 180 },
       { itemId: "leather_helmet", price: 25 },
@@ -46,15 +47,34 @@ export const SHOPS: Record<string, ShopDef> = {
       { itemId: "leather_boots", price: 8 },
     ],
   },
-  herbalist: {
-    npcId: "herbalist",
+
+  // Fenn — the ranged shop. Bows and arrows only; her stock is deliberately
+  // narrow so a player who commits to distance gets a shop that specialises.
+  fletcher: {
+    npcId: "fletcher",
     sells: [
+      { itemId: "bow", price: 90 },
+      { itemId: "arrow", price: 3 },
+    ],
+    buys: [
+      { itemId: "bow", price: 36 },
+      { itemId: "arrow", price: 1 },
+    ],
+  },
+
+  // Wren — the magic shop. Wands, potions, jewellery, the tools of a caster.
+  // She won't touch a blade.
+  apothecary: {
+    npcId: "apothecary",
+    sells: [
+      { itemId: "wand_of_vortex", price: 120 },
       { itemId: "health_potion", price: 15 },
       { itemId: "mana_potion", price: 15 },
       { itemId: "amulet_of_life", price: 90 },
       { itemId: "ring_of_healing", price: 110 },
     ],
     buys: [
+      { itemId: "wand_of_vortex", price: 48 },
       { itemId: "amulet_of_life", price: 36 },
       { itemId: "ring_of_healing", price: 44 },
     ],

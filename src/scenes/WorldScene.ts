@@ -426,6 +426,10 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private interactWithNpc(npc: NpcSpawn) {
+    // Ambient NPCs (farmers, background villagers) exist only for atmosphere;
+    // tapping them is a no-op so they never open a dialogue that has nothing
+    // to say.
+    if (npc.role === "ambient") return;
     if (chebyshevDistance(this.player.tile, { x: npc.x, y: npc.y }) > NPC_INTERACT_RANGE) {
       this.log("info", `Walk closer to talk to ${npc.name}.`);
       return;
@@ -434,7 +438,8 @@ export class WorldScene extends Phaser.Scene {
       npcId: npc.id,
       npcName: npc.name,
       textureKey: npc.textureKey,
-      role: npc.role,
+      role: npc.role as "shop" | "vocation", // ambient roles are filtered out above
+
       greeting: npc.greeting,
       about: npc.about,
     });

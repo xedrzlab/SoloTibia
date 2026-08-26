@@ -73,6 +73,12 @@ export const IMAGE_ASSETS: ImageAsset[] = [
   { key: "chest", path: "props/chest_01.png" },
   { key: "sack", path: "props/sack_01.png" },
   { key: "weapon-rack", path: "props/weapon_rack_01.png" },
+  { key: "fence-gate", path: "props/fence_gate_01.png" },
+  // Farm-animal props — static one-tile sprites used as background dressing,
+  // not creatures (they don't fight, patrol or drop loot).
+  { key: "chicken", path: "props/animal_chicken_01.png" },
+  { key: "sheep", path: "props/animal_sheep_01.png" },
+  { key: "cat", path: "props/animal_cat_01.png" },
 
   // --- buildings ---
   { key: "building-forge", path: "buildings/forge_01.png" },
@@ -84,6 +90,9 @@ export const IMAGE_ASSETS: ImageAsset[] = [
   { key: "npc-borin", path: "characters/npc_borin.png" },
   { key: "npc-wren", path: "characters/npc_wren.png" },
   { key: "npc-elder-corwin", path: "characters/npc_corwin.png" },
+  { key: "npc-fenn", path: "characters/npc_fenn.png" },
+  { key: "npc-farmer-01", path: "characters/npc_farmer_01.png" },
+  { key: "npc-farmer-02", path: "characters/npc_farmer_02.png" },
 
   // --- effects ---
   { key: "fx-hit", path: "effects/hit_spark_01.png" },
