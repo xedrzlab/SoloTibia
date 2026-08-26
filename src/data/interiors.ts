@@ -21,7 +21,7 @@ export interface InteriorNpc {
   id: string;
   name: string;
   textureKey: string;
-  role: "shop" | "vocation";
+  role: "shop" | "vocation" | "bank";
   greeting: string;
   about: string;
   x: number;
@@ -237,6 +237,66 @@ export const INTERIORS: Record<string, InteriorRoom> = {
       { textureKey: "barrel", x: 1, y: 2, blocks: true },
       { textureKey: "crate", x: 8, y: 2, blocks: true },
       { textureKey: "sack", x: 1, y: 6, blocks: true },
+      { textureKey: "sack", x: 8, y: 6, blocks: true },
+    ],
+  },
+
+  // ---------------------------------------------------------------------
+  // Bank — deposit and withdraw gold. Same shop template, different keeper.
+  // ---------------------------------------------------------------------
+  bank: {
+    id: "bank",
+    title: "Oakhollow Bank",
+    rows: SHOP_ROWS,
+    spawn: SHOP_SPAWN,
+    npc: {
+      id: "banker",
+      name: "Mira",
+      textureKey: "npc-banker",
+      role: "bank",
+      greeting: "The bank is open. Depositing or withdrawing today?",
+      about:
+        "I keep your gold safe. Deposit it here and it stays with you between deaths and journeys — no one can loot what's in the vault.",
+      x: 4,
+      y: 3,
+    },
+    decor: [
+      { textureKey: "chest", x: 1, y: 2, blocks: true },
+      { textureKey: "chest", x: 8, y: 2, blocks: true },
+      { textureKey: "barrel", x: 3, y: 2, blocks: true },
+      { textureKey: "crate", x: 7, y: 2, blocks: true },
+      { textureKey: "bench", x: 1, y: 6, blocks: true },
+      { textureKey: "bench", x: 8, y: 6, blocks: true },
+    ],
+  },
+
+  // ---------------------------------------------------------------------
+  // Depot — a rack of locked chests. No NPC; tap a chest to open a shared
+  // container. The container lives in WorldScene as the player's global
+  // stash.
+  // ---------------------------------------------------------------------
+  depot: {
+    id: "depot",
+    title: "Oakhollow Depot",
+    rows: [
+      "WWWWWWWWWW",
+      "W........W",
+      "W..CCCC..W", // row of depot chests along the back
+      "W........W",
+      "W........W",
+      "W........W",
+      "W........W",
+      "WWWWDDWWWW",
+    ],
+    spawn: SHOP_SPAWN,
+    // No NPC — the depot has no keeper. A "chest" prop stands in for each
+    // slot in the back row.
+    decor: [
+      { textureKey: "chest", x: 3, y: 2, blocks: true },
+      { textureKey: "chest", x: 4, y: 2, blocks: true },
+      { textureKey: "chest", x: 5, y: 2, blocks: true },
+      { textureKey: "chest", x: 6, y: 2, blocks: true },
+      { textureKey: "barrel", x: 1, y: 6, blocks: true },
       { textureKey: "sack", x: 8, y: 6, blocks: true },
     ],
   },

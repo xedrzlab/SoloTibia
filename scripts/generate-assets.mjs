@@ -1623,45 +1623,109 @@ function shopSignSprite(kind) {
   const plankHi = "#a3814f";
   const plankLo = "#5a3d22";
   const chain = "#5c5762";
-  // Shadow
+  const steel = "#c9ccd1";
+  const steelHi = "#eef0f3";
+  const gold = "#c9a24a";
+  const goldHi = "#f0d67a";
+  const wood = "#8a6a3d";
   s.fillRect(4, 15, 8, 1, "#0a0a0a");
-  // Bracket arm anchored to the building (top-left)
   s.fillRect(0, 2, 3, 1, bracket);
   s.setPixel(2, 3, bracket);
-  // Chain / rope down to the sign
   s.setPixel(3, 4, chain);
   s.setPixel(11, 4, chain);
-  // Wooden plank
   s.fillRect(2, 5, 12, 8, plank);
   s.fillRect(2, 5, 12, 1, plankHi);
   s.fillRect(2, 12, 12, 1, plankLo);
   s.fillRect(2, 5, 1, 8, plankHi);
   s.fillRect(13, 5, 1, 8, plankLo);
-  // Symbol
-  if (kind === "sword") {
-    s.fillRect(7, 6, 2, 5, "#c9ccd1");
-    s.setPixel(7, 6, "#eef0f3");
-    s.fillRect(6, 10, 4, 1, "#c9a24a");
-    s.setPixel(8, 11, "#5a3d22");
-  } else if (kind === "bow") {
-    // Small bow arc + arrow
-    s.setPixel(6, 6, plankLo);
+
+  if (kind === "sword-shield") {
+    // Sword on the left, shield on the right — the melee shop mark.
+    s.fillRect(5, 6, 1, 4, steel);
+    s.setPixel(5, 6, steelHi);
+    s.fillRect(4, 10, 3, 1, gold);
+    s.setPixel(5, 11, wood);
+    // Small kite shield
+    s.fillRect(9, 7, 4, 4, "#7a2c28");
+    s.fillRect(9, 7, 4, 1, "#c9302f");
+    s.setPixel(9, 7, "#e05a58");
+    s.fillRect(10, 8, 2, 1, gold);
+    s.setPixel(11, 10, gold);
+    s.line(9, 10, 12, 10, "#5a1e1c");
+  } else if (kind === "bow-arrow") {
+    // Bow arc on the left, arrow crossing right.
+    s.setPixel(5, 6, wood);
+    s.setPixel(4, 7, wood);
+    s.setPixel(4, 8, wood);
+    s.setPixel(4, 9, wood);
+    s.setPixel(4, 10, wood);
+    s.setPixel(5, 11, wood);
     s.setPixel(5, 7, plankLo);
-    s.setPixel(5, 8, plankLo);
-    s.setPixel(5, 9, plankLo);
     s.setPixel(5, 10, plankLo);
-    s.setPixel(6, 11, plankLo);
-    s.line(6, 7, 6, 10, "#3a2717");
-    s.line(7, 8, 12, 8, "#c9ccd1"); // arrow shaft
-    s.setPixel(11, 7, "#c9ccd1");
-    s.setPixel(11, 9, "#c9ccd1");
-  } else if (kind === "potion") {
-    // Small red potion silhouette
-    s.setPixel(7, 6, "#3a2717");
-    s.setPixel(8, 6, "#3a2717");
-    s.fillEllipse(8, 10, 2.2, 2.4, "#c9302f");
-    s.setPixel(7, 9, "#ff8f8b");
-    s.fillRect(7, 6, 2, 1, "#c9ccd1"); // cork
+    // Bow string
+    s.line(5, 7, 5, 10, "#e8e0c8");
+    // Arrow shaft
+    s.line(6, 8, 12, 8, steel);
+    // Arrow head
+    s.setPixel(13, 8, steelHi);
+    s.setPixel(12, 7, steelHi);
+    s.setPixel(12, 9, steelHi);
+    // Feather fletching
+    s.setPixel(6, 7, "#c9302f");
+    s.setPixel(6, 9, "#c9302f");
+  } else if (kind === "potion-wand") {
+    // Potion left, wand right — the magic shop mark.
+    s.fillRect(4, 6, 2, 1, "#c9ccd1"); // cork
+    s.setPixel(4, 5, "#3a2717");
+    s.setPixel(5, 5, "#3a2717");
+    s.fillEllipse(5, 9, 1.6, 2, "#c9302f");
+    s.setPixel(4, 8, "#ff8f8b");
+    // Wand — brown haft with a lit crystal tip
+    s.line(9, 11, 12, 8, wood);
+    s.setPixel(13, 7, "#6fb2ff");
+    s.setPixel(12, 7, "#c9e6ff");
+    s.setPixel(13, 6, "#c9e6ff");
+    // Small sparkle
+    s.setPixel(11, 5, "#ffe08a");
+  } else if (kind === "coin") {
+    // Gold coin with a green $ — the bank mark.
+    s.fillCircle(8, 9, 3, gold);
+    s.fillCircle(8, 9, 2.6, goldHi);
+    // $ glyph in green
+    const green = "#2f9c3a";
+    const greenHi = "#7cff7c";
+    s.setPixel(8, 7, green);
+    s.setPixel(7, 8, green);
+    s.setPixel(8, 8, green);
+    s.setPixel(9, 8, green);
+    s.setPixel(7, 9, green);
+    s.setPixel(8, 9, greenHi);
+    s.setPixel(9, 10, green);
+    s.setPixel(7, 10, green);
+    s.setPixel(8, 10, green);
+    s.setPixel(8, 11, green);
+    // Vertical bar of the $
+    s.setPixel(8, 6, green);
+    s.setPixel(8, 12, green);
+  } else if (kind === "depot") {
+    // Metal strongbox with brass corners — the depot mark.
+    const box = "#4a4650";
+    const boxHi = "#8a8792";
+    const boxLo = "#2c2832";
+    s.fillRect(4, 7, 8, 6, box);
+    s.fillRect(4, 7, 8, 1, boxHi);
+    s.fillRect(4, 12, 8, 1, boxLo);
+    // Lid line
+    s.fillRect(4, 9, 8, 1, boxLo);
+    s.fillRect(4, 10, 8, 1, boxHi);
+    // Brass corners
+    s.setPixel(4, 7, gold);
+    s.setPixel(11, 7, gold);
+    s.setPixel(4, 12, gold);
+    s.setPixel(11, 12, gold);
+    // Lock plate + keyhole in front
+    s.fillRect(7, 10, 2, 2, gold);
+    s.setPixel(7, 11, "#0a0a0a");
   }
   return s;
 }
@@ -1879,6 +1943,41 @@ function elderFrame() {
   // staff prop with a small gem
   s.fillRect(13, 2, 1, 11, staff);
   s.fillCircle(13.5, 2, 1.1, "#6fb2ff");
+  return s;
+}
+
+/** The banker: dark waistcoat, a coin pouch at the hip, silver chain. */
+function bankerFrame() {
+  const s = new Sprite(16, 16);
+  const coat = "#2b2830";
+  const coatHi = "#3d3947";
+  const shirt = "#e8e0c8";
+  const skin = "#c98a5c";
+  const gold = "#c9a24a";
+  const boot = "#3a2717";
+  s.fillRect(6, 12, 2, 2, boot);
+  s.fillRect(8, 12, 2, 2, boot);
+  // Long dark trousers under the waistcoat
+  s.fillRect(6, 9, 2, 3, "#1c1a20");
+  s.fillRect(8, 9, 2, 3, "#1c1a20");
+  // Waistcoat body
+  s.fillRect(4, 6, 8, 6, coat);
+  s.fillRect(4, 6, 8, 1, coatHi);
+  s.fillRect(7, 6, 2, 5, shirt); // shirt / cravat down the middle
+  s.setPixel(7, 7, gold); // pocket-watch chain
+  s.setPixel(8, 7, gold);
+  // Arms
+  s.fillRect(3, 7, 1, 3, coat);
+  s.fillRect(12, 7, 1, 3, coat);
+  // Coin pouch at the hip
+  s.fillRect(11, 9, 2, 2, "#5a3d22");
+  s.setPixel(11, 9, gold);
+  s.setPixel(12, 9, gold);
+  // Head
+  s.fillCircle(8, 3, 2.4, skin);
+  s.fillRect(6, 1, 4, 1, "#241a12"); // hair
+  s.setPixel(7, 3, "#241a12");
+  s.setPixel(9, 3, "#241a12");
   return s;
 }
 
@@ -2680,9 +2779,11 @@ saveSprite(planterSprite(), SCALE, `${OUT}/props/planter_01.png`);
 saveSprite(altarSprite(), SCALE, `${OUT}/props/altar_01.png`);
 saveSprite(stairsUpSprite(), SCALE, `${OUT}/props/stairs_up_01.png`);
 saveSprite(stairsDownSprite(), SCALE, `${OUT}/props/stairs_down_01.png`);
-saveSprite(shopSignSprite("sword"), SCALE, `${OUT}/props/shop_sign_sword_01.png`);
-saveSprite(shopSignSprite("bow"), SCALE, `${OUT}/props/shop_sign_bow_01.png`);
-saveSprite(shopSignSprite("potion"), SCALE, `${OUT}/props/shop_sign_potion_01.png`);
+saveSprite(shopSignSprite("sword-shield"), SCALE, `${OUT}/props/shop_sign_melee_01.png`);
+saveSprite(shopSignSprite("bow-arrow"), SCALE, `${OUT}/props/shop_sign_ranged_01.png`);
+saveSprite(shopSignSprite("potion-wand"), SCALE, `${OUT}/props/shop_sign_magic_01.png`);
+saveSprite(shopSignSprite("coin"), SCALE, `${OUT}/props/shop_sign_bank_01.png`);
+saveSprite(shopSignSprite("depot"), SCALE, `${OUT}/props/shop_sign_depot_01.png`);
 
 // --- farm animals (background dressing) ----------------------------------
 saveSprite(chickenSprite(), SCALE, `${OUT}/props/animal_chicken_01.png`);
@@ -2711,6 +2812,7 @@ saveSprite(fennFrame(), SCALE, `${OUT}/characters/npc_fenn.png`);
 saveSprite(farmerFrame(0), SCALE, `${OUT}/characters/npc_farmer_01.png`);
 saveSprite(farmerFrame(1), SCALE, `${OUT}/characters/npc_farmer_02.png`);
 saveSprite(priestFrame(), SCALE, `${OUT}/characters/npc_priest.png`);
+saveSprite(bankerFrame(), SCALE, `${OUT}/characters/npc_banker.png`);
 
 // --- creatures -----------------------------------------------------------
 const trollMeta = saveSpriteSheet(directionalFrames(trollFrame), SCALE, `${OUT}/creatures/troll_sheet.png`);

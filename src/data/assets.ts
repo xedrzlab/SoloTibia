@@ -81,9 +81,11 @@ export const IMAGE_ASSETS: ImageAsset[] = [
   { key: "altar", path: "props/altar_01.png" },
   { key: "stairs-up", path: "props/stairs_up_01.png" },
   { key: "stairs-down", path: "props/stairs_down_01.png" },
-  { key: "shop-sign-sword", path: "props/shop_sign_sword_01.png" },
-  { key: "shop-sign-bow", path: "props/shop_sign_bow_01.png" },
-  { key: "shop-sign-potion", path: "props/shop_sign_potion_01.png" },
+  { key: "shop-sign-melee", path: "props/shop_sign_melee_01.png" },
+  { key: "shop-sign-ranged", path: "props/shop_sign_ranged_01.png" },
+  { key: "shop-sign-magic", path: "props/shop_sign_magic_01.png" },
+  { key: "shop-sign-bank", path: "props/shop_sign_bank_01.png" },
+  { key: "shop-sign-depot", path: "props/shop_sign_depot_01.png" },
   // Farm-animal props — static one-tile sprites used as background dressing,
   // not creatures (they don't fight, patrol or drop loot).
   { key: "chicken", path: "props/animal_chicken_01.png" },
@@ -105,6 +107,7 @@ export const IMAGE_ASSETS: ImageAsset[] = [
   { key: "npc-farmer-01", path: "characters/npc_farmer_01.png" },
   { key: "npc-farmer-02", path: "characters/npc_farmer_02.png" },
   { key: "npc-priest", path: "characters/npc_priest.png" },
+  { key: "npc-banker", path: "characters/npc_banker.png" },
 
   // --- effects ---
   { key: "fx-hit", path: "effects/hit_spark_01.png" },

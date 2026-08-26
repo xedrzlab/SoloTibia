@@ -45,7 +45,10 @@ for (let yy = 0; yy < MAP_HEIGHT; yy++) {
 // Town — walled compound in the middle of the island
 // ---------------------------------------------------------------------------
 
-const TOWN = { x: 21, y: 13, w: 28, h: 24 };
+// Roughly doubled from the original 28x24 — the island shape sets the ceiling
+// (the ellipse is 30x21 half-axes centred at 35, 25), so this is about as
+// large as the wall can go without punching through the coast.
+const TOWN = { x: 13, y: 8, w: 44, h: 32 };
 const WALL_GATES = {
   north: { x: 34, w: 2 },
   south: { x: 34, w: 2 },
@@ -67,6 +70,11 @@ for (let i = 0; i < WALL_GATES.east.h; i++) {
 // and an east-west road through the east/west gates.
 b.rect(34, TOWN.y, 2, TOWN.h, "R");
 b.rect(TOWN.x, 24, TOWN.w, 2, "R");
+
+// Secondary E-W streets so both rows of houses have a road at their front.
+b.rect(TOWN.x, 13, TOWN.w, 1, "R"); // upper street
+b.rect(TOWN.x, 30, TOWN.w, 1, "R"); // lower street
+b.rect(TOWN.x, 36, TOWN.w, 1, "R"); // southernmost street
 
 // The old flagstone plaza is gone — an empty stone rectangle reads as a
 // parade ground, not a working village. In its place: a tiny safe-zone
@@ -97,25 +105,61 @@ export interface BuildingPlacement {
   footprintH: number;
 }
 
-// All buildings sit north of the road their door opens onto — the sprite
-// draws each door on the south face, so any building placed south of its
-// road would have its opening pointing away from the town. Moved the two
-// southern shops up into the middle band so every door faces a real road.
+// Every building sits north of the road its door opens onto, because the
+// sprite always draws its door on the south face. Rows of houses line each
+// E-W street, with irregular gaps so the town reads as grown rather than
+// planned. The named services (shops, church, guardpost, bank, depot) mix
+// in with the decorative houses on the same rows.
 export const BUILDINGS: BuildingPlacement[] = [
-  // NW: Borin's forge — melee shop. Door faces the y=20 branch street.
-  { textureKey: "building-forge", footprintX: 25, footprintY: 17, footprintW: 3, footprintH: 3 },
-  // NE: Fenn's fletchery — ranged shop. Door on the y=20 branch.
-  { textureKey: "building-cottage", footprintX: 42, footprintY: 17, footprintW: 3, footprintH: 3 },
-  // Guardpost, tucked to the west of the church.
-  { textureKey: "building-guardpost", footprintX: 30, footprintY: 15, footprintW: 3, footprintH: 3 },
-  // Farmer's cottage on the south road.
-  { textureKey: "building-cottage", footprintX: 32, footprintY: 40, footprintW: 3, footprintH: 3 },
+  // --- Upper row (footprints y=10..12, doors y=12, road y=13) ---
+  { textureKey: "building-house", footprintX: 16, footprintY: 10, footprintW: 3, footprintH: 3 },
+  { textureKey: "building-cottage", footprintX: 20, footprintY: 10, footprintW: 3, footprintH: 3 },
+  { textureKey: "building-cottage", footprintX: 27, footprintY: 10, footprintW: 3, footprintH: 3 },
+  { textureKey: "building-house", footprintX: 38, footprintY: 10, footprintW: 3, footprintH: 3 },
+  { textureKey: "building-cottage", footprintX: 45, footprintY: 10, footprintW: 3, footprintH: 3 },
+  { textureKey: "building-house", footprintX: 49, footprintY: 10, footprintW: 3, footprintH: 3 },
 
-  // Middle band: three buildings whose south face opens onto the E-W spine
-  // at y=24-25. Wren west of the church, Elder Corwin east of it.
+  // --- Northern shops row (footprints y=17..19, doors y=19, road y=20) ---
+  // Borin's forge — melee shop.
+  { textureKey: "building-forge", footprintX: 25, footprintY: 17, footprintW: 3, footprintH: 3 },
+  // Fenn's fletchery — ranged shop.
+  { textureKey: "building-cottage", footprintX: 42, footprintY: 17, footprintW: 3, footprintH: 3 },
+  // Guardpost sits west of Borin, over the north road.
+  { textureKey: "building-guardpost", footprintX: 30, footprintY: 15, footprintW: 3, footprintH: 3 },
+  // Two extra houses beside each shop.
+  { textureKey: "building-house", footprintX: 20, footprintY: 17, footprintW: 3, footprintH: 3 },
+  { textureKey: "building-cottage", footprintX: 47, footprintY: 17, footprintW: 3, footprintH: 3 },
+  { textureKey: "building-house", footprintX: 51, footprintY: 17, footprintW: 3, footprintH: 3 },
+
+  // --- Middle band (footprints y=21..23, doors y=23, road y=24-25) ---
+  // Bank at the far west, depot at the far east — both flank the church.
+  { textureKey: "building-house", footprintX: 14, footprintY: 21, footprintW: 3, footprintH: 3 }, // bank
+  { textureKey: "building-cottage", footprintX: 18, footprintY: 21, footprintW: 3, footprintH: 3 },
+  // Wren's apothecary.
   { textureKey: "building-house", footprintX: 25, footprintY: 21, footprintW: 3, footprintH: 3 },
+  // The church.
   { textureKey: "building-church", footprintX: 32, footprintY: 21, footprintW: 4, footprintH: 3 },
+  // Elder Corwin's cottage.
   { textureKey: "building-cottage", footprintX: 42, footprintY: 21, footprintW: 3, footprintH: 3 },
+  { textureKey: "building-house", footprintX: 47, footprintY: 21, footprintW: 3, footprintH: 3 },
+  { textureKey: "building-cottage", footprintX: 51, footprintY: 21, footprintW: 3, footprintH: 3 }, // depot
+
+  // --- Lower row (footprints y=27..29, doors y=29, road y=30) ---
+  { textureKey: "building-cottage", footprintX: 16, footprintY: 27, footprintW: 3, footprintH: 3 },
+  { textureKey: "building-house", footprintX: 20, footprintY: 27, footprintW: 3, footprintH: 3 },
+  { textureKey: "building-cottage", footprintX: 27, footprintY: 27, footprintW: 3, footprintH: 3 },
+  { textureKey: "building-house", footprintX: 38, footprintY: 27, footprintW: 3, footprintH: 3 },
+  { textureKey: "building-cottage", footprintX: 45, footprintY: 27, footprintW: 3, footprintH: 3 },
+  { textureKey: "building-house", footprintX: 49, footprintY: 27, footprintW: 3, footprintH: 3 },
+
+  // --- Southernmost row (footprints y=33..35, doors y=35, road y=36) ---
+  { textureKey: "building-house", footprintX: 20, footprintY: 33, footprintW: 3, footprintH: 3 },
+  { textureKey: "building-cottage", footprintX: 27, footprintY: 33, footprintW: 3, footprintH: 3 },
+  { textureKey: "building-cottage", footprintX: 40, footprintY: 33, footprintW: 3, footprintH: 3 },
+  { textureKey: "building-house", footprintX: 47, footprintY: 33, footprintW: 3, footprintH: 3 },
+
+  // --- Farmer's cottage outside the wall on the south road ---
+  { textureKey: "building-cottage", footprintX: 32, footprintY: 43, footprintW: 3, footprintH: 3 },
 ];
 for (const building of BUILDINGS) {
   b.rect(building.footprintX, building.footprintY, building.footprintW, building.footprintH, "W");
@@ -147,6 +191,8 @@ export const ENTRY_POINTS: EntryPoint[] = [
   { x: 26, y: 23, interiorId: "magic_shop" }, // Wren's apothecary
   { x: 43, y: 23, interiorId: "elder_house" }, // Elder Corwin's cottage
   { x: 34, y: 23, interiorId: "temple_main" }, // church arched doors
+  { x: 15, y: 23, interiorId: "bank" }, // bank
+  { x: 52, y: 23, interiorId: "depot" }, // depot
 ];
 // Punch each door tile out of the wall paint above, so the player can
 // actually step onto it. The building sprite still draws over the tile —
@@ -241,18 +287,14 @@ export const PROPS: PropPlacement[] = [
   { textureKey: "cat", x: 38, y: 30 },
   { textureKey: "cat", x: 30, y: 26 },
 
-  // Shop-yard clutter (outside the buildings, on the alley tiles).
-  { textureKey: "weapon-rack", x: 24, y: 20, blocks: true }, // Borin's yard
-  { textureKey: "sack", x: 28, y: 20, blocks: true },
-  { textureKey: "barrel", x: 45, y: 20, blocks: true }, // Fenn's yard
-  { textureKey: "crate", x: 42, y: 20, blocks: true },
-  { textureKey: "chest", x: 24, y: 24, blocks: true }, // Wren's yard (west of shop, on grass)
-  { textureKey: "barrel", x: 46, y: 24, blocks: true }, // Elder's yard (east of cottage)
-
-  // --- Shop signs so a player can read what a shop is from the street. ---
-  { textureKey: "shop-sign-sword", x: 27, y: 20 },
-  { textureKey: "shop-sign-bow", x: 41, y: 20 },
-  { textureKey: "shop-sign-potion", x: 27, y: 24 }, // Wren, on the E-W spine next to her door
+  // --- Icon shop-signs at each service, so a walker can read what the shop
+  // --- is from the street without stopping on the signpost. Each hangs on
+  // --- the tile next to the shop's door row.
+  { textureKey: "shop-sign-melee", x: 27, y: 20 }, // Borin's Forge — sword + shield
+  { textureKey: "shop-sign-ranged", x: 41, y: 20 }, // Fenn's Fletchery — bow + arrow
+  { textureKey: "shop-sign-magic", x: 27, y: 24 }, // Wren's Apothecary — potion + wand
+  { textureKey: "shop-sign-bank", x: 16, y: 24 }, // Bank — coin with green $
+  { textureKey: "shop-sign-depot", x: 51, y: 24 }, // Depot — metal box
 
   // --- Small pieces of street furniture along the roads. Kept sparse — the
   // --- plaza is gone on purpose, so nothing here should read as one. ---
@@ -288,12 +330,8 @@ export interface SignPlacement {
   text: string;
 }
 export const SIGNS: SignPlacement[] = [
-  { x: 33, y: 14, text: "Oakhollow — welcome, traveller." },
-  { x: 33, y: 38, text: "South: the farm and the shore." },
-  { x: 27, y: 20, text: "Borin's Forge — weapons & armour." },
-  { x: 41, y: 20, text: "Fenn's Fletchery — bows & arrows." },
-  { x: 27, y: 24, text: "Wren's Apothecary — magic & remedies." },
-  { x: 41, y: 24, text: "Elder Corwin — a path to walk." },
+  { x: 33, y: 7, text: "Oakhollow — welcome, traveller." },
+  { x: 33, y: 41, text: "South: the farm and the shore." },
 ];
 
 // ---------------------------------------------------------------------------
