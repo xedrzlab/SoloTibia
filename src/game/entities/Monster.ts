@@ -14,6 +14,10 @@ import { tileAnchorX, tileAnchorY, depthForTileY } from "../tileAnchor";
 
 const AI_TICK_MS = 400; // throttle pathfinding/decision-making for battery friendliness
 
+// Sheet layout shared with the player: frame 3 of each direction is the swing.
+const ATTACK_FRAME = 3;
+const ATTACK_POSE_MS = 180;
+
 export class Monster {
   sprite: Phaser.GameObjects.Sprite;
   tileX: number;
@@ -90,6 +94,33 @@ export class Monster {
     } else {
       this.sprite.setFrame(idle ? 0 : 1 % this.def.frameCount);
     }
+  }
+
+  /**
+   * Hold the swing pose briefly. Only directional sheets carry an attack
+   * frame; the simple two-frame creatures lunge instead, which reads well
+   * enough for a rat and costs no extra art.
+   */
+  playAttack() {
+    const perDir = this.def.framesPerDirection;
+    if (perDir && perDir > ATTACK_FRAME) {
+      this.sprite.setFrame(directionalFrameIndex(this.facing, ATTACK_FRAME, perDir));
+      this.scene.time.delayedCall(ATTACK_POSE_MS, () => {
+        if (this.alive && !this.moving) this.applyFrame(true);
+      });
+      return;
+    }
+    const restX = this.sprite.x;
+    this.scene.tweens.add({
+      targets: this.sprite,
+      x: restX + (this.sprite.flipX ? -4 : 4),
+      duration: ATTACK_POSE_MS / 2,
+      yoyo: true,
+      onComplete: () => {
+        this.sprite.x = restX;
+        this.syncBarPosition();
+      },
+    });
   }
 
   private stepTo(x: number, y: number): Promise<void> {
@@ -184,6 +215,9 @@ export class Monster {
 
     if (dist <= MELEE_RANGE) {
       if (this.attackCooldown <= 0) {
+        // Face the player before swinging, so the pose points the right way.
+        this.facing = directionFromDelta(playerTile.x - this.tileX, playerTile.y - this.tileY, this.facing);
+        this.playAttack();
         onAttackPlayer(rollDamage(this.def.minDamage, this.def.maxDamage), this.def.name);
         this.attackCooldown = this.def.attackIntervalMs;
       }

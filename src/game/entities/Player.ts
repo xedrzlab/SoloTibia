@@ -16,8 +16,11 @@ import { Container, createStack } from "../containers";
 import { Direction, directionFromDelta, directionalFrameIndex } from "../directionalSprite";
 
 // Matches the player sheet built by scripts/generate-assets.mjs:
-// 3 frames per direction (0 = idle, 1/2 = alternating walk steps).
-const PLAYER_FRAMES_PER_DIRECTION = 3;
+// 4 frames per direction (0 = idle, 1/2 = alternating walk steps, 3 = attack).
+const PLAYER_FRAMES_PER_DIRECTION = 4;
+const ATTACK_FRAME = 3;
+/** How long the swing pose is held. Short enough not to fight the walk cycle. */
+const ATTACK_POSE_MS = 180;
 
 /** Base swing/shot interval in ms, before any gear or skill adjustment. */
 export const BASE_ATTACK_INTERVAL_MS = 2000;
@@ -101,6 +104,15 @@ export class Player {
   private applyFrame(idle: boolean) {
     const frameInDirection = idle ? 0 : this.stepToggle ? 1 : 2;
     this.sprite.setFrame(directionalFrameIndex(this.facing, frameInDirection, PLAYER_FRAMES_PER_DIRECTION));
+  }
+
+  /** Hold the swing pose briefly, so a blow reads as an action. */
+  playAttack() {
+    this.sprite.setFrame(directionalFrameIndex(this.facing, ATTACK_FRAME, PLAYER_FRAMES_PER_DIRECTION));
+    this.scene.time.delayedCall(ATTACK_POSE_MS, () => {
+      // Walking takes priority: stepTo drives the frame itself while moving.
+      if (!this.moving) this.applyFrame(true);
+    });
   }
 
   /** Animate one tile step; resolves once the tween completes. */

@@ -506,6 +506,7 @@ export class WorldScene extends Phaser.Scene {
     const equipment = player.equipment;
     player.attackCooldown = player.attackIntervalMs;
     player.setFacing(target.tileX - player.tileX, target.tileY - player.tileY);
+    player.playAttack();
 
     let damage: number;
     if (mode === "wand") {

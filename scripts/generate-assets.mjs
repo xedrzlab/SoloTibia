@@ -795,6 +795,7 @@ function playerFrame(direction, pose) {
   const s = new Sprite(16, 16);
   const facingSide = direction === "left" || direction === "right";
   const back = direction === "up";
+  const attacking = pose === "attack";
 
   footShadow(s, 8, 15, 4);
 
@@ -835,7 +836,28 @@ function playerFrame(direction, pose) {
 
   // --- Arms: swing opposite the legs, and stay clear of the torso ---
   const swing = pose === "idle" ? 0 : pose === "stepA" ? 1 : -1;
-  if (facingSide) {
+  if (attacking) {
+    // The striking arm reaches out in the direction being faced, with the
+    // blade extending past it — the whole point is a silhouette that reads as
+    // a blow even at a glance.
+    if (facingSide) {
+      s.fillRect(10, 6, 3, 2, PC.tunicDark); // extended arm
+      s.fillRect(13, 6, 1, 2, PC.skin); // fist
+      s.fillRect(12, 3, 1, 4, "#c9ccd1"); // blade, angled up and forward
+      s.fillRect(13, 2, 1, 3, "#eef0f3");
+    } else if (back) {
+      s.fillRect(12, 5, 2, 2, PC.tunicDark);
+      s.fillRect(12, 2, 1, 4, "#c9ccd1");
+      s.fillRect(3, 8, 1, 3, PC.tunicHi);
+    } else {
+      s.fillRect(12, 6, 2, 2, PC.tunicDark);
+      s.fillRect(13, 8, 1, 1, PC.skin);
+      s.fillRect(13, 2, 1, 5, "#c9ccd1");
+      s.fillRect(12, 3, 1, 3, "#eef0f3");
+      s.fillRect(3, 8, 1, 3, PC.tunicHi); // off arm braces back
+      s.setPixel(3, 11, PC.skin);
+    }
+  } else if (facingSide) {
     // In profile only the near arm reads; it swings fore and aft.
     const ax = pose === "stepA" ? 10 : pose === "stepB" ? 4 : 9;
     s.fillRect(ax, 7, 2, 3, PC.tunicDark);
@@ -903,6 +925,7 @@ function trollFrame(direction, pose) {
   const s = new Sprite(20, 26);
   const facingSide = direction === "left" || direction === "right";
   const back = direction === "up";
+  const attacking = pose === "attack";
 
   s.fillEllipse(10, 25, 6, 1.4, "#1a2412");
 
@@ -940,11 +963,16 @@ function trollFrame(direction, pose) {
 
   // --- Arms: long, hanging below the waist ---
   const swing = pose === "idle" ? 0 : pose === "stepA" ? 1 : -1;
-  const leftArmY = 10 + Math.max(0, swing);
-  const rightArmY = 10 + Math.max(0, -swing);
+  // On the swing one arm is hauled up over the shoulder, ready to come down.
+  const leftArmY = attacking ? 4 : 10 + Math.max(0, swing);
+  const rightArmY = attacking ? 12 : 10 + Math.max(0, -swing);
   s.fillRect(1, leftArmY, 3, 8, TROLL.skin);
   s.fillRect(1, leftArmY, 1, 8, TROLL.skinHi);
   s.fillRect(1, leftArmY + 8, 3, 2, TROLL.skinDark); // fist
+  if (attacking) {
+    s.fillRect(0, 2, 4, 3, TROLL.skinHi); // raised fist clears the shoulder
+    s.fillRect(0, 2, 4, 1, TROLL.belly);
+  }
   s.fillRect(16, rightArmY, 3, 8, TROLL.skinDark);
   s.fillRect(16, rightArmY + 8, 3, 2, TROLL.skinDeep);
   if (!back) {
@@ -984,11 +1012,18 @@ function trollFrame(direction, pose) {
   return direction === "left" ? s.flippedHorizontal() : s;
 }
 
-/** Assemble a 4-direction x 3-frame sheet in DIRECTION_ORDER. */
+/**
+ * Poses per direction, in sheet order. Frame 0 is idle, 1 and 2 are the walk
+ * steps, and 3 is the attack — held briefly on a swing so a blow reads as an
+ * action rather than as a number appearing over the target.
+ */
+const POSES = ["idle", "stepA", "stepB", "attack"];
+
+/** Assemble a 4-direction x 4-frame sheet in DIRECTION_ORDER. */
 function directionalFrames(makeFrame) {
   const frames = [];
   for (const direction of ["down", "left", "right", "up"]) {
-    for (const pose of ["idle", "stepA", "stepB"]) frames.push(makeFrame(direction, pose));
+    for (const pose of POSES) frames.push(makeFrame(direction, pose));
   }
   return frames;
 }
