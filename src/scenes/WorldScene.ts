@@ -817,7 +817,7 @@ export class WorldScene extends Phaser.Scene {
         this.player.mana = state.mana;
         // Nudge one tile south of the door so the player faces the road
         // after exiting, rather than immediately re-triggering the door.
-        this.player.teleportTo(entry.x, entry.y + 1);
+        this.player.teleportTo(entry.exitX ?? entry.x, entry.exitY ?? entry.y + 1);
         this.emitPlayerStats();
       },
     });

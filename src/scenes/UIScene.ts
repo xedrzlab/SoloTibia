@@ -19,7 +19,15 @@ import { Equipment, EQUIP_SLOT_NAMES } from "../game/equipment";
 import { VOCATION_DESCRIPTIONS, VOCATION_NAMES, ChosenVocation } from "../game/stats";
 
 // --- Sidebar geometry, modelled on the 176px-wide classic Tibia client panel.
-const SIDEBAR_WIDTH = 176;
+// Width scales down on short viewports (phones in landscape) so the sidebar
+// doesn't eat the game view — recomputed on scene create + on resize.
+const SIDEBAR_WIDTH_MAX = 176;
+const SIDEBAR_WIDTH_MIN = 128;
+function computeSidebarWidth(): number {
+  const h = typeof window !== "undefined" ? window.innerHeight : SIDEBAR_WIDTH_MAX;
+  return Math.round(Math.max(SIDEBAR_WIDTH_MIN, Math.min(SIDEBAR_WIDTH_MAX, h * 0.35)));
+}
+let SIDEBAR_WIDTH = computeSidebarWidth();
 const PAD = 6;
 const BAR_H = 14;
 const SLOT = 32;
@@ -175,7 +183,11 @@ export class UIScene extends Phaser.Scene {
 
     this.input.on("wheel", (_p: unknown, _o: unknown, _dx: number, dy: number) => this.scrollBy(dy * 0.5));
 
-    this.scale.on("resize", () => this.layout());
+    this.scale.on("resize", () => {
+      SIDEBAR_WIDTH = computeSidebarWidth();
+      this.layout();
+    });
+    SIDEBAR_WIDTH = computeSidebarWidth();
     this.layout();
   }
 

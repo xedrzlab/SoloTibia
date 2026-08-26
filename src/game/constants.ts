@@ -1,7 +1,10 @@
 export const TILE_SIZE = 32;
 
 // Base time to walk one tile, in ms. Later scaled down slightly by skill/gear.
-export const BASE_STEP_MS = 220;
+// A step this long is deliberately unhurried — a tap-to-move MMORPG reads as
+// frantic if a tile passes in ~200ms, and the world is small enough that
+// slowing the walk gives the player time to notice what they are walking past.
+export const BASE_STEP_MS = 320;
 
 // How close (in tiles, Chebyshev distance) a melee target must be to land hits.
 export const MELEE_RANGE = 1;

@@ -132,14 +132,29 @@ export interface EntryPoint {
   x: number;
   y: number;
   interiorId: string;
+  /** Where to put the player when they exit the interior. Defaults to (x, y+1) — one south of the door. */
+  exitX?: number;
+  exitY?: number;
 }
 
+// Each entry sits ON the building's own door tile (the bottom-centre of the
+// footprint for the northern shops and the church, or the top-centre for
+// buildings whose sprite door faces away from the town centre — the
+// interior scene is what the player is heading into either way, so the
+// tile is walkable through a "door" gap in the wall paint).
 export const ENTRY_POINTS: EntryPoint[] = [
-  { x: 26, y: 20, interiorId: "melee_shop" }, // in front of Borin's forge
-  { x: 43, y: 20, interiorId: "ranged_shop" }, // in front of Fenn's cottage
-  { x: 26, y: 27, interiorId: "magic_shop" }, // in front of Wren's house
-  { x: 34, y: 25, interiorId: "temple_main" }, // in front of the church door
+  { x: 26, y: 19, interiorId: "melee_shop" }, // Borin's forge — south face
+  { x: 43, y: 19, interiorId: "ranged_shop" }, // Fenn's cottage — south face
+  // Wren's shop opens on the north face; the tile immediately south of the
+  // door is still inside the footprint (a wall), so the exit lands the player
+  // one tile NORTH — back onto the branch street they came in from.
+  { x: 26, y: 28, interiorId: "magic_shop", exitX: 26, exitY: 27 },
+  { x: 34, y: 23, interiorId: "temple_main" }, // church — south face (arched doors)
 ];
+// Punch each door tile out of the wall paint above, so the player can
+// actually step onto it. The building sprite still draws over the tile —
+// the player briefly disappears behind the roofline before the interior
+// scene takes over, which reads as walking in through the door.
 for (const entry of ENTRY_POINTS) {
   b.set(entry.x, entry.y, "D");
 }
