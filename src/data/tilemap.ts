@@ -384,6 +384,19 @@ export interface TileInfo {
   animated?: boolean;
   tree?: TreeSpecies;
   safe: boolean;
+  /**
+   * Old-Tibia "ground speed" divisor. Higher = slower to walk on. Reference
+   * values: town cobble 100, road 130, cave floor 140, grass 150, sand 160,
+   * water 250. Used with the step-duration formula in constants.ts.
+   */
+  groundFriction?: number;
+}
+
+/** Fallback friction for tiles that don't declare one — the value of grass. */
+export const DEFAULT_FRICTION = 150;
+
+export function frictionAt(x: number, y: number): number {
+  return tileAt(x, y).groundFriction ?? DEFAULT_FRICTION;
 }
 
 function cellHash(x: number, y: number): number {
@@ -404,16 +417,16 @@ export function overlayForCell(tile: TileInfo, x: number, y: number): string | u
 
 const LEGEND: Record<string, TileInfo> = {
   "#": { walkable: false, textureKey: "void-wall", safe: false },
-  ".": { walkable: true, textureKey: "grass", variants: ["grass", "grass-2", "grass-3"], safe: false },
-  T: { walkable: true, textureKey: "temple-floor", safe: true },
-  D: { walkable: true, textureKey: "dirt", variants: ["dirt", "dirt-2"], safe: false },
-  C: { walkable: true, textureKey: "cave-floor", safe: false },
+  ".": { walkable: true, textureKey: "grass", variants: ["grass", "grass-2", "grass-3"], safe: false, groundFriction: 150 },
+  T: { walkable: true, textureKey: "temple-floor", safe: true, groundFriction: 100 },
+  D: { walkable: true, textureKey: "dirt", variants: ["dirt", "dirt-2"], safe: false, groundFriction: 130 },
+  C: { walkable: true, textureKey: "cave-floor", safe: false, groundFriction: 140 },
   W: { walkable: false, textureKey: "stone-wall", safe: false },
-  "~": { walkable: false, textureKey: "water", animated: true, safe: false },
-  g: { walkable: true, textureKey: "rocky-ground", safe: false },
+  "~": { walkable: false, textureKey: "water", animated: true, safe: false, groundFriction: 250 },
+  g: { walkable: true, textureKey: "rocky-ground", safe: false, groundFriction: 160 },
   M: { walkable: false, textureKey: "mountain", safe: false },
-  R: { walkable: true, textureKey: "road", safe: false },
-  F: { walkable: true, textureKey: "wood-floor", safe: true },
+  R: { walkable: true, textureKey: "road", safe: false, groundFriction: 110 },
+  F: { walkable: true, textureKey: "wood-floor", safe: true, groundFriction: 100 },
 
   t: { walkable: false, textureKey: "grass", variants: ["grass", "grass-2"], tree: "oak", safe: false },
   p: { walkable: false, textureKey: "grass", variants: ["grass", "grass-2"], tree: "pine", safe: false },
@@ -429,10 +442,10 @@ const LEGEND: Record<string, TileInfo> = {
   r: { walkable: false, textureKey: "grass", variants: ["grass", "grass-3"], overlayKey: "rock-medium", safe: false },
   u: { walkable: false, textureKey: "grass", overlayKey: "stump", safe: false },
 
-  f: { walkable: true, textureKey: "grass", variants: ["grass", "grass-2"], overlayKey: "flowers", safe: false },
-  m: { walkable: true, textureKey: "grass", overlayKey: "mushrooms", safe: false },
-  n: { walkable: true, textureKey: "grass", variants: ["grass", "grass-3"], overlayKey: "rock-small", safe: false },
-  N: { walkable: true, textureKey: "cave-floor", overlayKey: "rock-small", safe: false },
+  f: { walkable: true, textureKey: "grass", variants: ["grass", "grass-2"], overlayKey: "flowers", safe: false, groundFriction: 150 },
+  m: { walkable: true, textureKey: "grass", overlayKey: "mushrooms", safe: false, groundFriction: 150 },
+  n: { walkable: true, textureKey: "grass", variants: ["grass", "grass-3"], overlayKey: "rock-small", safe: false, groundFriction: 150 },
+  N: { walkable: true, textureKey: "cave-floor", overlayKey: "rock-small", safe: false, groundFriction: 140 },
 
   k: { walkable: false, textureKey: "grass", overlayKey: "barrel", safe: false },
   x: { walkable: false, textureKey: "grass", overlayKey: "crate", safe: false },

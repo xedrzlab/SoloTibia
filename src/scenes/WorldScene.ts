@@ -3,6 +3,7 @@ import { TILE_SIZE, MELEE_RANGE, NPC_INTERACT_RANGE, VOCATION_CHOICE_LEVEL } fro
 import { tileAnchorX, tileAnchorY, depthForTileY } from "../game/tileAnchor";
 import {
   forEachTile,
+  frictionAt,
   isWalkable,
   MAP_WIDTH,
   MAP_HEIGHT,
@@ -746,7 +747,10 @@ export class WorldScene extends Phaser.Scene {
   private updatePlayerMovement(_delta: number) {
     if (this.player.moving || this.playerPath.length === 0) return;
     const next = this.playerPath.shift()!;
-    void this.player.stepTo(next.x, next.y).then(() => {
+    // Feed the destination tile's ground friction into stepTo so cobble
+    // walks faster than grass and grass walks faster than sand — old-Tibia
+    // step-time model. See src/game/constants.ts for the formula.
+    void this.player.stepTo(next.x, next.y, frictionAt(next.x, next.y)).then(() => {
       this.emitPlayerStats();
       this.checkForZoneIn();
     });

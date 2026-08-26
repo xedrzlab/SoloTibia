@@ -1,10 +1,32 @@
 export const TILE_SIZE = 32;
 
-// Base time to walk one tile, in ms. Later scaled down slightly by skill/gear.
-// A step this long is deliberately unhurried — a tap-to-move MMORPG reads as
-// frantic if a tile passes in ~200ms, and the world is small enough that
-// slowing the walk gives the player time to notice what they are walking past.
-export const BASE_STEP_MS = 320;
+// Old-school Tibia movement model. The step duration for a single tile is
+//   duration_ms = ceil( 1000 * groundFriction / totalSpeed , STEP_QUANTUM_MS )
+// then multiplied by DIAGONAL_STEP_MULT on a diagonal step.
+//
+//   totalSpeed = BASE_SPEED + SPEED_PER_LEVEL * (level - 1)  + item bonus
+//
+// The quantum (a Tibia mechanic) means adding a little speed does nothing
+// until you cross the next "breakpoint" — the tile time only ever changes in
+// STEP_QUANTUM_MS jumps. Sources: TibiaWiki Formulae + Speed Breakpoints,
+// TibiaLD's BAT series, and the community "old Tibia" TFS default.
+export const BASE_SPEED = 220;
+export const SPEED_PER_LEVEL = 2;
+export const STEP_QUANTUM_MS = 50;
+/** Every step is at least this long — matches Tibia's 50 ms floor per tile. */
+export const MIN_STEP_MS = STEP_QUANTUM_MS;
+/**
+ * Diagonal steps take longer than cardinal ones. Old Tibia used 2×; modern
+ * uses 3×. We use 2 as a compromise between authenticity and playability.
+ */
+export const DIAGONAL_STEP_MULT = 2;
+
+/**
+ * Retained for the paperdoll walk-animation frame-timing (attack cooldown
+ * uses its own constant). Real per-tile durations come from stepDurationMs
+ * on Player; this is only the fallback when no tile-friction is available.
+ */
+export const BASE_STEP_MS = 500;
 
 // How close (in tiles, Chebyshev distance) a melee target must be to land hits.
 export const MELEE_RANGE = 1;

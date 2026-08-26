@@ -212,7 +212,9 @@ export class InteriorScene extends Phaser.Scene {
       return;
     }
     const next = this.playerPath.shift()!;
-    void this.player.stepTo(next.x, next.y).then(() => this.checkTransition());
+    // Interior floors are always cobble/plank — friction 100, same as a
+    // town street. Interiors don't need per-tile friction lookup.
+    void this.player.stepTo(next.x, next.y, 100).then(() => this.checkTransition());
   }
 
   /** After each step, decide whether the tile the player just landed on triggers a transition. */

@@ -1,5 +1,12 @@
 import Phaser from "phaser";
-import { BASE_STEP_MS } from "../constants";
+import {
+  BASE_SPEED,
+  BASE_STEP_MS,
+  DIAGONAL_STEP_MULT,
+  MIN_STEP_MS,
+  SPEED_PER_LEVEL,
+  STEP_QUANTUM_MS,
+} from "../constants";
 import { tileAnchorX, tileAnchorY, depthForTileY } from "../tileAnchor";
 import {
   Vocation,
@@ -185,10 +192,44 @@ export class Player {
     });
   }
 
-  /** Animate one tile step; resolves once the tween completes. */
-  stepTo(x: number, y: number): Promise<void> {
+  /**
+   * Current effective movement speed, used by the step-duration formula.
+   * Simplified from Tibia's TFS default: BASE_SPEED + 2 * (level - 1) plus a
+   * flat item bonus derived from worn equipment (nothing today; the equipment
+   * system exposes this through Player.speedBonus if the caller wants to
+   * override).
+   */
+  totalSpeed(): number {
+    return BASE_SPEED + SPEED_PER_LEVEL * (this.level - 1);
+  }
+
+  /**
+   * Old-Tibia step-time formula:
+   *   duration_ms = ceil( 1000 * F / speed , STEP_QUANTUM_MS ) * (diag ? 2 : 1)
+   * The ceiling to STEP_QUANTUM_MS is the "breakpoint" behaviour — adding a
+   * little speed does nothing until the next quantum tier is reached.
+   */
+  stepDurationMs(friction: number, diagonal: boolean): number {
+    const raw = (1000 * friction) / Math.max(1, this.totalSpeed());
+    const quantised = Math.ceil(raw / STEP_QUANTUM_MS) * STEP_QUANTUM_MS;
+    const withDiagonal = quantised * (diagonal ? DIAGONAL_STEP_MULT : 1);
+    return Math.max(MIN_STEP_MS, withDiagonal);
+  }
+
+  /**
+   * Animate one tile step; resolves once the tween completes. `friction` is
+   * the ground-friction value of the destination tile (grass 150, cobble 100,
+   * water 250, etc.). When the caller can't produce a friction (interior
+   * scene without a tilemap of its own), the flat BASE_STEP_MS fallback is
+   * used — which lines up with roughly level-1-on-grass.
+   */
+  stepTo(x: number, y: number, friction?: number): Promise<void> {
     return new Promise((resolve) => {
-      this.setFacing(x - this.tileX, y - this.tileY);
+      const dx = x - this.tileX;
+      const dy = y - this.tileY;
+      const diagonal = dx !== 0 && dy !== 0;
+      const duration = friction === undefined ? BASE_STEP_MS : this.stepDurationMs(friction, diagonal);
+      this.setFacing(dx, dy);
       this.tileX = x;
       this.tileY = y;
       this.moving = true;
@@ -199,7 +240,7 @@ export class Player {
         targets: this.sprite,
         x: tileAnchorX(x),
         y: tileAnchorY(y),
-        duration: BASE_STEP_MS,
+        duration,
         onUpdate: () => this.syncLayers(), // layers ride the tween with the body
         onComplete: () => {
           this.moving = false;
