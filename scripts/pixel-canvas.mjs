@@ -76,6 +76,18 @@ export class Sprite {
     }
   }
 
+  /** Speckle confined to a region — for texturing one surface of a larger sprite. */
+  speckleRect(x, y, w, h, count, hex, seed = 1) {
+    let s = seed;
+    const rand = () => {
+      s = (s * 1103515245 + 12345) & 0x7fffffff;
+      return s / 0x7fffffff;
+    };
+    for (let i = 0; i < count; i++) {
+      this.setPixel(x + Math.floor(rand() * w), y + Math.floor(rand() * h), hex);
+    }
+  }
+
   flippedHorizontal() {
     const out = new Sprite(this.width, this.height);
     for (let y = 0; y < this.height; y++) {

@@ -141,6 +141,225 @@ function wellSprite() {
 }
 
 // ---------------------------------------------------------------------------
+// Buildings — original designs replacing the imported house art, which had a
+// different pixel density and palette from everything else here.
+//
+// Perspective: top-down, not flat-on and not isometric. The roof is seen from
+// above and fills most of the sprite; a band of front wall below it carries the
+// door and windows so the building reads as having height. Light comes from the
+// upper left throughout, so roofs and walls are brighter on their left side and
+// the contact shadow falls to the lower right.
+//
+// Scale: 48x56 source -> 96x112 at SCALE 2. The bottom 96px covers the 3x3-tile
+// footprint; the extra 16px is roof rising above it, which the bottom-right
+// sprite anchor turns into the up-and-left lean the rest of the world uses.
+// ---------------------------------------------------------------------------
+
+const BUILDING_W = 48;
+const BUILDING_H = 56;
+
+// Roof and wall palettes, related to the wood/stone families used elsewhere.
+const ROOF_CLAY = { dark: "#4a2018", mid: "#7a3428", light: "#9c4535", hi: "#b85a45" };
+const ROOF_SLATE = { dark: "#2c2832", mid: "#454150", light: "#5c5762", hi: "#726c78" };
+const ROOF_THATCH = { dark: "#5a3d22", mid: "#8a6a3d", light: "#a3814f", hi: "#c2a068" };
+
+const WALL_PLASTER = { dark: "#6b5a48", mid: "#9a8670", light: "#b8a58c", trim: "#4a2f1a" };
+const WALL_STONE = { dark: "#3a3640", mid: "#615c6b", light: "#7d7887", trim: "#2c2832" };
+
+const DOOR_WOOD = { dark: "#3a2312", mid: "#5a3d22", light: "#6b4a2a" };
+const GLASS = { dark: "#1c2530", sheen: "#2f3d4a" };
+
+/**
+ * Shared building construction. Every house in the world is drawn by this so
+ * they read as one settlement; the role details on top are what tell them apart.
+ */
+function buildingBase({ roof, wall, ridgeY = 3, eaveY = 28, wallY = 30, foundationY = 45 }) {
+  const s = new Sprite(BUILDING_W, BUILDING_H);
+  const groundY = 52;
+
+  // --- Ground contact shadow, thrown to the lower right ---
+  s.fillRect(4, groundY, BUILDING_W - 6, 2, "#14110f");
+  s.fillRect(6, groundY + 2, BUILDING_W - 8, 1, "#1a1712");
+
+  // --- Foundation: irregular stone course the walls sit on ---
+  s.fillRect(3, foundationY, BUILDING_W - 6, groundY - foundationY, WALL_STONE.dark);
+  for (let x = 4; x < BUILDING_W - 6; x += 7) {
+    s.fillRect(x, foundationY + 1, 5, 3, WALL_STONE.mid);
+    s.fillRect(x, foundationY + 1, 5, 1, WALL_STONE.light); // top plane catches the light
+  }
+
+  // --- Front wall ---
+  s.fillRect(3, wallY, BUILDING_W - 6, foundationY - wallY, wall.mid);
+  s.fillRect(3, wallY, 2, foundationY - wallY, wall.light); // lit left edge
+  s.fillRect(BUILDING_W - 5, wallY, 2, foundationY - wallY, wall.dark); // shaded right edge
+  s.speckleRect(5, wallY + 2, BUILDING_W - 12, foundationY - wallY - 3, 26, wall.dark, 71);
+  s.speckleRect(5, wallY + 2, BUILDING_W - 12, foundationY - wallY - 3, 14, wall.light, 72);
+
+  // --- Eaves: the roof overhangs, casting a hard line onto the wall below ---
+  s.fillRect(1, eaveY, BUILDING_W - 2, 2, roof.dark);
+  s.fillRect(3, wallY, BUILDING_W - 6, 1, "#1a1512");
+
+  // --- Roof, seen from above: courses of tiles running left to right ---
+  s.fillRect(2, ridgeY, BUILDING_W - 4, eaveY - ridgeY, roof.mid);
+  for (let y = ridgeY + 3; y < eaveY; y += 4) {
+    s.line(2, y, BUILDING_W - 3, y, roof.dark); // course seam
+    s.line(2, y + 1, BUILDING_W - 3, y + 1, roof.light); // lit lip of the next course
+  }
+  // Staggered vertical seams between individual tiles.
+  for (let y = ridgeY; y < eaveY; y += 4) {
+    for (let x = 4 + ((y / 4) % 2) * 4; x < BUILDING_W - 4; x += 8) {
+      s.setPixel(x, y + 2, roof.dark);
+      s.setPixel(x, y + 3, roof.dark);
+    }
+  }
+  // Light falls from the upper left: brighten that corner, deepen the far right.
+  s.fillRect(2, ridgeY, 10, eaveY - ridgeY, roof.light);
+  for (let y = ridgeY + 3; y < eaveY; y += 4) s.line(2, y, 11, y, roof.mid);
+  s.fillRect(BUILDING_W - 8, ridgeY, 6, eaveY - ridgeY, roof.dark);
+
+  // --- Ridge cap along the top edge ---
+  s.fillRect(2, ridgeY - 1, BUILDING_W - 4, 2, roof.dark);
+  s.fillRect(3, ridgeY - 1, BUILDING_W - 10, 1, roof.hi);
+
+  return s;
+}
+
+/** A panelled door with a frame and handle, centred on `cx`. */
+function drawDoor(s, cx, top, bottom) {
+  const w = 10;
+  const x = cx - w / 2;
+  s.fillRect(x - 1, top - 1, w + 2, bottom - top + 2, DOOR_WOOD.dark); // frame
+  s.fillRect(x, top, w, bottom - top, DOOR_WOOD.mid);
+  s.fillRect(x, top, 1, bottom - top, DOOR_WOOD.light); // lit edge
+  s.fillRect(x + 2, top + 2, w - 4, 1, DOOR_WOOD.dark); // panel seams
+  s.fillRect(x + 2, bottom - 4, w - 4, 1, DOOR_WOOD.dark);
+  s.setPixel(x + w - 3, top + Math.floor((bottom - top) / 2), "#c9a24a"); // handle
+}
+
+/** A shuttered window; `shutter` null leaves it bare. */
+function drawWindow(s, x, y, w, h, shutter) {
+  s.fillRect(x - 1, y - 1, w + 2, h + 2, DOOR_WOOD.dark);
+  s.fillRect(x, y, w, h, GLASS.dark);
+  s.fillRect(x, y, 1, h, GLASS.sheen); // faint glass highlight, light from upper left
+  s.fillRect(x, y, w, 1, GLASS.sheen);
+  s.line(x + Math.floor(w / 2), y, x + Math.floor(w / 2), y + h - 1, DOOR_WOOD.dark); // mullion
+  if (shutter) {
+    s.fillRect(x - 3, y - 1, 2, h + 2, shutter);
+    s.fillRect(x + w + 1, y - 1, 2, h + 2, shutter);
+  }
+}
+
+/** Borin's forge: slate roof, stone walls, a big smoke-stained chimney, lit forge window. */
+function buildingForge() {
+  const s = buildingBase({ roof: ROOF_SLATE, wall: WALL_STONE });
+
+  // Chimney, offset left so it doesn't sit dead centre.
+  s.fillRect(9, 0, 9, 12, WALL_STONE.dark);
+  s.fillRect(10, 1, 7, 10, WALL_STONE.mid);
+  s.fillRect(10, 1, 2, 10, WALL_STONE.light);
+  s.fillRect(8, 0, 11, 2, WALL_STONE.light); // cap
+  s.fillRect(11, 2, 5, 2, "#0f0d0c"); // sooted flue
+  s.speckleRect(9, 4, 9, 7, 10, "#241f26", 91); // smoke staining
+
+  // Wide workshop doors.
+  drawDoor(s, 24, 33, 45);
+  s.line(24, 33, 24, 44, DOOR_WOOD.dark); // split down the middle
+
+  // Forge window, glowing from the fire inside.
+  s.fillRect(35, 33, 8, 7, DOOR_WOOD.dark);
+  s.fillRect(36, 34, 6, 5, "#8a3410");
+  s.fillRect(36, 36, 6, 3, "#c95a1e");
+  s.fillRect(37, 37, 4, 2, "#e8862f");
+  s.setPixel(38, 38, "#ffe08a");
+
+  // Anvil sign hung by the door.
+  s.fillRect(6, 32, 9, 7, "#2c2832");
+  s.fillRect(7, 34, 7, 2, WALL_STONE.light);
+  s.fillRect(9, 36, 3, 2, WALL_STONE.mid);
+  return s;
+}
+
+/** Wren's cottage: thatch roof, plaster walls, green shutters, herbs drying outside. */
+function buildingCottage() {
+  const s = buildingBase({ roof: ROOF_THATCH, wall: WALL_PLASTER });
+
+  // Thatch reads as loose straw rather than hard tile courses.
+  s.speckleRect(3, 3, BUILDING_W - 6, 24, 90, ROOF_THATCH.dark, 41);
+  s.speckleRect(3, 3, BUILDING_W - 6, 24, 55, ROOF_THATCH.hi, 42);
+  s.fillRect(2, 26, BUILDING_W - 4, 2, ROOF_THATCH.dark); // ragged lower edge
+  for (let x = 3; x < BUILDING_W - 3; x += 3) s.setPixel(x, 28, ROOF_THATCH.dark);
+
+  // Timber framing on the plaster.
+  s.fillRect(3, 36, BUILDING_W - 6, 1, WALL_PLASTER.trim);
+  s.line(12, 30, 12, 45, WALL_PLASTER.trim);
+  s.line(36, 30, 36, 45, WALL_PLASTER.trim);
+
+  drawDoor(s, 24, 33, 45);
+  drawWindow(s, 5, 38, 6, 5, "#2f6b38");
+  drawWindow(s, 39, 38, 6, 5, "#2f6b38");
+
+  // Herb bundles hung to dry beside the door.
+  s.fillRect(17, 30, 1, 4, "#5a3d22");
+  s.fillEllipse(17, 35, 1.6, 2.2, "#3f9450");
+  s.fillRect(31, 30, 1, 4, "#5a3d22");
+  s.fillEllipse(31, 35, 1.6, 2.2, "#4a8f52");
+  return s;
+}
+
+/** Elder Corwin's house: clay-tiled roof, plaster walls, a modest chimney. */
+function buildingHouse() {
+  const s = buildingBase({ roof: ROOF_CLAY, wall: WALL_PLASTER });
+
+  s.fillRect(33, 0, 7, 10, WALL_STONE.dark);
+  s.fillRect(34, 1, 5, 8, WALL_STONE.mid);
+  s.fillRect(34, 1, 2, 8, WALL_STONE.light);
+  s.fillRect(32, 0, 9, 2, WALL_STONE.light);
+  s.fillRect(35, 2, 3, 2, "#0f0d0c");
+
+  drawDoor(s, 20, 33, 45);
+  drawWindow(s, 32, 35, 8, 6, null);
+  drawWindow(s, 5, 35, 6, 6, null);
+
+  // Doorstep, so the entrance meets the ground properly.
+  s.fillRect(16, 45, 9, 2, WALL_STONE.light);
+  return s;
+}
+
+/** The guard post: squat stone blockhouse, arrow slits, a banner over the door. */
+function buildingGuardPost() {
+  const s = buildingBase({ roof: ROOF_SLATE, wall: WALL_STONE });
+
+  // Crenellations along the ridge instead of a chimney.
+  for (let x = 4; x < BUILDING_W - 4; x += 6) {
+    s.fillRect(x, 0, 4, 4, WALL_STONE.mid);
+    s.fillRect(x, 0, 4, 1, WALL_STONE.light);
+    s.fillRect(x, 3, 4, 1, WALL_STONE.dark);
+  }
+
+  // Coursed stone blockwork on the wall face.
+  for (let y = 32; y < 45; y += 4) {
+    s.line(4, y, BUILDING_W - 5, y, WALL_STONE.dark);
+    for (let x = 6 + ((y / 4) % 2) * 5; x < BUILDING_W - 5; x += 10) {
+      s.line(x, y, x, Math.min(y + 3, 44), WALL_STONE.dark);
+    }
+  }
+
+  drawDoor(s, 24, 34, 45);
+
+  // Arrow slits rather than glazed windows.
+  s.fillRect(9, 34, 3, 8, "#1a1a1e");
+  s.fillRect(10, 35, 1, 6, "#0a0a0c");
+  s.fillRect(37, 34, 3, 8, "#1a1a1e");
+  s.fillRect(38, 35, 1, 6, "#0a0a0c");
+
+  // Banner hung above the doorway.
+  s.fillRect(20, 29, 9, 4, "#5a1e1c");
+  s.fillRect(20, 29, 9, 1, "#7a2c28");
+  s.fillRect(23, 30, 3, 2, "#c9a24a");
+  return s;
+}
+
+// ---------------------------------------------------------------------------
 // Town NPCs — original designs (each a distinct silhouette, not palette
 // swaps of one base), sized to match the player character (16x16 -> 32x32,
 // same scale as the player sheet) rather than towering over it.
@@ -621,6 +840,11 @@ saveSprite(wrenFrame(), SCALE, `${OUT}/npcs/wren.png`);
 saveSprite(elderFrame(), SCALE, `${OUT}/npcs/elder-corwin.png`);
 saveSprite(boulderSprite(), SCALE, `${OUT}/props/boulder.png`);
 saveSprite(signpostSprite(), SCALE, `${OUT}/props/signpost.png`);
+saveSprite(buildingForge(), SCALE, `${OUT}/props/building-forge.png`);
+saveSprite(buildingCottage(), SCALE, `${OUT}/props/building-cottage.png`);
+saveSprite(buildingHouse(), SCALE, `${OUT}/props/building-house.png`);
+saveSprite(buildingGuardPost(), SCALE, `${OUT}/props/building-guardpost.png`);
+
 saveSprite(barrelSprite(), SCALE, `${OUT}/props/barrel.png`);
 saveSprite(crateSprite(), SCALE, `${OUT}/props/crate.png`);
 saveSprite(wellSprite(), SCALE, `${OUT}/props/well.png`);

@@ -61,11 +61,10 @@ export interface BuildingPlacement {
 }
 
 export const BUILDINGS: BuildingPlacement[] = [
-  { textureKey: "building-weaponshop", footprintX: 26, footprintY: 20, footprintW: 3, footprintH: 3 },
+  { textureKey: "building-forge", footprintX: 26, footprintY: 20, footprintW: 3, footprintH: 3 },
   { textureKey: "building-cottage", footprintX: 40, footprintY: 20, footprintW: 3, footprintH: 3 },
   { textureKey: "building-house", footprintX: 36, footprintY: 29, footprintW: 3, footprintH: 3 },
-  // Guard House — reuses the cottage art (same as classic Tibia towns reusing house sprites).
-  { textureKey: "building-cottage", footprintX: 22, footprintY: 29, footprintW: 3, footprintH: 3 },
+  { textureKey: "building-guardpost", footprintX: 22, footprintY: 29, footprintW: 3, footprintH: 3 },
 ];
 for (const building of BUILDINGS) {
   b.rect(building.footprintX, building.footprintY, building.footprintW, building.footprintH, "W");

@@ -26,9 +26,10 @@ export class BootScene extends Phaser.Scene {
     this.load.image("barrel", `${base}/props/barrel.png`);
     this.load.image("crate", `${base}/props/crate.png`);
     this.load.image("well", `${base}/props/well.png`);
-    this.load.image("building-weaponshop", `${base}/props/building-weaponshop.png`);
+    this.load.image("building-forge", `${base}/props/building-forge.png`);
     this.load.image("building-cottage", `${base}/props/building-cottage.png`);
     this.load.image("building-house", `${base}/props/building-house.png`);
+    this.load.image("building-guardpost", `${base}/props/building-guardpost.png`);
 
     this.load.spritesheet("player", `${base}/entities/player.png`, PLAYER_SHEET);
     this.load.spritesheet("rat", `${base}/entities/rat.png`, {

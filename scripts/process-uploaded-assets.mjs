@@ -122,22 +122,10 @@ results.troll = await buildDirectionalSheet({
 // scripts/generate-assets.mjs, not derived from the uploaded pack's "jim.png"
 // — see docs discussion: they need to be distinct designs, not recolors.
 
-// --- Building facades: decorative backdrops for shop NPCs in town. ---
-results.building1 = await buildStaticSprite({
-  path: `${RAW}/houses/hus1.png`,
-  targetHeight: 110,
-  outPath: `${OUT}/props/building-house.png`,
-});
-results.building2 = await buildStaticSprite({
-  path: `${RAW}/houses/hus2.png`,
-  targetHeight: 110,
-  outPath: `${OUT}/props/building-cottage.png`,
-});
-results.weaponShop = await buildStaticSprite({
-  path: `${RAW}/houses/weaponshop1.png`,
-  targetHeight: 110,
-  outPath: `${OUT}/props/building-weaponshop.png`,
-});
+// Buildings are original procedural designs from scripts/generate-assets.mjs.
+// The uploaded pack's houses were dropped: at ~110px tall from a 32px-tile
+// source they carried a different pixel density and palette from the rest of
+// the world, which broke the one-artist look the art direction calls for.
 
 // --- Floor / wall tiles: already clean 32x32 art, just copy/rename. ---
 async function copyTile(srcName, outName) {
