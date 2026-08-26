@@ -25,6 +25,7 @@ import { Player } from "../game/entities/Player";
 import { Monster } from "../game/entities/Monster";
 import { findPath, chebyshevDistance, TileCoord } from "../game/pathfinding";
 import { DebugOverlay } from "../game/debugOverlay";
+import { DayNightCycle } from "../game/dayNight";
 import { rollDamage, rollLoot } from "../game/combat";
 import { Container, ItemStack, SlotAccessor, SlotRef, moveStack } from "../game/containers";
 import {
@@ -111,6 +112,7 @@ export class WorldScene extends Phaser.Scene {
   private battleListTimer = 0;
   private regenTimer = REGEN_INTERVAL_MS;
   private debug!: DebugOverlay;
+  private dayNight!: DayNightCycle;
 
   constructor() {
     super("World");
@@ -137,6 +139,20 @@ export class WorldScene extends Phaser.Scene {
     this.scale.on("resize", () => this.applyUiLayout(this.uiSidebarWidth, this.uiReservedWidth));
 
     this.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => this.handleTap(pointer));
+
+    // Anything in the world that burns is a light at night. Deriving them from
+    // the props means placing a torch lights the spot, with nothing to keep in
+    // sync by hand.
+    const LIGHT_RADII: Record<string, number> = { torch: 4.5, campfire: 6 };
+    const lights = PROPS.filter((prop) => prop.textureKey in LIGHT_RADII).map((prop) => ({
+      x: prop.x,
+      y: prop.y,
+      radius: LIGHT_RADII[prop.textureKey],
+      flicker: 0.08,
+    }));
+    // The forge fire shows through its window whatever the hour.
+    lights.push({ x: 27, y: 22, radius: 5, flicker: 0.05 });
+    this.dayNight = new DayNightCycle(this, lights);
 
     this.debug = new DebugOverlay(this, {
       sprites: () => [this.player.sprite, ...this.monsters.filter((m) => m.alive).map((m) => m.sprite)],
@@ -190,6 +206,7 @@ export class WorldScene extends Phaser.Scene {
     const width = Math.max(1, this.scale.width - sidebarWidth);
     this.cameras.main.setViewport(0, 0, width, this.scale.height);
     this.applyZoom();
+    this.dayNight?.resize();
   }
 
   private applyZoom() {
@@ -420,10 +437,13 @@ export class WorldScene extends Phaser.Scene {
       this.regenerate();
     }
 
+    this.dayNight.update(delta, this.player.tile);
+
     this.debug.update(this.player.tile, {
       mobs: this.monsters.filter((m) => m.alive).length,
       corpse: this.corpses.length,
       mode: this.resolveAttackMode().mode,
+      time: this.dayNight.phaseName,
     });
   }
 
