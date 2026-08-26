@@ -197,6 +197,11 @@ export class WorldScene extends Phaser.Scene {
     );
     bus.on(EVENTS.MOVE_ITEM, (payload: MoveItemPayload) => this.moveItem(payload.from, payload.to));
     bus.on(EVENTS.OPEN_CONTAINER, (payload: OpenContainerPayload) => this.openContainer(payload.container));
+    // Depot access — stepping on the chest tile in the depot interior emits
+    // this, and the outdoor player's depot container opens in the sidebar.
+    // openContainer is already idempotent, so re-stepping on the tile is a
+    // no-op instead of a duplicate window.
+    bus.on(EVENTS.OPEN_DEPOT, () => this.openContainer(this.player.depot));
     bus.on(EVENTS.CLOSE_CONTAINER, (payload: CloseContainerPayload) => this.closeContainer(payload.container));
     bus.on(EVENTS.CAST_SPELL, (payload: CastSpellPayload) => this.castSpell(payload.spellId));
     bus.on(EVENTS.LOOT_ALL, (payload: LootAllPayload) => this.lootAll(payload.container));

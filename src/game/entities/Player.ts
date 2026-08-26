@@ -53,6 +53,12 @@ export class Player {
 
   readonly skills = new SkillSet();
   readonly equipment = new Equipment();
+  /**
+   * The player's private depot — a large container the depot chests open
+   * onto. Persistent for the session (in-memory); a follow-up pass can save
+   * it to the character profile so it survives logout.
+   */
+  readonly depot = new Container("Depot", "chest", 24);
   /** Worn layers drawn over the base body, rebuilt when equipment changes. */
   private equipLayers: Phaser.GameObjects.Sprite[] = [];
   private silhouette!: Phaser.GameObjects.Sprite;

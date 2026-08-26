@@ -40,6 +40,7 @@ const CH_COUNTER = "C";
 const CH_DOOR = "D";
 const CH_STAIRS_UP = "U";
 const CH_STAIRS_DOWN = "d";
+const CH_DEPOT = "X";
 
 export class InteriorScene extends Phaser.Scene {
   private room!: InteriorRoom;
@@ -234,6 +235,13 @@ export class InteriorScene extends Phaser.Scene {
     }
     if (ch === CH_STAIRS_DOWN && this.room.stairsDown) {
       this.transitionToRoom(this.room.stairsDown.toRoomId, this.room.stairsDown.spawn);
+      return;
+    }
+    if (ch === CH_DEPOT) {
+      // Ask the outdoor world (which owns the real player instance) to open
+      // the player's depot container in the sidebar. Emitting once per step
+      // is fine — WorldScene ignores a duplicate open of the same container.
+      bus.emit(EVENTS.OPEN_DEPOT, {});
       return;
     }
   }

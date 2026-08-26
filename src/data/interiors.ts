@@ -11,11 +11,14 @@
 //      exits the interior — see `exit` on the room)
 //   U  stairs going up (walkable; steps onto it transition per `stairsUp`)
 //   d  stairs going down (walkable; per `stairsDown`)
+//   X  depot access — walkable, but stepping on it opens the player's
+//      depot container in the sidebar (Tibia-style, one tile in front of
+//      the depot chests).
 //
 // The letter grid describes visuals + walkability. NPC and decor placement is
 // listed separately so a room can be tweaked without redrawing the grid.
 
-export type InteriorTile = "W" | "." | "S" | "C" | "D" | "U" | "d";
+export type InteriorTile = "W" | "." | "S" | "C" | "D" | "U" | "d" | "X";
 
 export interface InteriorNpc {
   id: string;
@@ -278,11 +281,14 @@ export const INTERIORS: Record<string, InteriorRoom> = {
   depot: {
     id: "depot",
     title: "Oakhollow Depot",
+    // Row 2 holds four chests along the back wall; row 3 (the X tiles) is
+    // where the player stands to open the depot — stepping onto any of
+    // them opens the character's personal depot container in the sidebar.
     rows: [
       "WWWWWWWWWW",
       "W........W",
-      "W..CCCC..W", // row of depot chests along the back
-      "W........W",
+      "W........W", // chests are drawn as decor
+      "W..XXXX..W", // depot-access strip in front of the chests
       "W........W",
       "W........W",
       "W........W",
@@ -330,11 +336,19 @@ export const INTERIORS: Record<string, InteriorRoom> = {
 
 /** True if a room tile is walkable. Walls and counters block; everything else lets the player pass. */
 export function isFloorTile(ch: string): boolean {
-  return ch === "." || ch === "S" || ch === "D" || ch === "U" || ch === "d";
+  return ch === "." || ch === "S" || ch === "D" || ch === "U" || ch === "d" || ch === "X";
 }
 
 /** The "kind" of a tile, for tile-based visuals in InteriorScene. */
-export type TileKind = "wall" | "wood-floor" | "stone-floor" | "counter" | "door" | "stairs-up" | "stairs-down";
+export type TileKind =
+  | "wall"
+  | "wood-floor"
+  | "stone-floor"
+  | "counter"
+  | "door"
+  | "stairs-up"
+  | "stairs-down"
+  | "depot-access";
 
 export function tileKind(ch: string): TileKind {
   switch (ch) {
@@ -350,6 +364,8 @@ export function tileKind(ch: string): TileKind {
       return "stairs-up";
     case "d":
       return "stairs-down";
+    case "X":
+      return "depot-access";
     default:
       return "wood-floor";
   }

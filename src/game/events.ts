@@ -33,6 +33,8 @@ export const EVENTS = {
   SELECT_TARGET: "select-target",
   /** true when the player is inside an interior room, false when back outdoors. */
   INTERIOR_STATE: "interior-state",
+  /** Ask the world to open the player's depot container in the sidebar. */
+  OPEN_DEPOT: "open-depot",
 } as const;
 
 export interface InteriorStatePayload {
