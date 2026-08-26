@@ -17,6 +17,13 @@ import { vocationDisplayName } from "../game/stats";
 const PORTRAIT_KEY = "select-portrait";
 const PORTRAIT_URL = "assets/characters/player_base_sheet.png";
 const PORTRAIT_FRAME = { frameWidth: TILE_SIZE, frameHeight: TILE_SIZE };
+
+// The title-screen illustration, reused here so the login flow reads as one
+// continuous scene rather than a hard cut from art to black. Loaded under a
+// distinct key so this scene owns it — TitleScene is stopped by the time we
+// get here, but its texture may or may not still be in the cache.
+const BG_KEY = "select-bg";
+const BG_URL = "assets/ui/title_background.png";
 // The player sheet is laid out down/left/right/up × (idle/walk1/walk2/attack);
 // frame 0 is the idle-down pose, which is what a portrait wants.
 const IDLE_DOWN_FRAME = 0;
@@ -54,6 +61,7 @@ export class SelectScene extends Phaser.Scene {
 
   preload() {
     this.load.spritesheet(PORTRAIT_KEY, PORTRAIT_URL, PORTRAIT_FRAME);
+    this.load.image(BG_KEY, BG_URL);
   }
 
   create() {
@@ -74,6 +82,16 @@ export class SelectScene extends Phaser.Scene {
 
   private layout() {
     const { width, height } = this.scale;
+
+    // The same forest illustration used on the title screen, dimmed so the
+    // cards and the header still read cleanly on top. Cover-fit rather than
+    // stretched so the girl stays in frame at any aspect.
+    const bg = this.add.image(width / 2, height / 2, BG_KEY).setOrigin(0.5);
+    const bgTex = this.textures.get(BG_KEY).getSourceImage();
+    bg.setScale(Math.max(width / bgTex.width, height / bgTex.height));
+    // A dark scrim over the illustration. Without it, the cards' dark panels
+    // fight the illustration's midtones and neither reads at a glance.
+    this.add.rectangle(0, 0, width, height, 0x000000, 0.55).setOrigin(0, 0);
 
     this.add
       .text(width / 2, 34, "Choose Your Character", {
