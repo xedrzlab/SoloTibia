@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { PLAYER_SHEET, TROLL_SHEET } from "../game/constants";
+import { IMAGE_ASSETS, SHEET_ASSETS, WATER_FRAME_COUNT, WATER_FRAME_MS } from "../data/assets";
 
 export class BootScene extends Phaser.Scene {
   constructor() {
@@ -7,84 +7,36 @@ export class BootScene extends Phaser.Scene {
   }
 
   preload() {
+    // Everything the game draws is listed in src/data/assets.ts, so adding art
+    // is a data change rather than an edit to this scene.
     const base = "assets";
-    this.load.image("grass", `${base}/tiles/grass.png`);
-    this.load.image("grass-2", `${base}/tiles/grass-2.png`);
-    this.load.image("grass-3", `${base}/tiles/grass-3.png`);
-    this.load.image("dirt-2", `${base}/tiles/dirt-2.png`);
-    this.load.image("cave-floor", `${base}/tiles/cave-floor.png`);
-    this.load.image("dirt", `${base}/tiles/dirt.png`);
-    this.load.image("stone-wall", `${base}/tiles/stone-wall.png`);
-    this.load.image("water", `${base}/tiles/water.png`);
-    this.load.image("void-wall", `${base}/tiles/void-wall.png`);
-    this.load.image("temple-floor", `${base}/tiles/temple-floor.png`);
-    this.load.image("rocky-ground", `${base}/tiles/rocky-ground.png`);
-    this.load.image("mountain", `${base}/tiles/mountain.png`);
-    this.load.image("road", `${base}/tiles/road.png`);
-
-    this.load.image("tree", `${base}/props/tree.png`);
-    this.load.image("bush", `${base}/props/bush.png`);
-    this.load.image("boulder", `${base}/props/boulder.png`);
-    this.load.image("signpost", `${base}/props/signpost.png`);
-    this.load.image("barrel", `${base}/props/barrel.png`);
-    this.load.image("crate", `${base}/props/crate.png`);
-    this.load.image("well", `${base}/props/well.png`);
-    this.load.image("building-forge", `${base}/props/building-forge.png`);
-    this.load.image("building-cottage", `${base}/props/building-cottage.png`);
-    this.load.image("building-house", `${base}/props/building-house.png`);
-    this.load.image("building-guardpost", `${base}/props/building-guardpost.png`);
-
-    this.load.spritesheet("player", `${base}/entities/player.png`, PLAYER_SHEET);
-    this.load.spritesheet("rat", `${base}/entities/rat.png`, {
-      frameWidth: 32,
-      frameHeight: 32,
-    });
-    this.load.spritesheet("cave-rat", `${base}/entities/cave-rat.png`, {
-      frameWidth: 32,
-      frameHeight: 32,
-    });
-    this.load.spritesheet("slime", `${base}/entities/slime.png`, {
-      frameWidth: 32,
-      frameHeight: 32,
-    });
-    this.load.spritesheet("troll", `${base}/entities/troll.png`, TROLL_SHEET);
-
-    this.load.image("npc-borin", `${base}/npcs/borin.png`);
-    this.load.image("npc-wren", `${base}/npcs/wren.png`);
-    this.load.image("npc-elder-corwin", `${base}/npcs/elder-corwin.png`);
-
-    // Item icons — the texture keys here must match ItemDef.textureKey in
-    // src/data/items.ts (plus the two spell icons used by the action bar).
-    for (const key of [
-      "sword",
-      "health-potion",
-      "mana-potion",
-      "gold-coin",
-      "backpack",
-      "bag",
-      "axe",
-      "bow",
-      "arrow",
-      "wand",
-      "wooden-shield",
-      "steel-shield",
-      "leather-helmet",
-      "steel-helmet",
-      "leather-armor",
-      "plate-armor",
-      "leather-legs",
-      "plate-legs",
-      "leather-boots",
-      "amulet",
-      "ring",
-      "spell-heal",
-      "spell-flame",
-    ]) {
-      this.load.image(key, `${base}/items/${key}.png`);
+    for (const asset of IMAGE_ASSETS) {
+      this.load.image(asset.key, `${base}/${asset.path}`);
     }
+    for (const sheet of SHEET_ASSETS) {
+      this.load.spritesheet(sheet.key, `${base}/${sheet.path}`, {
+        frameWidth: sheet.frameWidth,
+        frameHeight: sheet.frameHeight,
+      });
+    }
+
+    // A missing file would otherwise show up as a blank sprite somewhere far
+    // from the cause; say so plainly instead.
+    this.load.on("loaderror", (file: Phaser.Loader.File) => {
+      console.error(`Missing asset "${file.key}" at ${file.url} — check src/data/assets.ts.`);
+    });
   }
 
   create() {
+    // Water is the one terrain that moves. Registering it here keeps the
+    // animation definition next to the sheet it belongs to.
+    this.anims.create({
+      key: "water-flow",
+      frames: this.anims.generateFrameNumbers("water", { start: 0, end: WATER_FRAME_COUNT - 1 }),
+      frameRate: 1000 / WATER_FRAME_MS,
+      repeat: -1,
+    });
+
     this.scene.start("World");
     this.scene.launch("UI");
   }

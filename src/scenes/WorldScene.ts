@@ -12,7 +12,9 @@ import {
   BUILDINGS,
   SIGNS,
   NpcSpawn,
+  PROPS,
   variantForCell,
+  overlayForCell,
 } from "../data/tilemap";
 import { MONSTERS } from "../data/monsters";
 import { EquipSlot, ITEMS } from "../data/items";
@@ -22,6 +24,7 @@ import { ChosenVocation, VOCATION_NAMES, vocationDisplayName } from "../game/sta
 import { Player } from "../game/entities/Player";
 import { Monster } from "../game/entities/Monster";
 import { findPath, chebyshevDistance, TileCoord } from "../game/pathfinding";
+import { DebugOverlay } from "../game/debugOverlay";
 import { rollDamage, rollLoot } from "../game/combat";
 import { Container, ItemStack, SlotAccessor, SlotRef, moveStack } from "../game/containers";
 import {
@@ -107,6 +110,7 @@ export class WorldScene extends Phaser.Scene {
   private skillsDirty = false;
   private battleListTimer = 0;
   private regenTimer = REGEN_INTERVAL_MS;
+  private debug!: DebugOverlay;
 
   constructor() {
     super("World");
@@ -133,6 +137,11 @@ export class WorldScene extends Phaser.Scene {
     this.scale.on("resize", () => this.applyUiLayout(this.uiSidebarWidth, this.uiReservedWidth));
 
     this.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => this.handleTap(pointer));
+
+    this.debug = new DebugOverlay(this, {
+      sprites: () => [this.player.sprite, ...this.monsters.filter((m) => m.alive).map((m) => m.sprite)],
+      isWalkable,
+    });
 
     bus.on(EVENTS.USE_ITEM, (payload: UseItemPayload) => this.useItem(payload.itemId));
     bus.on(EVENTS.BUY_ITEM, (payload: BuyItemPayload) => this.buyItem(payload.npcId, payload.itemId));
@@ -193,16 +202,35 @@ export class WorldScene extends Phaser.Scene {
     this.cameras.main.setZoom(zoom);
   }
 
-  /** Bake the static tile grid into one texture so it's a single draw call per frame. */
+  /**
+   * Bake the static tile grid into one texture so it's a single draw call per
+   * frame regardless of map size. Animated terrain can't be baked, so those
+   * cells get a real sprite on a layer just above the baked one.
+   */
   private buildTileLayer() {
     const mapWidthPx = MAP_WIDTH * TILE_SIZE;
     const mapHeightPx = MAP_HEIGHT * TILE_SIZE;
     const rt = this.add.renderTexture(0, 0, mapWidthPx, mapHeightPx).setOrigin(0, 0);
     rt.setDepth(0);
+
+    const animatedCells: { x: number; y: number; key: string }[] = [];
     forEachTile((x, y, tile) => {
+      if (tile.animated) {
+        animatedCells.push({ x, y, key: tile.textureKey });
+        return;
+      }
       rt.draw(variantForCell(tile, x, y), x * TILE_SIZE, y * TILE_SIZE);
-      if (tile.overlayKey) rt.draw(tile.overlayKey, x * TILE_SIZE, y * TILE_SIZE);
+      const overlay = overlayForCell(tile, x, y);
+      if (overlay) rt.draw(overlay, x * TILE_SIZE, y * TILE_SIZE);
     });
+
+    for (const cell of animatedCells) {
+      this.add
+        .sprite(cell.x * TILE_SIZE, cell.y * TILE_SIZE, cell.key)
+        .setOrigin(0, 0)
+        .setDepth(1)
+        .play("water-flow");
+    }
   }
 
   private buildEnvironmentDecoration() {
@@ -216,6 +244,15 @@ export class WorldScene extends Phaser.Scene {
         .setOrigin(1, 1)
         .setDepth(depthForTileY(anchorTileY));
     }
+    // Props are anchored like everything else, so tall ones (torches, carts)
+    // lean up-left and sort correctly against the player walking past them.
+    for (const prop of PROPS) {
+      this.add
+        .image(tileAnchorX(prop.x), tileAnchorY(prop.y), prop.textureKey)
+        .setOrigin(1, 1)
+        .setDepth(depthForTileY(prop.y));
+    }
+
     for (const sign of SIGNS) {
       const sprite = this.add
         .image(tileAnchorX(sign.x), tileAnchorY(sign.y), "signpost")
@@ -224,6 +261,44 @@ export class WorldScene extends Phaser.Scene {
         .setInteractive({ useHandCursor: true });
       sprite.on("pointerdown", () => this.log("info", sign.text));
     }
+  }
+
+  /**
+   * A short burst of pixel sprites thrown out from a point. Used for hits,
+   * spell impacts and level-ups — enough to make an action read without
+   * hiding what the player needs to see.
+   */
+  private burst(x: number, y: number, textureKey: string, count: number, spread: number, tint?: number) {
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const distance = spread * (0.4 + Math.random() * 0.6);
+      const particle = this.add.image(x, y, textureKey).setDepth(55).setScale(0.5 + Math.random() * 0.3);
+      if (tint !== undefined) particle.setTint(tint);
+      this.tweens.add({
+        targets: particle,
+        x: x + Math.cos(angle) * distance,
+        y: y + Math.sin(angle) * distance,
+        alpha: 0,
+        scale: 0.2,
+        duration: 260 + Math.random() * 160,
+        ease: "Cubic.Out",
+        onComplete: () => particle.destroy(),
+      });
+    }
+  }
+
+  /** A single sprite that pops and fades in place, for the moment of impact. */
+  private flash(x: number, y: number, textureKey: string, tint?: number) {
+    const sprite = this.add.image(x, y, textureKey).setDepth(56).setScale(0.6);
+    if (tint !== undefined) sprite.setTint(tint);
+    this.tweens.add({
+      targets: sprite,
+      scale: 1.1,
+      alpha: 0,
+      duration: 220,
+      ease: "Quad.Out",
+      onComplete: () => sprite.destroy(),
+    });
   }
 
   private buildNpcs() {
@@ -344,6 +419,12 @@ export class WorldScene extends Phaser.Scene {
       this.regenTimer = REGEN_INTERVAL_MS;
       this.regenerate();
     }
+
+    this.debug.update(this.player.tile, {
+      mobs: this.monsters.filter((m) => m.alive).length,
+      corpse: this.corpses.length,
+      mode: this.resolveAttackMode().mode,
+    });
   }
 
   private regenerate() {
@@ -447,6 +528,17 @@ export class WorldScene extends Phaser.Scene {
 
     const died = target.takeDamage(damage);
     this.log("damage", `You hit the ${target.def.name} for ${damage}.`);
+
+    // Impact reads at the target: a flash on the blow, then debris.
+    const hx = this.spriteCenterX(target.sprite);
+    const hy = this.spriteTopY(target.sprite) + target.sprite.displayHeight / 2;
+    if (mode === "wand") {
+      this.flash(hx, hy, "fx-sparkle");
+      this.burst(hx, hy, "fx-sparkle", 4, 14);
+    } else {
+      this.flash(hx, hy, "fx-hit");
+      this.burst(hx, hy, "fx-blood", 4, 12);
+    }
     this.floatText(this.spriteCenterX(target.sprite), this.spriteTopY(target.sprite), `-${damage}`, "#ffffff");
 
     if (died) {
@@ -528,6 +620,9 @@ export class WorldScene extends Phaser.Scene {
     const power = spellDamage(player.skills.level("magic"), player.level, spell.base, spell.factor);
     if (spell.kind === "heal") {
       player.heal(power);
+      const px = this.spriteCenterX(player.sprite);
+      const py = this.spriteTopY(player.sprite) + player.sprite.displayHeight / 2;
+      this.burst(px, py, "fx-sparkle", 6, 16, 0x7cff7c);
       this.floatText(
         this.spriteCenterX(player.sprite),
         this.spriteTopY(player.sprite),
@@ -538,6 +633,10 @@ export class WorldScene extends Phaser.Scene {
       this.fireProjectile(target, spell.textureKey);
       const died = target.takeDamage(power);
       this.log("damage", `You hit the ${target.def.name} for ${power}.`);
+      const hx = this.spriteCenterX(target.sprite);
+      const hy = this.spriteTopY(target.sprite) + target.sprite.displayHeight / 2;
+      this.flash(hx, hy, "fx-sparkle", 0xff9f4a);
+      this.burst(hx, hy, "fx-dust", 5, 16, 0xff9f4a);
       this.floatText(this.spriteCenterX(target.sprite), this.spriteTopY(target.sprite), `-${power}`, "#ff9f4a");
       if (died) {
         this.rewardKill(target);
@@ -562,6 +661,14 @@ export class WorldScene extends Phaser.Scene {
     this.floatText(this.spriteCenterX(this.player.sprite), this.spriteTopY(this.player.sprite) - 14, `+${monster.def.xp} xp`, "#8fd0ff");
     if (leveledUp) {
       this.log("levelup", `You advanced to level ${this.player.level}!`);
+      this.burst(
+        this.spriteCenterX(this.player.sprite),
+        this.spriteTopY(this.player.sprite) + this.player.sprite.displayHeight / 2,
+        "fx-sparkle",
+        10,
+        26,
+        0xe6c34a,
+      );
     }
 
     const drops = rollLoot(monster.def.loot);
@@ -718,6 +825,10 @@ export class WorldScene extends Phaser.Scene {
 
     this.player.takeDamage(reduced);
     this.log("damage", `The ${attackerName} hits you for ${reduced}.`);
+    const px = this.spriteCenterX(this.player.sprite);
+    const py = this.spriteTopY(this.player.sprite) + this.player.sprite.displayHeight / 2;
+    this.flash(px, py, "fx-hit", 0xff8080);
+    this.burst(px, py, "fx-blood", 3, 10);
     this.floatText(this.spriteCenterX(this.player.sprite), this.spriteTopY(this.player.sprite), `-${reduced}`, "#ff5c5c");
     this.emitPlayerStats();
   }

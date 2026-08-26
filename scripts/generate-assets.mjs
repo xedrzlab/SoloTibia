@@ -156,20 +156,173 @@ function cobbleTile() {
 }
 
 /** Still water: darker with depth, with a few surface highlights. */
-function waterTile() {
+/**
+ * One frame of the water cycle. The body of the water never moves — only the
+ * ripple crests drift and fade, which is enough to read as a living surface
+ * without the ground appearing to slide underneath the player.
+ */
+function waterTile(frame = 0) {
   const s = new Sprite(16, 16);
   s.fillRect(0, 0, 16, 16, P_WATER.mid);
 
-  // Depth pooling in broad bands rather than per-pixel noise.
+  // Depth pooling in broad bands rather than per-pixel noise. Static across
+  // the cycle, so the water keeps its shape.
   clusters(s, [[0, 0, 6, 3], [9, 2, 7, 2], [2, 7, 5, 3], [11, 9, 5, 3], [0, 13, 7, 3]], P_WATER.dark);
   clusters(s, [[3, 1, 3, 1], [12, 3, 3, 1], [4, 8, 3, 1], [13, 10, 3, 1]], P_WATER.deep);
 
-  // Ripple crests: a bright leading edge above a darker trough.
-  for (const [x, y, w] of [[2, 4, 5], [9, 6, 4], [4, 11, 4], [10, 14, 5]]) {
-    s.fillRect(x, y, w, 1, P_WATER.light);
-    s.fillRect(x + 1, y - 1, w - 2, 1, P_WATER.hi);
-    s.fillRect(x, y + 1, w, 1, P_WATER.dark);
+  // Ripple crests: a bright leading edge over a darker trough. Each drifts one
+  // pixel per frame and the set wraps, so frame 4 lands back on frame 0.
+  const ripples = [
+    [2, 4, 5],
+    [9, 6, 4],
+    [4, 11, 4],
+    [10, 14, 5],
+  ];
+  ripples.forEach(([x, y, w], i) => {
+    // Alternate drift direction so the surface churns rather than scrolls.
+    const drift = i % 2 === 0 ? frame : WATER_FRAMES - frame;
+    const rx = (x + drift) % 16;
+    for (let dx = 0; dx < w; dx++) {
+      const px = (rx + dx) % 16;
+      s.setPixel(px, y, P_WATER.light);
+      s.setPixel(px, y + 1, P_WATER.dark);
+      if (dx > 0 && dx < w - 1) s.setPixel(px, y - 1, P_WATER.hi);
+    }
+  });
+  return s;
+}
+
+const WATER_FRAMES = 4;
+
+// ---------------------------------------------------------------------------
+// Trees. Several species rather than one repeated silhouette: a stand of
+// woodland should read as a stand, not as one sprite stamped in a grid. All
+// share the trunk-plus-canopy construction and the same greens.
+// ---------------------------------------------------------------------------
+
+const P_BARK = { deep: "#241609", dark: "#3a2312", mid: "#4a2e18", light: "#5f3d22" };
+
+/** Trunk with a lit left face and roots flaring into the ground shadow. */
+function drawTrunk(s, cx, top, bottom, width = 2) {
+  const x = cx - Math.floor(width / 2);
+  s.fillRect(x, top, width, bottom - top, P_BARK.mid);
+  s.fillRect(x, top, 1, bottom - top, P_BARK.light); // lit left face
+  s.fillRect(x + width - 1, top, 1, bottom - top, P_BARK.dark); // shaded right
+  s.setPixel(x - 1, bottom - 1, P_BARK.dark); // roots
+  s.setPixel(x + width, bottom - 1, P_BARK.dark);
+  s.fillEllipse(cx, bottom, width + 2, 1, "#1a2412"); // contact shadow
+}
+
+/** Broad-canopied oak. Two variants so a wood doesn't repeat every tile. */
+function treeOak(variant = 0) {
+  const s = new Sprite(16, 16);
+  drawTrunk(s, 8, 9, 15);
+
+  // Canopy built from overlapping lobes, deliberately off-centre — a perfect
+  // circle is the clearest tell of a procedurally drawn tree.
+  const lobes =
+    variant === 0
+      ? [[8, 6, 6], [6, 5, 4], [11, 6.5, 3.5], [8, 8, 5]]
+      : [[8, 6.5, 5.5], [10, 5, 4], [5.5, 6, 3.5], [8, 8, 4.5]];
+  for (const [lx, ly, r] of lobes) s.fillCircle(lx, ly, r, P_GRASS.deep);
+  for (const [lx, ly, r] of lobes) s.fillCircle(lx - 0.4, ly - 0.4, r - 0.9, "#2f7a3e");
+  // Light from the upper left picks out the near-left lobes only.
+  s.fillCircle(variant === 0 ? 6 : 6.5, 4.6, 2.4, "#3f9450");
+  s.fillCircle(variant === 0 ? 5.6 : 6, 4, 1.2, "#6fc47f");
+  // A few dark gaps so the canopy has depth instead of reading as a dome.
+  s.setPixel(10, 7, P_GRASS.deep);
+  s.setPixel(9, 4, P_GRASS.deep);
+  return s;
+}
+
+/** Conifer: a tiered spire, unmistakable against the oaks at a glance. */
+function treePine() {
+  const s = new Sprite(16, 16);
+  drawTrunk(s, 8, 11, 15);
+  // Three tiers, each wider than the one above.
+  const tiers = [
+    [1, 3],
+    [4, 5],
+    [7, 7],
+  ];
+  for (const [top, span] of tiers) {
+    for (let row = 0; row < 3; row++) {
+      const half = Math.round(((row + 1) / 3) * span * 0.5);
+      s.fillRect(8 - half, top + row, half * 2, 1, "#1f5c2e");
+    }
   }
+  // Lit left edge of each tier.
+  for (const [top, span] of tiers) {
+    const half = Math.round(span * 0.5);
+    s.setPixel(8 - half, top + 2, "#3f9450");
+    s.setPixel(8 - half + 1, top + 2, "#2f7a3e");
+  }
+  s.setPixel(8, 0, "#3f9450"); // tip
+  s.setPixel(8, 1, "#2f7a3e");
+  return s;
+}
+
+/** Dead tree: bare branching silhouette, for the mountain and cave approaches. */
+function treeDead() {
+  const s = new Sprite(16, 16);
+  drawTrunk(s, 8, 5, 15, 2);
+  // Branches: each is a short diagonal with a lit upper-left pixel.
+  for (const [x0, y0, x1, y1] of [
+    [7, 8, 3, 5],
+    [9, 7, 13, 4],
+    [7, 5, 5, 2],
+    [9, 4, 11, 1],
+  ]) {
+    s.line(x0, y0, x1, y1, P_BARK.mid);
+    s.setPixel(x1, y1, P_BARK.light);
+  }
+  s.setPixel(3, 4, P_BARK.dark); // twig ends
+  s.setPixel(13, 3, P_BARK.dark);
+  return s;
+}
+
+// ---------------------------------------------------------------------------
+// Rocks. A size range plus a mossy variant, so stony ground can be composed
+// rather than tiled.
+// ---------------------------------------------------------------------------
+
+/** Shared rock body: a lit top-left plane over a shadowed lower-right face. */
+function rockBody(s, cx, cy, rx, ry, moss = false) {
+  s.fillEllipse(cx, cy + ry - 0.4, rx + 0.6, 1, "#14110f"); // ground shadow
+  s.fillEllipse(cx, cy, rx, ry, P_STONE.dark);
+  s.fillEllipse(cx - 0.3, cy - 0.3, rx - 0.6, ry - 0.6, P_STONE.mid);
+  s.fillEllipse(cx - rx * 0.35, cy - ry * 0.4, rx * 0.45, ry * 0.4, P_STONE.light);
+  s.setPixel(Math.round(cx - rx * 0.5), Math.round(cy - ry * 0.55), P_STONE.hi);
+  // A crack running down the shaded face gives the stone a plane to read.
+  s.setPixel(Math.round(cx + rx * 0.3), Math.round(cy), P_STONE.deep);
+  s.setPixel(Math.round(cx + rx * 0.2), Math.round(cy + ry * 0.4), P_STONE.deep);
+  if (moss) {
+    s.fillEllipse(cx - rx * 0.2, cy - ry * 0.5, rx * 0.5, ry * 0.3, "#2f6b38");
+    s.setPixel(Math.round(cx - rx * 0.4), Math.round(cy - ry * 0.6), "#4a8f52");
+  }
+}
+
+function rockSmall() {
+  const s = new Sprite(16, 16);
+  rockBody(s, 8, 12, 2.6, 1.8);
+  return s;
+}
+
+function rockMedium() {
+  const s = new Sprite(16, 16);
+  rockBody(s, 8, 10.5, 4, 3);
+  return s;
+}
+
+function rockLarge() {
+  const s = new Sprite(16, 16);
+  rockBody(s, 8, 9, 5.5, 4.4);
+  return s;
+}
+
+function rockMossy() {
+  const s = new Sprite(16, 16);
+  rockBody(s, 8, 10, 4.6, 3.6, true);
   return s;
 }
 
@@ -325,6 +478,265 @@ function crateSprite() {
   s.line(3, 9, 13, 9, "#5a3d22");
   s.line(3, 6, 8, 13, "#6b4a2a");
   s.line(13, 6, 8, 13, "#6b4a2a");
+  return s;
+}
+
+// ---------------------------------------------------------------------------
+// Prop library. These are the pieces a location is composed from: a mine reads
+// as a mine because of the carts and crates around it, not because the ground
+// is a different colour.
+// ---------------------------------------------------------------------------
+
+/** Post-and-rail fence, for yards and paddocks. */
+function fenceSprite() {
+  const s = new Sprite(16, 16);
+  s.fillEllipse(3, 14, 1.6, 0.8, "#14110f");
+  s.fillEllipse(12, 14, 1.6, 0.8, "#14110f");
+  for (const x of [2, 11]) {
+    s.fillRect(x, 5, 2, 9, P_BARK.mid);
+    s.fillRect(x, 5, 1, 9, P_BARK.light);
+    s.fillRect(x, 5, 2, 1, "#6b4a2a"); // cut top
+  }
+  for (const y of [7, 11]) {
+    s.fillRect(0, y, 16, 1, "#6b4a2a");
+    s.fillRect(0, y + 1, 16, 1, P_BARK.dark);
+  }
+  return s;
+}
+
+/** Plank bench. */
+function benchSprite() {
+  const s = new Sprite(16, 16);
+  s.fillEllipse(8, 14, 5, 1, "#14110f");
+  s.fillRect(3, 12, 2, 2, P_BARK.dark); // legs
+  s.fillRect(11, 12, 2, 2, P_BARK.dark);
+  s.fillRect(2, 9, 12, 3, "#8a6a3d"); // seat
+  s.fillRect(2, 9, 12, 1, "#a3814f");
+  s.fillRect(2, 11, 12, 1, "#5a3d22");
+  s.fillRect(2, 5, 1, 5, P_BARK.mid); // back uprights
+  s.fillRect(13, 5, 1, 5, P_BARK.mid);
+  s.fillRect(2, 5, 12, 2, "#8a6a3d"); // backrest
+  s.fillRect(2, 5, 12, 1, "#a3814f");
+  return s;
+}
+
+/** Hand cart, tipped forward on its handles — mine and market dressing. */
+function cartSprite() {
+  const s = new Sprite(16, 16);
+  s.fillEllipse(8, 14, 6, 1, "#14110f");
+  s.fillRect(2, 6, 12, 6, "#7a5230"); // body
+  s.fillRect(2, 6, 12, 1, "#96683c");
+  s.fillRect(2, 6, 1, 6, "#5c3c22");
+  s.fillRect(13, 6, 1, 6, "#4a2f1a");
+  s.fillRect(3, 8, 10, 1, "#5a3d22"); // plank seams
+  s.fillRect(3, 10, 10, 1, "#5a3d22");
+  s.fillCircle(5, 13, 2.2, "#3a2312"); // wheels
+  s.fillCircle(5, 13, 1.2, "#5f3d22");
+  s.fillCircle(11, 13, 2.2, "#3a2312");
+  s.fillCircle(11, 13, 1.2, "#5f3d22");
+  s.fillRect(0, 4, 3, 1, "#6b4a2a"); // handle
+  return s;
+}
+
+/** Campfire: stone ring, logs, flame. The warmest thing in a dark scene. */
+function campfireSprite() {
+  const s = new Sprite(16, 16);
+  s.fillEllipse(8, 13, 6, 2, "#14110f");
+  // Stone ring
+  for (const [x, y] of [[2, 11], [5, 13], [9, 13], [12, 11], [3, 9], [12, 9]]) {
+    s.fillRect(x, y, 3, 2, P_STONE.mid);
+    s.fillRect(x, y, 3, 1, P_STONE.light);
+  }
+  // Crossed logs
+  s.line(4, 12, 11, 9, P_BARK.mid);
+  s.line(4, 9, 11, 12, P_BARK.dark);
+  // Flame: hot core, cooler edges
+  s.fillEllipse(8, 8, 2.6, 3.4, "#8a3410");
+  s.fillEllipse(8, 8.6, 1.8, 2.6, "#c95a1e");
+  s.fillEllipse(8, 9.2, 1, 1.6, "#e8862f");
+  s.setPixel(8, 10, "#ffe08a");
+  s.setPixel(8, 4, "#c95a1e"); // tip
+  s.setPixel(7, 5, "#8a3410");
+  return s;
+}
+
+/** Standing torch on a post — lights dungeon walls and town roads. */
+function torchSprite() {
+  const s = new Sprite(16, 16);
+  s.fillEllipse(8, 14, 2.4, 1, "#14110f");
+  s.fillRect(7, 6, 2, 8, P_BARK.mid);
+  s.fillRect(7, 6, 1, 8, P_BARK.light);
+  s.fillRect(6, 5, 4, 2, "#3a3640"); // iron cage
+  s.fillEllipse(8, 3.6, 2.2, 2.8, "#8a3410");
+  s.fillEllipse(8, 4, 1.4, 2, "#e8862f");
+  s.setPixel(8, 4, "#ffe08a");
+  s.setPixel(8, 1, "#c95a1e");
+  return s;
+}
+
+/** Weathered gravestone. */
+function gravestoneSprite() {
+  const s = new Sprite(16, 16);
+  s.fillEllipse(8, 14, 4, 1, "#14110f");
+  s.fillRect(5, 4, 6, 10, P_STONE.mid);
+  s.fillCircle(8, 4, 3, P_STONE.mid); // rounded top
+  s.fillRect(5, 4, 2, 10, P_STONE.light);
+  s.fillCircle(7, 3.6, 2.2, P_STONE.light);
+  s.fillRect(10, 4, 1, 10, P_STONE.dark);
+  s.fillRect(6, 6, 4, 1, P_STONE.deep); // worn inscription
+  s.fillRect(6, 8, 3, 1, P_STONE.deep);
+  s.fillRect(4, 13, 8, 2, P_STONE.dark); // base
+  s.fillRect(4, 13, 8, 1, P_STONE.hi);
+  s.setPixel(11, 12, "#2f6b38"); // moss creeping up the shaded side
+  s.setPixel(11, 11, "#2f6b38");
+  return s;
+}
+
+/** Banded treasure chest. */
+function chestSprite() {
+  const s = new Sprite(16, 16);
+  s.fillEllipse(8, 14, 5.5, 1, "#14110f");
+  s.fillRect(2, 8, 12, 6, "#7a5230"); // body
+  s.fillRect(2, 8, 12, 1, "#96683c");
+  s.fillRect(2, 8, 1, 6, "#5c3c22");
+  s.fillRect(13, 8, 1, 6, "#4a2f1a");
+  s.fillRect(2, 4, 12, 4, "#8a6a3d"); // domed lid
+  s.fillRect(3, 3, 10, 1, "#a3814f");
+  s.fillRect(2, 7, 12, 1, "#4a2f1a"); // lid seam
+  for (const x of [4, 11]) {
+    s.fillRect(x, 3, 1, 11, "#8a6a1a"); // iron bands
+    s.fillRect(x, 3, 1, 5, "#c9a24a");
+  }
+  s.fillRect(7, 7, 2, 3, "#c9a24a"); // lock plate
+  s.setPixel(8, 8, "#3a2312");
+  return s;
+}
+
+/** Tied sack of grain. */
+function sackSprite() {
+  const s = new Sprite(16, 16);
+  s.fillEllipse(8, 14, 4.5, 1, "#14110f");
+  s.fillEllipse(8, 10.5, 4.4, 3.6, "#9a8670");
+  s.fillEllipse(7.2, 9.8, 3.4, 2.8, "#b8a58c");
+  s.fillEllipse(6.4, 9, 1.4, 1, "#cbbca6");
+  s.fillRect(6, 5, 4, 3, "#8a7860"); // gathered neck
+  s.fillRect(6, 6, 4, 1, "#6b5a48"); // cord
+  s.setPixel(5, 6, "#4a2f1a");
+  return s;
+}
+
+/** Weapon rack — dresses the forge yard. */
+function weaponRackSprite() {
+  const s = new Sprite(16, 16);
+  s.fillEllipse(8, 14, 5, 1, "#14110f");
+  s.fillRect(2, 4, 2, 10, P_BARK.mid);
+  s.fillRect(12, 4, 2, 10, P_BARK.mid);
+  s.fillRect(2, 4, 1, 10, P_BARK.light);
+  s.fillRect(1, 4, 14, 2, "#6b4a2a"); // crossbar
+  s.fillRect(1, 4, 14, 1, "#8a6a3d");
+  // Two blades and a haft leaning in the rack.
+  s.fillRect(5, 6, 1, 7, "#c9ccd1");
+  s.fillRect(5, 12, 1, 2, "#5a3d22");
+  s.fillRect(8, 6, 1, 8, "#9aa0a8");
+  s.fillRect(10, 6, 1, 8, "#5a3d22");
+  s.fillRect(9, 6, 3, 2, "#c9ccd1"); // axe head
+  return s;
+}
+
+/** Cut stump with visible rings — forest storytelling. */
+function stumpSprite() {
+  const s = new Sprite(16, 16);
+  s.fillEllipse(8, 13.5, 4.5, 1.2, "#14110f");
+  s.fillRect(5, 9, 6, 4, P_BARK.mid);
+  s.fillRect(5, 9, 1, 4, P_BARK.light);
+  s.fillRect(10, 9, 1, 4, P_BARK.dark);
+  s.fillEllipse(8, 9, 3.4, 1.8, "#7a5230"); // cut face
+  s.fillEllipse(8, 9, 2.2, 1.1, "#96683c");
+  s.fillEllipse(8, 9, 1, 0.5, "#7a5230"); // rings
+  s.setPixel(4, 12, P_BARK.dark); // roots
+  s.setPixel(11, 12, P_BARK.dark);
+  return s;
+}
+
+/** A small cluster of mushrooms. */
+function mushroomsSprite() {
+  const s = new Sprite(16, 16);
+  s.fillEllipse(8, 13.5, 4, 1, "#14110f");
+  for (const [x, y, r, cap] of [
+    [6, 10, 2.4, "#a8402f"],
+    [10, 11, 1.8, "#8a3428"],
+    [8, 12, 1.4, "#a8402f"],
+  ]) {
+    s.fillRect(x - 1, y, 2, 3, "#cbbca6"); // stalk
+    s.fillEllipse(x, y, r, r * 0.7, cap);
+    s.fillEllipse(x - r * 0.3, y - r * 0.25, r * 0.4, r * 0.3, "#c26a55");
+    s.setPixel(x + 1, y, "#e0dcc2"); // spots
+  }
+  return s;
+}
+
+/** A patch of wildflowers, for meadow variety. */
+function flowersSprite() {
+  const s = new Sprite(16, 16);
+  for (const [x, y, colour] of [
+    [4, 9, "#c9b86a"],
+    [8, 7, "#c47a8a"],
+    [11, 10, "#8a9ac4"],
+    [6, 12, "#c9b86a"],
+  ]) {
+    s.fillRect(x, y + 1, 1, 3, "#2f6b38"); // stem
+    s.setPixel(x, y, colour);
+    s.setPixel(x - 1, y, "#4a8f52");
+    s.setPixel(x + 1, y, "#4a8f52");
+  }
+  return s;
+}
+
+// ---------------------------------------------------------------------------
+// Combat and magic effects. Small, short-lived, and drawn in the same pixel
+// language as everything else — a smooth glow would read as belonging to a
+// different game.
+// ---------------------------------------------------------------------------
+
+/** White impact star for a landed melee hit. */
+function hitSparkSprite() {
+  const s = new Sprite(16, 16);
+  s.fillRect(7, 3, 2, 10, "#ffffff");
+  s.fillRect(3, 7, 10, 2, "#ffffff");
+  s.line(4, 4, 12, 12, "#e8e8ee");
+  s.line(12, 4, 4, 12, "#e8e8ee");
+  s.fillRect(6, 6, 4, 4, "#ffffff");
+  return s;
+}
+
+/** Blood spatter, thrown to the lower right like every other shadow. */
+function bloodSprite() {
+  const s = new Sprite(16, 16);
+  for (const [x, y, r] of [[7, 7, 2.4], [10, 9, 1.4], [5, 10, 1], [12, 6, 0.8]]) {
+    s.fillCircle(x, y, r, "#8a1a14");
+  }
+  s.fillCircle(6.6, 6.4, 1.2, "#c9302f");
+  return s;
+}
+
+/** Dust puff kicked up on impact or landing. */
+function dustSprite() {
+  const s = new Sprite(16, 16);
+  for (const [x, y, r] of [[6, 9, 2.6], [10, 8, 2], [8, 11, 1.6]]) {
+    s.fillCircle(x, y, r, "#8a8175");
+  }
+  s.fillCircle(5.6, 8.4, 1.4, "#b0a698");
+  return s;
+}
+
+/** Arcane mote for spell impacts and level-ups. */
+function sparkleSprite() {
+  const s = new Sprite(16, 16);
+  s.fillRect(7, 2, 2, 12, "#d9b8ff");
+  s.fillRect(2, 7, 12, 2, "#d9b8ff");
+  s.fillRect(6, 6, 4, 4, "#f0e2ff");
+  s.setPixel(4, 4, "#8a5cc9");
+  s.setPixel(11, 11, "#8a5cc9");
   return s;
 }
 
@@ -1269,81 +1681,115 @@ function appIcon(size) {
 // Write everything out
 // ---------------------------------------------------------------------------
 
-saveSprite(grassTile(0), SCALE, `${OUT}/tiles/grass.png`);
-saveSprite(grassTile(1), SCALE, `${OUT}/tiles/grass-2.png`);
-saveSprite(grassTile(2), SCALE, `${OUT}/tiles/grass-3.png`);
-saveSprite(dirtTile(0), SCALE, `${OUT}/tiles/dirt.png`);
-saveSprite(dirtTile(1), SCALE, `${OUT}/tiles/dirt-2.png`);
-saveSprite(caveFloorTile(), SCALE, `${OUT}/tiles/cave-floor.png`);
-saveSprite(cobbleTile(), SCALE, `${OUT}/tiles/temple-floor.png`);
-saveSprite(waterTile(), SCALE, `${OUT}/tiles/water.png`);
-saveSprite(stoneWallTile(), SCALE, `${OUT}/tiles/stone-wall.png`);
-saveSprite(rockyGroundTile(), SCALE, `${OUT}/tiles/rocky-ground.png`);
-saveSprite(voidWallTile(), SCALE, `${OUT}/tiles/void-wall.png`);
-saveSprite(mountainTile(), SCALE, `${OUT}/tiles/mountain.png`);
-saveSprite(roadTile(), SCALE, `${OUT}/tiles/road.png`);
+// --- terrain -------------------------------------------------------------
+saveSprite(grassTile(0), SCALE, `${OUT}/terrain/grass_01.png`);
+saveSprite(grassTile(1), SCALE, `${OUT}/terrain/grass_02.png`);
+saveSprite(grassTile(2), SCALE, `${OUT}/terrain/grass_03.png`);
+saveSprite(dirtTile(0), SCALE, `${OUT}/terrain/dirt_01.png`);
+saveSprite(dirtTile(1), SCALE, `${OUT}/terrain/dirt_02.png`);
+saveSprite(caveFloorTile(), SCALE, `${OUT}/terrain/cave_floor_01.png`);
+saveSprite(cobbleTile(), SCALE, `${OUT}/terrain/cobble_01.png`);
+saveSprite(stoneWallTile(), SCALE, `${OUT}/terrain/wall_stone_01.png`);
+saveSprite(rockyGroundTile(), SCALE, `${OUT}/terrain/ground_rocky_01.png`);
+saveSprite(voidWallTile(), SCALE, `${OUT}/terrain/void_01.png`);
+saveSprite(mountainTile(), SCALE, `${OUT}/terrain/mountain_01.png`);
+saveSprite(roadTile(), SCALE, `${OUT}/terrain/road_01.png`);
 
-saveSprite(treeSprite(), SCALE, `${OUT}/props/tree.png`);
-saveSprite(bushSprite(), SCALE, `${OUT}/props/bush.png`);
+// Water is animated, so its frames ship as one sheet rather than a tile.
+const waterMeta = saveSpriteSheet(
+  Array.from({ length: WATER_FRAMES }, (_, i) => waterTile(i)),
+  SCALE,
+  `${OUT}/terrain/water_sheet.png`,
+);
 
-saveSprite(borinFrame(), SCALE, `${OUT}/npcs/borin.png`);
-saveSprite(wrenFrame(), SCALE, `${OUT}/npcs/wren.png`);
-saveSprite(elderFrame(), SCALE, `${OUT}/npcs/elder-corwin.png`);
-saveSprite(boulderSprite(), SCALE, `${OUT}/props/boulder.png`);
-saveSprite(signpostSprite(), SCALE, `${OUT}/props/signpost.png`);
-saveSprite(buildingForge(), SCALE, `${OUT}/props/building-forge.png`);
-saveSprite(buildingCottage(), SCALE, `${OUT}/props/building-cottage.png`);
-saveSprite(buildingHouse(), SCALE, `${OUT}/props/building-house.png`);
-saveSprite(buildingGuardPost(), SCALE, `${OUT}/props/building-guardpost.png`);
+// --- environment ---------------------------------------------------------
+saveSprite(treeOak(0), SCALE, `${OUT}/environment/tree_oak_01.png`);
+saveSprite(treeOak(1), SCALE, `${OUT}/environment/tree_oak_02.png`);
+saveSprite(treePine(), SCALE, `${OUT}/environment/tree_pine_01.png`);
+saveSprite(treeDead(), SCALE, `${OUT}/environment/tree_dead_01.png`);
+saveSprite(bushSprite(), SCALE, `${OUT}/environment/bush_01.png`);
+saveSprite(rockSmall(), SCALE, `${OUT}/environment/rock_small_01.png`);
+saveSprite(rockMedium(), SCALE, `${OUT}/environment/rock_medium_01.png`);
+saveSprite(rockLarge(), SCALE, `${OUT}/environment/rock_large_01.png`);
+saveSprite(rockMossy(), SCALE, `${OUT}/environment/rock_mossy_01.png`);
+saveSprite(stumpSprite(), SCALE, `${OUT}/environment/stump_01.png`);
+saveSprite(mushroomsSprite(), SCALE, `${OUT}/environment/mushrooms_01.png`);
+saveSprite(flowersSprite(), SCALE, `${OUT}/environment/flowers_01.png`);
 
-saveSprite(barrelSprite(), SCALE, `${OUT}/props/barrel.png`);
-saveSprite(crateSprite(), SCALE, `${OUT}/props/crate.png`);
-saveSprite(wellSprite(), SCALE, `${OUT}/props/well.png`);
+// --- props ---------------------------------------------------------------
+saveSprite(barrelSprite(), SCALE, `${OUT}/props/barrel_01.png`);
+saveSprite(crateSprite(), SCALE, `${OUT}/props/crate_01.png`);
+saveSprite(wellSprite(), SCALE, `${OUT}/props/well_01.png`);
+saveSprite(signpostSprite(), SCALE, `${OUT}/props/sign_01.png`);
+saveSprite(fenceSprite(), SCALE, `${OUT}/props/fence_01.png`);
+saveSprite(benchSprite(), SCALE, `${OUT}/props/bench_01.png`);
+saveSprite(cartSprite(), SCALE, `${OUT}/props/cart_01.png`);
+saveSprite(campfireSprite(), SCALE, `${OUT}/props/campfire_01.png`);
+saveSprite(torchSprite(), SCALE, `${OUT}/props/torch_01.png`);
+saveSprite(gravestoneSprite(), SCALE, `${OUT}/props/gravestone_01.png`);
+saveSprite(chestSprite(), SCALE, `${OUT}/props/chest_01.png`);
+saveSprite(sackSprite(), SCALE, `${OUT}/props/sack_01.png`);
+saveSprite(weaponRackSprite(), SCALE, `${OUT}/props/weapon_rack_01.png`);
 
-const playerMeta = saveSpriteSheet(directionalFrames(playerFrame), SCALE, `${OUT}/entities/player.png`);
-const trollMeta = saveSpriteSheet(directionalFrames(trollFrame), SCALE, `${OUT}/entities/troll.png`);
+// --- buildings -----------------------------------------------------------
+saveSprite(buildingForge(), SCALE, `${OUT}/buildings/forge_01.png`);
+saveSprite(buildingCottage(), SCALE, `${OUT}/buildings/cottage_01.png`);
+saveSprite(buildingHouse(), SCALE, `${OUT}/buildings/house_01.png`);
+saveSprite(buildingGuardPost(), SCALE, `${OUT}/buildings/guardpost_01.png`);
 
+// --- characters ----------------------------------------------------------
+const playerMeta = saveSpriteSheet(directionalFrames(playerFrame), SCALE, `${OUT}/characters/player_sheet.png`);
+saveSprite(borinFrame(), SCALE, `${OUT}/characters/npc_borin.png`);
+saveSprite(wrenFrame(), SCALE, `${OUT}/characters/npc_wren.png`);
+saveSprite(elderFrame(), SCALE, `${OUT}/characters/npc_corwin.png`);
+
+// --- creatures -----------------------------------------------------------
+const trollMeta = saveSpriteSheet(directionalFrames(trollFrame), SCALE, `${OUT}/creatures/troll_sheet.png`);
 const ratFrames = [ratFrame({ step: 0 }), ratFrame({ step: 1 })];
-const ratMeta = saveSpriteSheet(ratFrames, SCALE, `${OUT}/entities/rat.png`);
-
-const caveRatFrames = [
-  ratFrame({ furBase: "#4a3626", furDark: "#3a2a1c", eye: "#a83232", scale: 1.15, step: 0 }),
-  ratFrame({ furBase: "#4a3626", furDark: "#3a2a1c", eye: "#a83232", scale: 1.15, step: 1 }),
-];
-const caveRatMeta = saveSpriteSheet(caveRatFrames, SCALE, `${OUT}/entities/cave-rat.png`);
-
+const ratMeta = saveSpriteSheet(ratFrames, SCALE, `${OUT}/creatures/rat_sheet.png`);
+// Darker fur and red eyes mark the cave variant apart from the field rat.
+const CAVE_RAT = { furBase: "#4a3626", furDark: "#3a2a1c", eye: "#a83232", scale: 1.15 };
+const caveRatFrames = [ratFrame({ ...CAVE_RAT, step: 0 }), ratFrame({ ...CAVE_RAT, step: 1 })];
+const caveRatMeta = saveSpriteSheet(caveRatFrames, SCALE, `${OUT}/creatures/cave_rat_sheet.png`);
 const slimeFrames = [slimeFrame({ squish: false }), slimeFrame({ squish: true })];
-const slimeMeta = saveSpriteSheet(slimeFrames, SCALE, `${OUT}/entities/slime.png`);
+const slimeMeta = saveSpriteSheet(slimeFrames, SCALE, `${OUT}/creatures/slime_sheet.png`);
 
-saveSprite(swordIcon(), SCALE, `${OUT}/items/sword.png`);
-saveSprite(healthPotionIcon(), SCALE, `${OUT}/items/health-potion.png`);
-saveSprite(manaPotionIcon(), SCALE, `${OUT}/items/mana-potion.png`);
-saveSprite(goldCoinIcon(), SCALE, `${OUT}/items/gold-coin.png`);
+// --- effects -------------------------------------------------------------
+saveSprite(hitSparkSprite(), SCALE, `${OUT}/effects/hit_spark_01.png`);
+saveSprite(bloodSprite(), SCALE, `${OUT}/effects/blood_01.png`);
+saveSprite(dustSprite(), SCALE, `${OUT}/effects/dust_01.png`);
+saveSprite(sparkleSprite(), SCALE, `${OUT}/effects/sparkle_01.png`);
 
-saveSprite(backpackIcon(), SCALE, `${OUT}/items/backpack.png`);
-saveSprite(bagIcon(), SCALE, `${OUT}/items/bag.png`);
-saveSprite(axeIcon(), SCALE, `${OUT}/items/axe.png`);
-saveSprite(bowIcon(), SCALE, `${OUT}/items/bow.png`);
-saveSprite(arrowIcon(), SCALE, `${OUT}/items/arrow.png`);
-saveSprite(wandIcon(), SCALE, `${OUT}/items/wand.png`);
-saveSprite(woodenShieldIcon(), SCALE, `${OUT}/items/wooden-shield.png`);
-saveSprite(steelShieldIcon(), SCALE, `${OUT}/items/steel-shield.png`);
-saveSprite(leatherHelmetIcon(), SCALE, `${OUT}/items/leather-helmet.png`);
-saveSprite(steelHelmetIcon(), SCALE, `${OUT}/items/steel-helmet.png`);
-saveSprite(leatherArmorIcon(), SCALE, `${OUT}/items/leather-armor.png`);
-saveSprite(plateArmorIcon(), SCALE, `${OUT}/items/plate-armor.png`);
-saveSprite(leatherLegsIcon(), SCALE, `${OUT}/items/leather-legs.png`);
-saveSprite(plateLegsIcon(), SCALE, `${OUT}/items/plate-legs.png`);
-saveSprite(leatherBootsIcon(), SCALE, `${OUT}/items/leather-boots.png`);
-saveSprite(amuletIcon(), SCALE, `${OUT}/items/amulet.png`);
-saveSprite(ringIcon(), SCALE, `${OUT}/items/ring.png`);
-saveSprite(healSpellIcon(), SCALE, `${OUT}/items/spell-heal.png`);
-saveSprite(flameSpellIcon(), SCALE, `${OUT}/items/spell-flame.png`);
+// --- items ---------------------------------------------------------------
+saveSprite(swordIcon(), SCALE, `${OUT}/items/weapon_sword.png`);
+saveSprite(axeIcon(), SCALE, `${OUT}/items/weapon_axe.png`);
+saveSprite(bowIcon(), SCALE, `${OUT}/items/weapon_bow.png`);
+saveSprite(wandIcon(), SCALE, `${OUT}/items/weapon_wand.png`);
+saveSprite(arrowIcon(), SCALE, `${OUT}/items/ammo_arrow.png`);
+saveSprite(woodenShieldIcon(), SCALE, `${OUT}/items/shield_wooden.png`);
+saveSprite(steelShieldIcon(), SCALE, `${OUT}/items/shield_steel.png`);
+saveSprite(leatherHelmetIcon(), SCALE, `${OUT}/items/armor_helmet_leather.png`);
+saveSprite(steelHelmetIcon(), SCALE, `${OUT}/items/armor_helmet_steel.png`);
+saveSprite(leatherArmorIcon(), SCALE, `${OUT}/items/armor_body_leather.png`);
+saveSprite(plateArmorIcon(), SCALE, `${OUT}/items/armor_body_plate.png`);
+saveSprite(leatherLegsIcon(), SCALE, `${OUT}/items/armor_legs_leather.png`);
+saveSprite(plateLegsIcon(), SCALE, `${OUT}/items/armor_legs_plate.png`);
+saveSprite(leatherBootsIcon(), SCALE, `${OUT}/items/armor_boots_leather.png`);
+saveSprite(amuletIcon(), SCALE, `${OUT}/items/jewel_amulet.png`);
+saveSprite(ringIcon(), SCALE, `${OUT}/items/jewel_ring.png`);
+saveSprite(backpackIcon(), SCALE, `${OUT}/items/container_backpack.png`);
+saveSprite(bagIcon(), SCALE, `${OUT}/items/container_bag.png`);
+saveSprite(healthPotionIcon(), SCALE, `${OUT}/items/potion_health.png`);
+saveSprite(manaPotionIcon(), SCALE, `${OUT}/items/potion_mana.png`);
+saveSprite(goldCoinIcon(), SCALE, `${OUT}/items/coin_gold.png`);
+saveSprite(healSpellIcon(), SCALE, `${OUT}/items/spell_heal.png`);
+saveSprite(flameSpellIcon(), SCALE, `${OUT}/items/spell_flame.png`);
 
 savePNG(appIcon(192).toPNG(1), `${ICONS}/icon-192.png`);
 savePNG(appIcon(512).toPNG(1), `${ICONS}/icon-512.png`);
 
-console.log("Generated every game asset: terrain, props, buildings, characters, items, app icons.");
+console.log("Generated every game asset: terrain, environment, props, buildings, characters, creatures, effects, items, app icons.");
+console.log("water sheet meta:", waterMeta);
 console.log("PLAYER_SHEET must match:", playerMeta);
 console.log("TROLL_SHEET must match:", trollMeta);
 console.log("rat sheet meta:", ratMeta);

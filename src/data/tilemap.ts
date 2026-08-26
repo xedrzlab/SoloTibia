@@ -27,13 +27,54 @@ export const TEMPLE_SPAWN = { x: 34, y: 24 };
 // --- Mountain hunting ground: scattered blocking peaks over the rocky ground ---
 b.scatter(1, 1, MAP_WIDTH - 2, 17, "M", ["g"], 0.18, 501);
 
-// --- Plains hunting ground: trees/bushes/boulders scattered over grass ---
-b.scatter(1, 34, MAP_WIDTH - 2, 15, "t", ["."], 0.07, 601);
+// --- Mountain approach: dead trees and loose stone, nothing green ---
+b.scatter(1, 1, MAP_WIDTH - 2, 17, "y", ["g"], 0.02, 520);
+
+// --- Plains hunting ground: trees/bushes/rocks scattered over grass ---
+b.scatter(1, 34, MAP_WIDTH - 2, 15, "t", ["."], 0.06, 601);
 b.scatter(1, 34, MAP_WIDTH - 2, 15, "b", ["."], 0.035, 602);
-b.scatter(1, 34, MAP_WIDTH - 2, 15, "o", ["."], 0.025, 603);
+b.scatter(1, 34, MAP_WIDTH - 2, 15, "o", ["."], 0.02, 603);
+b.scatter(1, 34, MAP_WIDTH - 2, 15, "r", ["."], 0.015, 606);
+// Walkable ground cover: dressing that doesn't cost the player any space.
+b.scatter(1, 34, MAP_WIDTH - 2, 15, "f", ["."], 0.05, 607);
+b.scatter(1, 34, MAP_WIDTH - 2, 15, "n", ["."], 0.03, 608);
 // light decoration on the approach bands between town and each hunting ground
 b.scatter(1, 18, MAP_WIDTH - 2, 4, "t", ["."], 0.03, 604);
 b.scatter(1, 29, MAP_WIDTH - 2, 5, "t", ["."], 0.03, 605);
+b.scatter(1, 29, MAP_WIDTH - 2, 5, "f", ["."], 0.04, 609);
+
+// --- A pine wood in the south-west, dense enough to read as its own place ---
+b.scatter(3, 36, 18, 12, "p", ["."], 0.16, 610);
+b.scatter(3, 36, 18, 12, "m", ["."], 0.05, 611); // mushrooms in the shade
+b.scatter(3, 36, 18, 12, "u", ["."], 0.02, 612); // stumps: someone has been logging
+
+// --- Millpond: the plains landmark, and the only moving water in the world ---
+const POND = { x: 52, y: 36, w: 11, h: 8 };
+for (let yy = POND.y; yy < POND.y + POND.h; yy++) {
+  for (let xx = POND.x; xx < POND.x + POND.w; xx++) {
+    // Round the corners so the pond reads as a body of water, not a bathtub.
+    const nx = (xx - (POND.x + POND.w / 2 - 0.5)) / (POND.w / 2);
+    const ny = (yy - (POND.y + POND.h / 2 - 0.5)) / (POND.h / 2);
+    if (nx * nx + ny * ny <= 1) b.set(xx, yy, "~");
+  }
+}
+// A sandy shore where the grass meets the water.
+for (let yy = POND.y - 1; yy <= POND.y + POND.h; yy++) {
+  for (let xx = POND.x - 1; xx <= POND.x + POND.w; xx++) {
+    if (b.get(xx, yy) !== ".") continue;
+    const touchesWater = [
+      [1, 0],
+      [-1, 0],
+      [0, 1],
+      [0, -1],
+      [1, 1],
+      [-1, -1],
+      [1, -1],
+      [-1, 1],
+    ].some(([dx, dy]) => b.get(xx + dx, yy + dy) === "~");
+    if (touchesWater) b.set(xx, yy, "D");
+  }
+}
 
 // --- Underground cave (reached by trail off the plains) ---
 const CAVE = { x: 12, y: 36, w: 15, h: 12 };
@@ -85,6 +126,61 @@ b.set(25, 21, "x"); // crate, west of the blacksmith
 b.set(43, 20, "k"); // barrel, east of the herbalist
 b.set(43, 21, "x"); // crate, east of the herbalist
 b.set(39, 29, "k"); // barrel, east of the elder's house
+
+// --- Props: what makes a location read as a place rather than as terrain ---
+export interface PropPlacement {
+  textureKey: string;
+  x: number;
+  y: number;
+  /** Blocks movement without changing the terrain drawn underneath it. */
+  blocks?: boolean;
+}
+
+export const PROPS: PropPlacement[] = [
+  // Borin's forge yard: the tools of the trade, left outside.
+  { textureKey: "weapon-rack", x: 25, y: 22, blocks: true },
+  { textureKey: "sack", x: 29, y: 21, blocks: true },
+
+  // The old mine: a working face, abandoned mid-shift.
+  { textureKey: "cart", x: 17, y: 35, blocks: true },
+  { textureKey: "crate", x: 21, y: 35, blocks: true },
+  { textureKey: "sack", x: 21, y: 34, blocks: true },
+  { textureKey: "torch", x: 18, y: 36, blocks: true },
+  { textureKey: "torch", x: 20, y: 36, blocks: true },
+
+  // Millpond shore: somewhere to sit, and the remains of a fire.
+  { textureKey: "bench", x: 51, y: 40, blocks: true },
+  { textureKey: "campfire", x: 50, y: 42, blocks: true },
+  { textureKey: "barrel", x: 64, y: 39, blocks: true },
+
+  // A graveyard behind the guard post.
+  { textureKey: "gravestone", x: 19, y: 29, blocks: true },
+  { textureKey: "gravestone", x: 21, y: 30, blocks: true },
+  { textureKey: "gravestone", x: 19, y: 32, blocks: true },
+  { textureKey: "fence", x: 18, y: 28 },
+  { textureKey: "fence", x: 20, y: 28 },
+  { textureKey: "fence", x: 22, y: 28 },
+
+  // An abandoned camp deep in the pine wood — someone was out here.
+  { textureKey: "campfire", x: 9, y: 42, blocks: true },
+  { textureKey: "crate", x: 8, y: 43, blocks: true },
+  { textureKey: "chest", x: 11, y: 43, blocks: true },
+
+  // Town street lighting and seating.
+  { textureKey: "torch", x: 33, y: 27, blocks: true },
+  { textureKey: "torch", x: 36, y: 27, blocks: true },
+  { textureKey: "bench", x: 31, y: 21, blocks: true },
+  { textureKey: "bench", x: 38, y: 21, blocks: true },
+];
+
+// Collision is kept out of the tile grid on purpose: a prop should be able to
+// block a square without changing the ground drawn beneath it, and a large
+// sprite's footprint is rarely the same shape as its art (see the art
+// direction on collision vs visual size).
+const blockedCells = new Set<string>();
+for (const prop of PROPS) {
+  if (prop.blocks) blockedCells.add(`${prop.x},${prop.y}`);
+}
 
 // --- Signposts (decorative, non-blocking, placed just off the road) ---
 export interface SignPlacement {
@@ -179,6 +275,13 @@ export const MONSTER_SPAWNS: MonsterSpawn[] = [
 
 // Force every point-feature tile back to its intended terrain, in case a
 // scatter pass (which runs earlier) happened to land on the same cell.
+for (const prop of PROPS) {
+  // Props sit on open ground; a scattered tree on the same cell would render
+  // through them and block the square twice over.
+  if (b.get(prop.x, prop.y) === "t" || b.get(prop.x, prop.y) === "p" || b.get(prop.x, prop.y) === "b") {
+    b.set(prop.x, prop.y, ".");
+  }
+}
 for (const npc of NPC_SPAWNS) b.set(npc.x, npc.y, ".");
 for (const spawn of MONSTER_SPAWNS) {
   const inMountain = spawn.y <= 17;
@@ -201,17 +304,33 @@ export interface TileInfo {
   variants?: string[];
   /** A transparent-background decoration drawn on top of textureKey (e.g. a tree over grass). */
   overlayKey?: string;
+  /** Interchangeable versions of overlayKey — several tree species on one map char. */
+  overlayVariants?: string[];
+  /** Drawn as an animated sprite rather than baked into the static tile layer. */
+  animated?: boolean;
   safe: boolean; // protection-zone tiles: no monster aggro, valid respawn point
 }
 
 /**
- * Pick a tile's variant from its position. A cheap integer hash keeps the
- * pattern from lining up into visible stripes the way (x + y) would.
+ * A cheap integer hash of a cell's position. Used to pick tile and overlay
+ * variants: stable between runs, and it doesn't line up into visible stripes
+ * the way (x + y) would.
  */
+function cellHash(x: number, y: number): number {
+  return Math.abs(Math.imul(x * 374761393 + y * 668265263, 1274126177)) >>> 0;
+}
+
 export function variantForCell(tile: TileInfo, x: number, y: number): string {
   if (!tile.variants || tile.variants.length === 0) return tile.textureKey;
-  const hash = Math.abs(Math.imul(x * 374761393 + y * 668265263, 1274126177)) >>> 0;
-  return tile.variants[hash % tile.variants.length];
+  return tile.variants[cellHash(x, y) % tile.variants.length];
+}
+
+export function overlayForCell(tile: TileInfo, x: number, y: number): string | undefined {
+  if (tile.overlayVariants && tile.overlayVariants.length > 0) {
+    // Offset the hash so a cell doesn't pick "first of both lists" every time.
+    return tile.overlayVariants[cellHash(x + 7, y + 13) % tile.overlayVariants.length];
+  }
+  return tile.overlayKey;
 }
 
 const LEGEND: Record<string, TileInfo> = {
@@ -221,15 +340,41 @@ const LEGEND: Record<string, TileInfo> = {
   D: { walkable: true, textureKey: "dirt", variants: ["dirt", "dirt-2"], safe: false },
   C: { walkable: true, textureKey: "cave-floor", safe: false },
   W: { walkable: false, textureKey: "stone-wall", safe: false },
-  "~": { walkable: false, textureKey: "water", safe: false },
+  "~": { walkable: false, textureKey: "water", animated: true, safe: false },
   g: { walkable: true, textureKey: "rocky-ground", safe: false },
   M: { walkable: false, textureKey: "mountain", safe: false },
   R: { walkable: true, textureKey: "road", safe: false },
-  // t/b/o only ever scatter onto grass ('.') cells (see the scatter() calls
-  // above), so grass is always the correct base to draw underneath them.
-  t: { walkable: false, textureKey: "grass", variants: ["grass", "grass-2"], overlayKey: "tree", safe: false },
+
+  // Blocking vegetation and stone. These only ever scatter onto grass ('.')
+  // cells (see the scatter() calls above), so grass is the correct base.
+  t: {
+    walkable: false,
+    textureKey: "grass",
+    variants: ["grass", "grass-2"],
+    overlayVariants: ["tree", "tree-oak-2"],
+    safe: false,
+  },
+  p: { walkable: false, textureKey: "grass", variants: ["grass", "grass-2"], overlayKey: "tree-pine", safe: false },
+  y: { walkable: false, textureKey: "rocky-ground", overlayKey: "tree-dead", safe: false },
   b: { walkable: false, textureKey: "grass", variants: ["grass", "grass-2"], overlayKey: "bush", safe: false },
-  o: { walkable: false, textureKey: "grass", variants: ["grass", "grass-3"], overlayKey: "boulder", safe: false },
+  o: {
+    walkable: false,
+    textureKey: "grass",
+    variants: ["grass", "grass-3"],
+    overlayVariants: ["boulder", "rock-mossy"],
+    safe: false,
+  },
+  r: { walkable: false, textureKey: "grass", variants: ["grass", "grass-3"], overlayKey: "rock-medium", safe: false },
+  u: { walkable: false, textureKey: "grass", overlayKey: "stump", safe: false },
+
+  // Walkable ground cover — detail the player can stand on, so the world can
+  // be dressed without carving up the walkable space.
+  f: { walkable: true, textureKey: "grass", variants: ["grass", "grass-2"], overlayKey: "flowers", safe: false },
+  m: { walkable: true, textureKey: "grass", overlayKey: "mushrooms", safe: false },
+  n: { walkable: true, textureKey: "grass", variants: ["grass", "grass-3"], overlayKey: "rock-small", safe: false },
+  N: { walkable: true, textureKey: "cave-floor", overlayKey: "rock-small", safe: false },
+
+  // Town dressing.
   k: { walkable: false, textureKey: "grass", overlayKey: "barrel", safe: false },
   x: { walkable: false, textureKey: "grass", overlayKey: "crate", safe: false },
   w: { walkable: false, textureKey: "temple-floor", overlayKey: "well", safe: true },
@@ -246,7 +391,7 @@ export function tileAt(x: number, y: number): TileInfo {
 }
 
 export function isWalkable(x: number, y: number): boolean {
-  return tileAt(x, y).walkable;
+  return tileAt(x, y).walkable && !blockedCells.has(`${x},${y}`);
 }
 
 export function forEachTile(cb: (x: number, y: number, tile: TileInfo) => void): void {
