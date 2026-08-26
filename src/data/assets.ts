@@ -98,6 +98,12 @@ export const IMAGE_ASSETS: ImageAsset[] = [
   { key: "building-house", path: "buildings/house_01.png" },
   { key: "building-guardpost", path: "buildings/guardpost_01.png" },
   { key: "building-church", path: "buildings/church_01.png" },
+  { key: "building-timber", path: "buildings/timber_01.png" },
+  { key: "building-brick", path: "buildings/brick_01.png" },
+  { key: "building-manor", path: "buildings/manor_01.png" },
+  { key: "building-warm-plaster", path: "buildings/warm_plaster_01.png" },
+  { key: "building-shingle", path: "buildings/shingle_01.png" },
+  { key: "building-fieldstone", path: "buildings/fieldstone_01.png" },
 
   // --- npcs ---
   { key: "npc-borin", path: "characters/npc_borin.png" },

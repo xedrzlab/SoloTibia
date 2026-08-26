@@ -139,12 +139,12 @@ export interface BuildingPlacement {
 // in with the decorative houses on the same rows.
 export const BUILDINGS: BuildingPlacement[] = [
   // --- Upper row (footprints y=10..12, doors y=12, road y=13) ---
-  { textureKey: "building-house", footprintX: 16, footprintY: 10, footprintW: 3, footprintH: 3 },
+  { textureKey: "building-timber", footprintX: 16, footprintY: 10, footprintW: 3, footprintH: 3 },
   { textureKey: "building-cottage", footprintX: 20, footprintY: 10, footprintW: 3, footprintH: 3 },
-  { textureKey: "building-cottage", footprintX: 27, footprintY: 10, footprintW: 3, footprintH: 3 },
-  { textureKey: "building-house", footprintX: 38, footprintY: 10, footprintW: 3, footprintH: 3 },
+  { textureKey: "building-brick", footprintX: 27, footprintY: 10, footprintW: 3, footprintH: 3 },
+  { textureKey: "building-manor", footprintX: 38, footprintY: 10, footprintW: 3, footprintH: 3 },
   { textureKey: "building-cottage", footprintX: 45, footprintY: 10, footprintW: 3, footprintH: 3 },
-  { textureKey: "building-house", footprintX: 49, footprintY: 10, footprintW: 3, footprintH: 3 },
+  { textureKey: "building-fieldstone", footprintX: 49, footprintY: 10, footprintW: 3, footprintH: 3 },
 
   // --- Northern shops row (footprints y=17..19, doors y=19, road y=20) ---
   // Borin's forge — melee shop.
@@ -154,14 +154,14 @@ export const BUILDINGS: BuildingPlacement[] = [
   // Guardpost sits west of Borin, over the north road.
   { textureKey: "building-guardpost", footprintX: 30, footprintY: 15, footprintW: 3, footprintH: 3 },
   // Two extra houses beside each shop.
-  { textureKey: "building-house", footprintX: 20, footprintY: 17, footprintW: 3, footprintH: 3 },
-  { textureKey: "building-cottage", footprintX: 47, footprintY: 17, footprintW: 3, footprintH: 3 },
+  { textureKey: "building-warm-plaster", footprintX: 20, footprintY: 17, footprintW: 3, footprintH: 3 },
+  { textureKey: "building-shingle", footprintX: 47, footprintY: 17, footprintW: 3, footprintH: 3 },
   { textureKey: "building-house", footprintX: 51, footprintY: 17, footprintW: 3, footprintH: 3 },
 
   // --- Middle band (footprints y=21..23, doors y=23, road y=24-25) ---
   // Bank at the far west, depot at the far east — both flank the church.
   { textureKey: "building-house", footprintX: 14, footprintY: 21, footprintW: 3, footprintH: 3 }, // bank
-  { textureKey: "building-cottage", footprintX: 18, footprintY: 21, footprintW: 3, footprintH: 3 },
+  { textureKey: "building-timber", footprintX: 18, footprintY: 21, footprintW: 3, footprintH: 3 },
   // Wren's apothecary.
   { textureKey: "building-house", footprintX: 25, footprintY: 21, footprintW: 3, footprintH: 3 },
   // The church.
@@ -172,17 +172,17 @@ export const BUILDINGS: BuildingPlacement[] = [
   { textureKey: "building-cottage", footprintX: 51, footprintY: 21, footprintW: 3, footprintH: 3 }, // depot
 
   // --- Lower row (footprints y=27..29, doors y=29, road y=30) ---
-  { textureKey: "building-cottage", footprintX: 16, footprintY: 27, footprintW: 3, footprintH: 3 },
+  { textureKey: "building-brick", footprintX: 16, footprintY: 27, footprintW: 3, footprintH: 3 },
   { textureKey: "building-house", footprintX: 20, footprintY: 27, footprintW: 3, footprintH: 3 },
-  { textureKey: "building-cottage", footprintX: 27, footprintY: 27, footprintW: 3, footprintH: 3 },
+  { textureKey: "building-warm-plaster", footprintX: 27, footprintY: 27, footprintW: 3, footprintH: 3 },
   { textureKey: "building-house", footprintX: 38, footprintY: 27, footprintW: 3, footprintH: 3 },
   { textureKey: "building-cottage", footprintX: 45, footprintY: 27, footprintW: 3, footprintH: 3 },
-  { textureKey: "building-house", footprintX: 49, footprintY: 27, footprintW: 3, footprintH: 3 },
+  { textureKey: "building-fieldstone", footprintX: 49, footprintY: 27, footprintW: 3, footprintH: 3 },
 
   // --- Southernmost row (footprints y=33..35, doors y=35, road y=36) ---
   { textureKey: "building-house", footprintX: 20, footprintY: 33, footprintW: 3, footprintH: 3 },
   { textureKey: "building-cottage", footprintX: 27, footprintY: 33, footprintW: 3, footprintH: 3 },
-  { textureKey: "building-cottage", footprintX: 40, footprintY: 33, footprintW: 3, footprintH: 3 },
+  { textureKey: "building-shingle", footprintX: 40, footprintY: 33, footprintW: 3, footprintH: 3 },
   { textureKey: "building-house", footprintX: 47, footprintY: 33, footprintW: 3, footprintH: 3 },
 
   // --- Farmer's cottage outside the wall on the south road ---
@@ -337,6 +337,59 @@ export const PROPS: PropPlacement[] = [
   // without blocking the E-W spine.
   { textureKey: "torch", x: 33, y: 26, blocks: true },
   { textureKey: "torch", x: 36, y: 26, blocks: true },
+
+  // --- Backyards: fenced patches behind selected houses with small props,
+  // so each corner of town has its own character. ---
+
+  // Timber house (x:16, y:10) — side yard to the west.
+  { textureKey: "fence", x: 14, y: 9, blocks: true },
+  { textureKey: "fence", x: 14, y: 10, blocks: true },
+  { textureKey: "fence", x: 14, y: 11, blocks: true },
+  { textureKey: "fence", x: 14, y: 12, blocks: true },
+  { textureKey: "fence", x: 15, y: 9, blocks: true },
+  { textureKey: "fence", x: 15, y: 12, blocks: true },
+  { textureKey: "barrel", x: 15, y: 10, blocks: true },
+  { textureKey: "crate", x: 15, y: 11, blocks: true },
+
+  // Manor house (x:38, y:10) — garden to the east.
+  { textureKey: "fence", x: 41, y: 9, blocks: true },
+  { textureKey: "fence", x: 42, y: 9, blocks: true },
+  { textureKey: "fence", x: 43, y: 9, blocks: true },
+  { textureKey: "fence", x: 43, y: 10, blocks: true },
+  { textureKey: "fence", x: 43, y: 11, blocks: true },
+  { textureKey: "fence", x: 43, y: 12, blocks: true },
+  { textureKey: "fence", x: 41, y: 12, blocks: true },
+  { textureKey: "fence", x: 42, y: 12, blocks: true },
+  { textureKey: "planter", x: 41, y: 10, blocks: true },
+  { textureKey: "planter", x: 42, y: 11, blocks: true },
+
+  // Brick house (x:16, y:27) — small yard to the south.
+  { textureKey: "fence", x: 16, y: 31, blocks: true },
+  { textureKey: "fence", x: 17, y: 31, blocks: true },
+  { textureKey: "fence", x: 18, y: 31, blocks: true },
+  { textureKey: "fence", x: 16, y: 32, blocks: true },
+  { textureKey: "fence", x: 18, y: 32, blocks: true },
+  { textureKey: "sack", x: 17, y: 32, blocks: true },
+
+  // Warm-plaster house (x:27, y:27) — yard to the south with a cart.
+  { textureKey: "fence", x: 27, y: 31, blocks: true },
+  { textureKey: "fence", x: 28, y: 31, blocks: true },
+  { textureKey: "fence", x: 29, y: 31, blocks: true },
+  { textureKey: "fence", x: 30, y: 31, blocks: true },
+  { textureKey: "fence", x: 30, y: 32, blocks: true },
+  { textureKey: "fence", x: 27, y: 32, blocks: true },
+  { textureKey: "barrel", x: 28, y: 32, blocks: true },
+  { textureKey: "crate", x: 29, y: 32, blocks: true },
+
+  // Shingle house (x:40, y:33) — woodsy backyard to the south.
+  { textureKey: "fence", x: 40, y: 37, blocks: true },
+  { textureKey: "fence", x: 41, y: 37, blocks: true },
+  { textureKey: "fence", x: 42, y: 37, blocks: true },
+  { textureKey: "fence", x: 43, y: 37, blocks: true },
+  { textureKey: "fence", x: 43, y: 38, blocks: true },
+  { textureKey: "fence", x: 40, y: 38, blocks: true },
+  { textureKey: "barrel", x: 41, y: 38, blocks: true },
+  { textureKey: "sack", x: 42, y: 38, blocks: true },
 
   // Farm yard dressing.
   { textureKey: "sack", x: 32, y: 44, blocks: true },

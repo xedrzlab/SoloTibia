@@ -1849,6 +1849,261 @@ function buildingGuardPost() {
 }
 
 // ---------------------------------------------------------------------------
+// Unique house variants — each has its own wall material, roof style, window
+// shape, and detailing so the town doesn't look copy-pasted.
+// ---------------------------------------------------------------------------
+
+// Additional palette families for the new buildings.
+const ROOF_MOSS = { dark: "#2a4020", mid: "#3a5a2a", light: "#4a6a35", hi: "#6a8a50" };
+const WALL_BRICK = { dark: "#5a2820", mid: "#8a3c2a", light: "#a84e38", trim: "#3a1a10" };
+const WALL_TIMBER = { dark: "#2a1a0c", mid: "#3a2812", light: "#4a3520", trim: "#1a0e06" };
+const WALL_BLUESTONE = { dark: "#2a3040", mid: "#3e4a5c", light: "#566478", trim: "#1c2230" };
+const WALL_WARM_PLASTER = { dark: "#7a6040", mid: "#b89868", light: "#d4b480", trim: "#5a3a1a" };
+const WALL_SHINGLE = { dark: "#3a4838", mid: "#506850", light: "#688068", trim: "#2a3428" };
+const WALL_FIELDSTONE = { dark: "#484440", mid: "#686460", light: "#888078", trim: "#383430" };
+
+/** Timber-frame house: dark oak beams over white plaster, steep slate roof, diamond-pane window. */
+function buildingTimber() {
+  const s = buildingBase({ roof: ROOF_SLATE, wall: WALL_PLASTER });
+
+  // Heavy timber framing — the defining feature. Vertical posts at each third,
+  // a horizontal rail mid-wall, and diagonal braces in the upper panels.
+  const trim = WALL_TIMBER.mid;
+  const trimD = WALL_TIMBER.dark;
+  // Verticals
+  for (const x of [3, 15, 32, BUILDING_W - 4]) {
+    s.fillRect(x, 30, 2, 15, trim);
+    s.fillRect(x + 1, 30, 1, 15, trimD);
+  }
+  // Horizontal rail
+  s.fillRect(3, 37, BUILDING_W - 6, 2, trim);
+  s.fillRect(3, 38, BUILDING_W - 6, 1, trimD);
+  // Diagonal braces in the two outer panels
+  for (let i = 0; i < 6; i++) {
+    s.setPixel(5 + i * 2, 31 + i, trimD);
+    s.setPixel(6 + i * 2, 31 + i, trim);
+    s.setPixel(43 - i * 2, 31 + i, trimD);
+    s.setPixel(42 - i * 2, 31 + i, trim);
+  }
+
+  drawDoor(s, 24, 33, 45);
+
+  // Diamond-pane window — a grid of small panes at a 45° slant.
+  s.fillRect(35, 34, 8, 6, DOOR_WOOD.dark);
+  s.fillRect(36, 35, 6, 4, GLASS.dark);
+  s.fillRect(36, 35, 6, 1, GLASS.sheen);
+  // Diamond lattice
+  for (let dx = 0; dx < 6; dx += 2) {
+    s.setPixel(36 + dx, 37, "#4a3520");
+    s.setPixel(37 + dx, 36, "#4a3520");
+  }
+
+  // Small flower box below the window
+  s.fillRect(35, 40, 8, 2, WALL_PLASTER.trim);
+  s.fillRect(36, 40, 2, 1, "#3f9450");
+  s.fillRect(39, 40, 2, 1, "#c85050");
+  s.fillRect(41, 40, 1, 1, "#3f9450");
+
+  // No chimney — the timber-frame look stands on its own.
+  return s;
+}
+
+/** Brick house: warm red brick walls, flat grey roof, arched window with iron grille. */
+function buildingBrick() {
+  const s = buildingBase({ roof: ROOF_SLATE, wall: WALL_BRICK });
+
+  // Brick coursing on the front wall — alternating half-bond pattern.
+  for (let y = 31; y < 45; y += 3) {
+    s.line(4, y, BUILDING_W - 5, y, WALL_BRICK.dark);
+    const off = ((y / 3) % 2) * 4;
+    for (let x = 6 + off; x < BUILDING_W - 5; x += 8) {
+      s.line(x, y, x, Math.min(y + 2, 44), WALL_BRICK.dark);
+    }
+  }
+  // Highlight a few individual bricks for variety
+  s.fillRect(8, 32, 3, 2, WALL_BRICK.light);
+  s.fillRect(28, 35, 3, 2, WALL_BRICK.light);
+  s.fillRect(16, 41, 3, 2, WALL_BRICK.light);
+
+  drawDoor(s, 20, 33, 45);
+
+  // Arched window with iron grille
+  s.fillRect(32, 33, 10, 9, WALL_BRICK.dark);
+  s.fillRect(33, 34, 8, 7, GLASS.dark);
+  s.fillRect(33, 34, 8, 1, GLASS.sheen);
+  // Arch top — darken the corners
+  s.setPixel(33, 34, WALL_BRICK.dark);
+  s.setPixel(40, 34, WALL_BRICK.dark);
+  // Iron grille
+  s.line(37, 34, 37, 40, "#3a3a3a");
+  s.line(33, 37, 40, 37, "#3a3a3a");
+
+  // Decorative stone lintel above the door
+  s.fillRect(15, 32, 11, 1, WALL_STONE.light);
+  s.fillRect(15, 31, 11, 1, WALL_STONE.mid);
+
+  // Short chimney, right side
+  s.fillRect(36, 0, 6, 8, WALL_BRICK.dark);
+  s.fillRect(37, 1, 4, 6, WALL_BRICK.mid);
+  s.fillRect(37, 1, 1, 6, WALL_BRICK.light);
+  s.fillRect(35, 0, 8, 2, WALL_BRICK.mid);
+  s.fillRect(38, 2, 2, 1, "#0f0d0c");
+  return s;
+}
+
+/** Manor house: blue-grey stone, dark slate roof, two tall windows, a flower box. */
+function buildingManor() {
+  const s = buildingBase({ roof: ROOF_SLATE, wall: WALL_BLUESTONE });
+
+  // Quoins — cut stone corner blocks
+  for (let y = 30; y < 45; y += 4) {
+    s.fillRect(3, y, 3, 3, WALL_BLUESTONE.light);
+    s.fillRect(BUILDING_W - 6, y, 3, 3, WALL_BLUESTONE.light);
+  }
+
+  // Two tall paired windows
+  drawWindow(s, 6, 33, 6, 8, null);
+  drawWindow(s, 34, 33, 6, 8, null);
+  // Stone sills
+  s.fillRect(5, 41, 8, 1, WALL_BLUESTONE.light);
+  s.fillRect(33, 41, 8, 1, WALL_BLUESTONE.light);
+
+  drawDoor(s, 22, 33, 45);
+
+  // Decorative keystone above the door
+  s.fillRect(18, 31, 9, 2, WALL_BLUESTONE.light);
+  s.fillRect(21, 30, 3, 1, WALL_BLUESTONE.light);
+
+  // Chimney — offset left
+  s.fillRect(8, 0, 7, 10, WALL_BLUESTONE.dark);
+  s.fillRect(9, 1, 5, 8, WALL_BLUESTONE.mid);
+  s.fillRect(9, 1, 2, 8, WALL_BLUESTONE.light);
+  s.fillRect(7, 0, 9, 2, WALL_BLUESTONE.light);
+  s.fillRect(10, 2, 3, 2, "#0f0d0c");
+
+  // Flower box below one window
+  s.fillRect(6, 42, 6, 2, WALL_TIMBER.mid);
+  s.fillRect(7, 42, 1, 1, "#c85050");
+  s.fillRect(9, 42, 1, 1, "#e0a040");
+  s.fillRect(10, 42, 1, 1, "#c85050");
+  return s;
+}
+
+/** Warm plaster house: yellow/cream stucco, terracotta roof, round porthole window. */
+function buildingWarmPlaster() {
+  const s = buildingBase({ roof: ROOF_CLAY, wall: WALL_WARM_PLASTER });
+
+  // Smooth stucco look — fewer speckles, more uniform.
+  s.fillRect(5, 31, BUILDING_W - 10, 13, WALL_WARM_PLASTER.mid);
+  s.speckleRect(5, 31, BUILDING_W - 10, 13, 10, WALL_WARM_PLASTER.dark, 55);
+  s.fillRect(3, 30, 2, 15, WALL_WARM_PLASTER.light);
+  s.fillRect(BUILDING_W - 5, 30, 2, 15, WALL_WARM_PLASTER.dark);
+
+  drawDoor(s, 18, 33, 45);
+
+  // Porthole window — circular, with a simple cross mullion
+  const pCx = 36, pCy = 37;
+  s.fillCircle(pCx, pCy, 4.5, DOOR_WOOD.dark);
+  s.fillCircle(pCx, pCy, 3.5, GLASS.dark);
+  s.fillCircle(pCx, pCy, 3, "#2a3a50");
+  s.setPixel(pCx - 1, pCy - 1, GLASS.sheen);
+  s.setPixel(pCx, pCy - 1, GLASS.sheen);
+  // Cross mullion
+  s.line(pCx, pCy - 3, pCx, pCy + 3, DOOR_WOOD.dark);
+  s.line(pCx - 3, pCy, pCx + 3, pCy, DOOR_WOOD.dark);
+
+  // Terracotta pot beside the door
+  s.fillRect(10, 43, 3, 2, "#8a4020");
+  s.fillRect(10, 42, 3, 1, "#3f9450");
+  s.fillRect(11, 41, 1, 1, "#50a060");
+
+  // Small awning above the door
+  s.fillRect(13, 32, 11, 1, ROOF_CLAY.dark);
+  s.fillRect(13, 31, 11, 1, ROOF_CLAY.mid);
+  s.fillRect(14, 31, 4, 1, ROOF_CLAY.light);
+  return s;
+}
+
+/** Shingle house: green-grey weathered wood siding, brown shingled roof, wide window. */
+function buildingShingle() {
+  const s = buildingBase({ roof: ROOF_THATCH, wall: WALL_SHINGLE });
+
+  // Horizontal wood planks — clapboard siding effect
+  for (let y = 31; y < 45; y += 3) {
+    s.line(4, y, BUILDING_W - 5, y, WALL_SHINGLE.dark);
+    s.line(4, y + 1, BUILDING_W - 5, y + 1, WALL_SHINGLE.light);
+  }
+
+  // Thatch re-texture: looser straw feel
+  s.speckleRect(3, 3, BUILDING_W - 6, 24, 80, ROOF_THATCH.dark, 61);
+  s.speckleRect(3, 3, BUILDING_W - 6, 24, 45, ROOF_THATCH.hi, 62);
+  s.fillRect(2, 26, BUILDING_W - 4, 2, ROOF_THATCH.dark);
+
+  drawDoor(s, 14, 33, 45);
+
+  // Wide shuttered window — green shutters match the walls
+  drawWindow(s, 28, 35, 10, 6, WALL_SHINGLE.mid);
+
+  // A small plank shelf below the window with items
+  s.fillRect(28, 41, 10, 1, WALL_SHINGLE.trim);
+  s.fillRect(29, 41, 2, 1, "#8a6a3d");
+  s.fillRect(35, 41, 2, 1, "#8a6a3d");
+
+  // Woodpile leaning against the right wall
+  for (let i = 0; i < 3; i++) {
+    s.fillRect(BUILDING_W - 8 + i, 43 - i, 2, 2 + i, WALL_TIMBER.mid);
+    s.fillRect(BUILDING_W - 8 + i, 43 - i, 1, 1, WALL_TIMBER.light);
+  }
+  return s;
+}
+
+/** Fieldstone cottage: rough stacked fieldstone walls, mossy thatch roof, slot window. */
+function buildingFieldstone() {
+  const s = buildingBase({ roof: ROOF_MOSS, wall: WALL_FIELDSTONE });
+
+  // Mossy thatch re-texture
+  s.fillRect(2, 3, BUILDING_W - 4, 24, ROOF_MOSS.mid);
+  s.speckleRect(3, 3, BUILDING_W - 6, 24, 70, ROOF_MOSS.dark, 81);
+  s.speckleRect(3, 3, BUILDING_W - 6, 24, 50, ROOF_MOSS.light, 82);
+  s.speckleRect(3, 3, BUILDING_W - 6, 24, 25, ROOF_MOSS.hi, 83);
+  s.fillRect(2, 26, BUILDING_W - 4, 2, ROOF_MOSS.dark);
+  for (let x = 3; x < BUILDING_W - 3; x += 4) s.setPixel(x, 28, ROOF_MOSS.dark);
+  // Ridge cap — mossy
+  s.fillRect(2, 2, BUILDING_W - 4, 2, ROOF_MOSS.dark);
+  s.fillRect(3, 2, BUILDING_W - 10, 1, ROOF_MOSS.hi);
+
+  // Irregular fieldstone blocks on the wall face
+  const stones = [
+    [5, 31, 6, 3], [12, 31, 7, 4], [20, 31, 5, 3], [26, 31, 8, 4],
+    [35, 31, 6, 3], [5, 35, 7, 3], [13, 36, 6, 3], [20, 35, 8, 4],
+    [29, 36, 5, 3], [35, 35, 7, 3], [5, 39, 5, 4], [11, 40, 7, 3],
+    [19, 40, 6, 3], [26, 40, 8, 3], [35, 39, 7, 4],
+  ];
+  for (const [sx, sy, sw, sh] of stones) {
+    s.fillRect(sx, sy, sw, sh, WALL_FIELDSTONE.mid);
+    s.fillRect(sx, sy, sw, 1, WALL_FIELDSTONE.light);
+    s.fillRect(sx + sw - 1, sy, 1, sh, WALL_FIELDSTONE.dark);
+  }
+
+  drawDoor(s, 24, 34, 45);
+
+  // Narrow slot window — simple and rustic
+  s.fillRect(8, 35, 4, 6, WALL_FIELDSTONE.dark);
+  s.fillRect(9, 36, 2, 4, GLASS.dark);
+  s.fillRect(9, 36, 1, 1, GLASS.sheen);
+
+  // Second slot window on the right
+  s.fillRect(37, 35, 4, 6, WALL_FIELDSTONE.dark);
+  s.fillRect(38, 36, 2, 4, GLASS.dark);
+  s.fillRect(38, 36, 1, 1, GLASS.sheen);
+
+  // Moss patches at the base
+  s.fillRect(4, 44, 3, 1, ROOF_MOSS.mid);
+  s.fillRect(BUILDING_W - 7, 44, 3, 1, ROOF_MOSS.mid);
+  return s;
+}
+
+// ---------------------------------------------------------------------------
 // Town NPCs — original designs (each a distinct silhouette, not palette
 // swaps of one base), sized to match the player character (16x16 -> 32x32,
 // same scale as the player sheet) rather than towering over it.
@@ -2796,6 +3051,12 @@ saveSprite(buildingCottage(), SCALE, `${OUT}/buildings/cottage_01.png`);
 saveSprite(buildingHouse(), SCALE, `${OUT}/buildings/house_01.png`);
 saveSprite(buildingGuardPost(), SCALE, `${OUT}/buildings/guardpost_01.png`);
 saveSprite(buildingChurch(), SCALE, `${OUT}/buildings/church_01.png`);
+saveSprite(buildingTimber(), SCALE, `${OUT}/buildings/timber_01.png`);
+saveSprite(buildingBrick(), SCALE, `${OUT}/buildings/brick_01.png`);
+saveSprite(buildingManor(), SCALE, `${OUT}/buildings/manor_01.png`);
+saveSprite(buildingWarmPlaster(), SCALE, `${OUT}/buildings/warm_plaster_01.png`);
+saveSprite(buildingShingle(), SCALE, `${OUT}/buildings/shingle_01.png`);
+saveSprite(buildingFieldstone(), SCALE, `${OUT}/buildings/fieldstone_01.png`);
 
 // --- characters ----------------------------------------------------------
 // The player is a paper doll: one sheet per layer, all sharing frame indices
@@ -2865,4 +3126,3 @@ console.log("PLAYER_SHEET must match:", playerMeta);
 console.log("TROLL_SHEET must match:", trollMeta);
 console.log("rat sheet meta:", ratMeta);
 console.log("cave rat sheet meta:", caveRatMeta);
-console.log("slime sheet meta:", slimeMeta);
