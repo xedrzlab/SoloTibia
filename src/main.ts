@@ -9,7 +9,16 @@ import { UIScene } from "./scenes/UIScene";
 import { TARGET_FPS } from "./game/constants";
 import { initOrientationLock } from "./game/orientationLock";
 
-registerSW({ immediate: true });
+// Take a fresh service worker as soon as it's ready and reload, so a new
+// build (Title screen, character select, whatever else changed) is picked up
+// on next open of the PWA rather than hanging on the previous cached bundle
+// until the user manually clears storage.
+const updateSW = registerSW({
+  immediate: true,
+  onNeedRefresh() {
+    updateSW(true);
+  },
+});
 
 const game = new Phaser.Game({
   // Real users always get Phaser.AUTO (WebGL where available — better perf).
