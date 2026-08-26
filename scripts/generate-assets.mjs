@@ -351,6 +351,245 @@ function goldCoinIcon() {
   return s;
 }
 
+// --- Containers ---
+
+/** Shared body for the bag/backpack icons, parameterised by size and leather tone. */
+function packIcon({ dark, mid, light, strap, width, height, top }) {
+  const s = new Sprite(16, 16);
+  const x = 8 - width / 2;
+  s.fillRect(x, top, width, height, mid);
+  s.fillRect(x, top, width, 1, light); // lid highlight
+  s.fillRect(x, top + height - 1, width, 1, dark); // base shadow
+  s.fillRect(x, top, 1, height, dark);
+  s.fillRect(x + width - 1, top, 1, height, dark);
+  s.fillRect(x + 1, top + 2, width - 2, 1, dark); // flap seam
+  s.fillRect(7, top + 3, 2, 2, strap); // buckle
+  return s;
+}
+
+function backpackIcon() {
+  const s = packIcon({
+    dark: "#4a2f1a",
+    mid: "#7a5230",
+    light: "#96683c",
+    strap: "#e6c34a",
+    width: 10,
+    height: 11,
+    top: 3,
+  });
+  s.fillRect(4, 1, 2, 3, "#5c3c22"); // shoulder straps
+  s.fillRect(10, 1, 2, 3, "#5c3c22");
+  return s;
+}
+
+function bagIcon() {
+  const s = packIcon({
+    dark: "#5a3d22",
+    mid: "#8a6a3d",
+    light: "#a3814f",
+    strap: "#c9a24a",
+    width: 8,
+    height: 8,
+    top: 6,
+  });
+  s.fillRect(6, 4, 4, 2, "#5a3d22"); // cinched neck
+  return s;
+}
+
+// --- Weapons ---
+
+function axeIcon() {
+  const s = new Sprite(16, 16);
+  s.fillRect(7, 3, 2, 11, "#5a3d22"); // haft
+  s.fillRect(7, 3, 1, 11, "#3a2717");
+  s.fillEllipse(5, 5, 4, 3.4, "#c9ccd1"); // blade
+  s.fillEllipse(5.6, 5, 3, 2.6, "#9aa0a8");
+  s.fillRect(6, 2, 4, 1, "#eef0f3");
+  return s;
+}
+
+function bowIcon() {
+  const s = new Sprite(16, 16);
+  // Limbs: a C-shape opening right, drawn as two arcs of stacked pixels.
+  for (let y = 2; y <= 13; y++) {
+    const bulge = Math.round(3 * Math.sin(((y - 2) / 11) * Math.PI));
+    s.setPixel(4 + bulge, y, "#6b4a2a");
+    s.setPixel(5 + bulge, y, "#8a6a3d");
+  }
+  s.line(4, 2, 4, 13, "#d8d2c0"); // string
+  return s;
+}
+
+function arrowIcon() {
+  const s = new Sprite(16, 16);
+  s.fillRect(7, 4, 2, 9, "#8a6a3d"); // shaft
+  s.fillRect(7, 4, 1, 9, "#5a3d22");
+  s.fillRect(6, 2, 4, 2, "#c9ccd1"); // head
+  s.setPixel(8, 1, "#eef0f3");
+  s.fillRect(5, 12, 2, 3, "#c9302f"); // fletching
+  s.fillRect(9, 12, 2, 3, "#c9302f");
+  return s;
+}
+
+function wandIcon() {
+  const s = new Sprite(16, 16);
+  s.fillRect(7, 6, 2, 9, "#3a2717"); // shaft
+  s.fillRect(7, 6, 1, 9, "#241609");
+  s.fillCircle(8, 4, 3, "#4a2f6b"); // vortex gem
+  s.fillCircle(8, 4, 2, "#8a5cc9");
+  s.setPixel(7, 3, "#d9b8ff");
+  return s;
+}
+
+// --- Shields ---
+
+/** Shared heater-shield silhouette: square shoulders tapering to a point. */
+function shieldIcon({ dark, mid, light, boss }) {
+  const s = new Sprite(16, 16);
+  for (let y = 2; y <= 13; y++) {
+    const t = (y - 2) / 11;
+    const halfWidth = Math.max(1, Math.round(5 * (1 - t * t)));
+    s.fillRect(8 - halfWidth, y, halfWidth * 2, 1, mid);
+    s.setPixel(8 - halfWidth, y, dark);
+    s.setPixel(8 + halfWidth - 1, y, dark);
+  }
+  s.fillRect(3, 2, 10, 1, light); // top edge
+  s.fillCircle(8, 7, 2, boss); // central boss
+  return s;
+}
+
+function woodenShieldIcon() {
+  return shieldIcon({ dark: "#4a2f1a", mid: "#7a5230", light: "#96683c", boss: "#c9a24a" });
+}
+
+function steelShieldIcon() {
+  return shieldIcon({ dark: "#5c6068", mid: "#9aa0a8", light: "#d5dae0", boss: "#e6c34a" });
+}
+
+// --- Armor ---
+
+/** Shared helmet silhouette: domed skull with a face opening. */
+function helmetIcon({ dark, mid, light, full }) {
+  const s = new Sprite(16, 16);
+  s.fillCircle(8, 8, 5, mid);
+  s.fillRect(3, 8, 10, 5, mid);
+  s.fillCircle(8, 7, 4.2, light); // domed highlight
+  s.fillRect(3, 12, 10, 1, dark);
+  s.fillRect(5, 9, 6, full ? 2 : 3, "#1a1a1e"); // visor slit / face gap
+  if (full) s.fillRect(7, 9, 2, 4, dark); // nose guard
+  return s;
+}
+
+function leatherHelmetIcon() {
+  return helmetIcon({ dark: "#4a2f1a", mid: "#7a5230", light: "#96683c", full: false });
+}
+
+function steelHelmetIcon() {
+  return helmetIcon({ dark: "#5c6068", mid: "#9aa0a8", light: "#c9ccd1", full: true });
+}
+
+/** Shared cuirass silhouette: shoulders, chest, waist. */
+function armorIcon({ dark, mid, light, trim }) {
+  const s = new Sprite(16, 16);
+  s.fillRect(3, 3, 10, 3, mid); // shoulders
+  s.fillRect(4, 6, 8, 7, mid); // chest
+  s.fillRect(4, 6, 8, 1, light);
+  s.fillRect(3, 3, 1, 3, dark);
+  s.fillRect(12, 3, 1, 3, dark);
+  s.fillRect(4, 12, 8, 1, dark); // waist hem
+  s.fillRect(6, 3, 4, 2, "#1a1a1e"); // neck opening
+  s.fillRect(7, 7, 2, 4, trim); // centre seam
+  return s;
+}
+
+function leatherArmorIcon() {
+  return armorIcon({ dark: "#4a2f1a", mid: "#7a5230", light: "#96683c", trim: "#5c3c22" });
+}
+
+function plateArmorIcon() {
+  return armorIcon({ dark: "#5c6068", mid: "#9aa0a8", light: "#d5dae0", trim: "#6d727a" });
+}
+
+/** Shared legs silhouette: waistband over two tapering legs. */
+function legsIcon({ dark, mid, light }) {
+  const s = new Sprite(16, 16);
+  s.fillRect(4, 3, 8, 3, mid); // waistband
+  s.fillRect(4, 3, 8, 1, light);
+  s.fillRect(4, 6, 3, 8, mid); // left leg
+  s.fillRect(9, 6, 3, 8, mid); // right leg
+  s.fillRect(4, 13, 3, 1, dark);
+  s.fillRect(9, 13, 3, 1, dark);
+  s.fillRect(7, 6, 2, 8, "#1a1a1e"); // gap between legs
+  return s;
+}
+
+function leatherLegsIcon() {
+  return legsIcon({ dark: "#4a2f1a", mid: "#7a5230", light: "#96683c" });
+}
+
+function plateLegsIcon() {
+  return legsIcon({ dark: "#5c6068", mid: "#9aa0a8", light: "#d5dae0" });
+}
+
+function leatherBootsIcon() {
+  const s = new Sprite(16, 16);
+  s.fillRect(3, 4, 4, 7, "#7a5230"); // left shaft
+  s.fillRect(9, 4, 4, 7, "#7a5230");
+  s.fillRect(3, 4, 4, 1, "#96683c");
+  s.fillRect(9, 4, 4, 1, "#96683c");
+  s.fillRect(2, 11, 6, 2, "#4a2f1a"); // left foot
+  s.fillRect(8, 11, 6, 2, "#4a2f1a");
+  s.fillRect(2, 13, 6, 1, "#241609"); // soles
+  s.fillRect(8, 13, 6, 1, "#241609");
+  return s;
+}
+
+// --- Jewellery ---
+
+function amuletIcon() {
+  const s = new Sprite(16, 16);
+  for (let x = 4; x <= 11; x++) {
+    const y = 3 + Math.round(2 * Math.sin(((x - 4) / 7) * Math.PI));
+    s.setPixel(x, y, "#c9a24a"); // chain arc
+  }
+  s.fillCircle(8, 9, 3, "#8a6a1a"); // pendant
+  s.fillCircle(8, 9, 2, "#c9302f");
+  s.setPixel(7, 8, "#ff8f8b");
+  return s;
+}
+
+function ringIcon() {
+  const s = new Sprite(16, 16);
+  s.fillCircle(8, 10, 4, "#8a6a1a");
+  s.fillCircle(8, 10, 2.6, "#1a1a1e"); // band hole
+  s.fillCircle(8, 5, 2.4, "#c9a24a"); // setting
+  s.fillCircle(8, 5, 1.4, "#7cff7c"); // stone
+  s.setPixel(7, 4, "#d8ffd8");
+  return s;
+}
+
+// --- Spell icons (action bar) ---
+
+function healSpellIcon() {
+  const s = new Sprite(16, 16);
+  s.fillCircle(8, 8, 6, "#1d3a24");
+  s.fillCircle(8, 8, 5, "#2f7a3e");
+  s.fillRect(6, 3, 4, 10, "#d8ffd8"); // cross
+  s.fillRect(3, 6, 10, 4, "#d8ffd8");
+  return s;
+}
+
+function flameSpellIcon() {
+  const s = new Sprite(16, 16);
+  s.fillCircle(8, 8, 6, "#3a1408");
+  s.fillEllipse(8, 9, 4.4, 5, "#c9302f"); // outer flame
+  s.fillEllipse(8, 10, 3, 3.6, "#e8862f");
+  s.fillEllipse(8, 11, 1.6, 2.2, "#ffe08a"); // core
+  s.setPixel(8, 3, "#ff9f4a"); // tip
+  s.setPixel(8, 4, "#ff9f4a");
+  return s;
+}
+
 // ---------------------------------------------------------------------------
 // App icons (PWA home screen)
 // ---------------------------------------------------------------------------
@@ -402,6 +641,26 @@ saveSprite(swordIcon(), SCALE, `${OUT}/items/sword.png`);
 saveSprite(healthPotionIcon(), SCALE, `${OUT}/items/health-potion.png`);
 saveSprite(manaPotionIcon(), SCALE, `${OUT}/items/mana-potion.png`);
 saveSprite(goldCoinIcon(), SCALE, `${OUT}/items/gold-coin.png`);
+
+saveSprite(backpackIcon(), SCALE, `${OUT}/items/backpack.png`);
+saveSprite(bagIcon(), SCALE, `${OUT}/items/bag.png`);
+saveSprite(axeIcon(), SCALE, `${OUT}/items/axe.png`);
+saveSprite(bowIcon(), SCALE, `${OUT}/items/bow.png`);
+saveSprite(arrowIcon(), SCALE, `${OUT}/items/arrow.png`);
+saveSprite(wandIcon(), SCALE, `${OUT}/items/wand.png`);
+saveSprite(woodenShieldIcon(), SCALE, `${OUT}/items/wooden-shield.png`);
+saveSprite(steelShieldIcon(), SCALE, `${OUT}/items/steel-shield.png`);
+saveSprite(leatherHelmetIcon(), SCALE, `${OUT}/items/leather-helmet.png`);
+saveSprite(steelHelmetIcon(), SCALE, `${OUT}/items/steel-helmet.png`);
+saveSprite(leatherArmorIcon(), SCALE, `${OUT}/items/leather-armor.png`);
+saveSprite(plateArmorIcon(), SCALE, `${OUT}/items/plate-armor.png`);
+saveSprite(leatherLegsIcon(), SCALE, `${OUT}/items/leather-legs.png`);
+saveSprite(plateLegsIcon(), SCALE, `${OUT}/items/plate-legs.png`);
+saveSprite(leatherBootsIcon(), SCALE, `${OUT}/items/leather-boots.png`);
+saveSprite(amuletIcon(), SCALE, `${OUT}/items/amulet.png`);
+saveSprite(ringIcon(), SCALE, `${OUT}/items/ring.png`);
+saveSprite(healSpellIcon(), SCALE, `${OUT}/items/spell-heal.png`);
+saveSprite(flameSpellIcon(), SCALE, `${OUT}/items/spell-flame.png`);
 
 savePNG(appIcon(192).toPNG(1), `${ICONS}/icon-192.png`);
 savePNG(appIcon(512).toPNG(1), `${ICONS}/icon-512.png`);

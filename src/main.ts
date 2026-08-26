@@ -31,6 +31,12 @@ const game = new Phaser.Game({
   scene: [BootScene, WorldScene, UIScene],
 });
 
+// Dev-only handle so the running game can be inspected from a test harness.
+// Vite strips this branch from production builds.
+if (import.meta.env.DEV) {
+  (window as unknown as { __game?: Phaser.Game }).__game = game;
+}
+
 // Battery + landscape-only: fully stop the render/update loop whenever the
 // tab is backgrounded OR the device is in portrait — two independent
 // conditions, combined here so neither one's "wake" can undo the other's

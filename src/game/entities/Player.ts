@@ -10,11 +10,17 @@ import {
   expIntoCurrentLevel,
   expNeededForNextLevel,
 } from "../stats";
+import { SkillSet } from "../skills";
+import { Equipment } from "../equipment";
+import { Container, createStack } from "../containers";
 import { Direction, directionFromDelta, directionalFrameIndex } from "../directionalSprite";
 
 // Matches the player sheet built by scripts/process-uploaded-assets.mjs:
 // 3 frames per direction (0 = idle, 1/2 = alternating walk steps).
 const PLAYER_FRAMES_PER_DIRECTION = 3;
+
+/** Base swing/shot interval in ms, before any gear or skill adjustment. */
+export const BASE_ATTACK_INTERVAL_MS = 2000;
 
 export class Player {
   sprite: Phaser.GameObjects.Sprite;
@@ -32,11 +38,11 @@ export class Player {
   mana: number;
   maxMana: number;
   maxCapacity: number;
-  meleeSkill = 10;
 
-  inventory: Record<string, number> = { health_potion: 3, mana_potion: 1 };
+  readonly skills = new SkillSet();
+  readonly equipment = new Equipment();
 
-  weapon = { min: 3, max: 7, intervalMs: 2000 };
+  attackIntervalMs = BASE_ATTACK_INTERVAL_MS;
   attackCooldown = 0;
 
   constructor(
@@ -52,6 +58,8 @@ export class Player {
     this.mana = this.maxMana;
     this.maxCapacity = maxCapacityFor(this.vocation, this.level);
 
+    this.equipStartingGear();
+
     this.sprite = scene.add.sprite(
       tileAnchorX(tileX),
       tileAnchorY(tileY),
@@ -60,6 +68,26 @@ export class Player {
     );
     this.sprite.setOrigin(1, 1);
     this.sprite.setDepth(depthForTileY(tileY));
+  }
+
+  private equipStartingGear() {
+    this.equipment.set("back", createStack("backpack", 1));
+    this.equipment.set("left", createStack("sword", 1));
+    this.equipment.set("armor", createStack("leather_armor", 1));
+
+    const backpack = this.backpack;
+    if (!backpack) return;
+    backpack.addItem("health_potion", 3);
+    backpack.addItem("mana_potion", 1);
+    backpack.addItem("wooden_shield", 1);
+    backpack.addItem("leather_helmet", 1);
+    // A spare bag, so nested containers are discoverable from the first minute.
+    backpack.addItem("bag", 1);
+  }
+
+  /** Root of the inventory tree — null only if the backpack slot is emptied. */
+  get backpack(): Container | null {
+    return this.equipment.backpack;
   }
 
   get tile(): { x: number; y: number } {
@@ -143,16 +171,44 @@ export class Player {
     this.mana = Math.min(this.maxMana, this.mana + amount);
   }
 
-  addItem(itemId: string, amount: number) {
-    this.inventory[itemId] = (this.inventory[itemId] ?? 0) + amount;
+  spendMana(amount: number): boolean {
+    if (this.mana < amount) return false;
+    this.mana -= amount;
+    return true;
+  }
+
+  // --- Inventory helpers, all routed through the worn backpack -------------
+
+  countItem(itemId: string): number {
+    return this.backpack?.countItem(itemId) ?? 0;
+  }
+
+  /** Adds to the backpack; returns how many didn't fit. */
+  addItem(itemId: string, amount: number): number {
+    const backpack = this.backpack;
+    if (!backpack) return amount;
+    return backpack.addItem(itemId, amount);
   }
 
   removeItem(itemId: string, amount: number): boolean {
-    const have = this.inventory[itemId] ?? 0;
-    if (have < amount) return false;
-    this.inventory[itemId] = have - amount;
-    if (this.inventory[itemId] <= 0) delete this.inventory[itemId];
+    const backpack = this.backpack;
+    if (!backpack || backpack.countItem(itemId) < amount) return false;
+    backpack.removeItem(itemId, amount);
     return true;
+  }
+
+  /** Flattened item counts for the shop and action-bar views. */
+  inventoryTotals(): Record<string, number> {
+    return this.backpack?.totals() ?? {};
+  }
+
+  /** Weight carried, in oz, against maxCapacity. */
+  capacityUsed(): number {
+    return this.equipment.weight();
+  }
+
+  capacityFree(): number {
+    return Math.max(0, this.maxCapacity - this.capacityUsed());
   }
 
   teleportTo(x: number, y: number) {

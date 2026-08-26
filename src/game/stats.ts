@@ -27,6 +27,11 @@ export const VOCATION_NAMES: Record<ChosenVocation, string> = {
   druid: "Druid",
 };
 
+/** Display label for any vocation, including the pre-choice "none" state. */
+export function vocationDisplayName(vocation: Vocation): string {
+  return vocation === "none" ? "No Vocation" : VOCATION_NAMES[vocation];
+}
+
 export const VOCATION_DESCRIPTIONS: Record<ChosenVocation, string> = {
   knight: "Melee tank. Highest HP, heavy armor, strong in a straight fight.",
   paladin: "Ranged hybrid. Balanced HP and mana, fights from a distance.",
@@ -35,7 +40,10 @@ export const VOCATION_DESCRIPTIONS: Record<ChosenVocation, string> = {
 };
 
 const BASE_HP = 150;
-const BASE_MANA = 0;
+// Every character starts with a small mana pool, so spellcasting (and with it
+// magic-level training) is available from level 1 rather than only after the
+// level-8 vocation choice.
+const BASE_MANA = 30;
 const BASE_CAPACITY = 400;
 
 export function maxHpFor(vocation: Vocation, level: number): number {

@@ -49,10 +49,35 @@ export class BootScene extends Phaser.Scene {
     this.load.image("npc-wren", `${base}/npcs/wren.png`);
     this.load.image("npc-elder-corwin", `${base}/npcs/elder-corwin.png`);
 
-    this.load.image("sword", `${base}/items/sword.png`);
-    this.load.image("health-potion", `${base}/items/health-potion.png`);
-    this.load.image("mana-potion", `${base}/items/mana-potion.png`);
-    this.load.image("gold-coin", `${base}/items/gold-coin.png`);
+    // Item icons — the texture keys here must match ItemDef.textureKey in
+    // src/data/items.ts (plus the two spell icons used by the action bar).
+    for (const key of [
+      "sword",
+      "health-potion",
+      "mana-potion",
+      "gold-coin",
+      "backpack",
+      "bag",
+      "axe",
+      "bow",
+      "arrow",
+      "wand",
+      "wooden-shield",
+      "steel-shield",
+      "leather-helmet",
+      "steel-helmet",
+      "leather-armor",
+      "plate-armor",
+      "leather-legs",
+      "plate-legs",
+      "leather-boots",
+      "amulet",
+      "ring",
+      "spell-heal",
+      "spell-flame",
+    ]) {
+      this.load.image(key, `${base}/items/${key}.png`);
+    }
   }
 
   create() {

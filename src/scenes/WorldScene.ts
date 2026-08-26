@@ -14,13 +14,25 @@ import {
   NpcSpawn,
 } from "../data/tilemap";
 import { MONSTERS } from "../data/monsters";
-import { ITEMS } from "../data/items";
+import { EquipSlot, ITEMS } from "../data/items";
 import { SHOPS } from "../data/shops";
-import { ChosenVocation, VOCATION_NAMES } from "../game/stats";
+import { SPELLS } from "../data/spells";
+import { ChosenVocation, VOCATION_NAMES, vocationDisplayName } from "../game/stats";
 import { Player } from "../game/entities/Player";
 import { Monster } from "../game/entities/Monster";
 import { findPath, chebyshevDistance, TileCoord } from "../game/pathfinding";
 import { rollDamage, rollLoot } from "../game/combat";
+import { Container, ItemStack, SlotAccessor, SlotRef, moveStack } from "../game/containers";
+import {
+  SKILL_NAMES,
+  SKILL_ORDER,
+  SkillId,
+  armorReduction,
+  blockChance,
+  spellDamage,
+  weaponMaxDamage,
+  weaponMinDamage,
+} from "../game/skills";
 import {
   bus,
   EVENTS,
@@ -31,15 +43,42 @@ import {
   ChooseVocationPayload,
   ModalStatePayload,
   RequestVocationTalkPayload,
+  MoveItemPayload,
+  OpenContainerPayload,
+  CloseContainerPayload,
+  CastSpellPayload,
+  LootAllPayload,
+  UiLayoutPayload,
+  SelectTargetPayload,
 } from "../game/events";
 
 const RECHASE_INTERVAL_MS = 300;
 const DEATH_RESPAWN_HP_FRACTION = 0.5;
 const CORPSE_DECAY_MS = 60_000;
 
+/** Slots in a monster corpse's loot bag. */
+const CORPSE_CAPACITY = 8;
+
+/** Wands fire a small magic bolt: cheap on mana, shorter reach than a bow. */
+const WAND_MANA_COST = 4;
+const WAND_RANGE = 3;
+
+/** How often the Battle tab's nearby-monster list refreshes, and how far it looks. */
+const BATTLE_LIST_INTERVAL_MS = 400;
+const BATTLE_LIST_RANGE = 8;
+
+// Slow passive regeneration, so mana (and therefore magic training) is a
+// renewable resource rather than a one-shot pool between potion purchases.
+const REGEN_INTERVAL_MS = 3000;
+const HP_REGEN_FRACTION = 0.01;
+const MANA_REGEN_FRACTION = 0.03;
+
+/** How the equipped weapon decides to attack, once ammo and mana are checked. */
+type AttackMode = "melee" | "distance" | "wand";
+
 interface Corpse {
   sprite: Phaser.GameObjects.Sprite;
-  loot: { itemId: string; amount: number }[];
+  container: Container;
   name: string;
 }
 
@@ -57,6 +96,16 @@ export class WorldScene extends Phaser.Scene {
   private playerPath: TileCoord[] = [];
   private chaseTimer = 0;
   private modalOpen = false;
+  /** Container windows the player has open — backpacks, bags, corpses. */
+  private openContainers: Container[] = [];
+  /** Sidebar width the world view must leave free on the right. */
+  private uiSidebarWidth = 0;
+  /** Right-edge strip owned by the UI, so world taps landing on it are ignored. */
+  private uiReservedWidth = 0;
+  /** Set by skill training; flushed once per frame instead of per hit. */
+  private skillsDirty = false;
+  private battleListTimer = 0;
+  private regenTimer = REGEN_INTERVAL_MS;
 
   constructor() {
     super("World");
@@ -80,7 +129,7 @@ export class WorldScene extends Phaser.Scene {
     this.applyZoom();
     this.cameras.main.startFollow(this.player.sprite, true, 0.15, 0.15);
 
-    this.scale.on("resize", () => this.applyZoom());
+    this.scale.on("resize", () => this.applyUiLayout(this.uiSidebarWidth, this.uiReservedWidth));
 
     this.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => this.handleTap(pointer));
 
@@ -96,22 +145,50 @@ export class WorldScene extends Phaser.Scene {
     bus.on(EVENTS.REQUEST_VOCATION_TALK, (payload: RequestVocationTalkPayload) =>
       this.requestVocationTalk(payload.npcId),
     );
+    bus.on(EVENTS.MOVE_ITEM, (payload: MoveItemPayload) => this.moveItem(payload.from, payload.to));
+    bus.on(EVENTS.OPEN_CONTAINER, (payload: OpenContainerPayload) => this.openContainer(payload.container));
+    bus.on(EVENTS.CLOSE_CONTAINER, (payload: CloseContainerPayload) => this.closeContainer(payload.container));
+    bus.on(EVENTS.CAST_SPELL, (payload: CastSpellPayload) => this.castSpell(payload.spellId));
+    bus.on(EVENTS.LOOT_ALL, (payload: LootAllPayload) => this.lootAll(payload.container));
+    bus.on(EVENTS.UI_LAYOUT, (payload: UiLayoutPayload) =>
+      this.applyUiLayout(payload.sidebarWidth, payload.reservedWidth),
+    );
+    bus.on(EVENTS.SELECT_TARGET, (payload: SelectTargetPayload) => {
+      const monster = this.monsters[payload.id];
+      if (monster?.alive) this.setTarget(monster);
+    });
 
     // UIScene's create() (which subscribes to these events) runs in the same
     // scene-boot flush but isn't guaranteed to run first, so defer the
     // initial sync to the next update tick rather than risk it being missed.
     this.time.delayedCall(0, () => {
+      // The backpack starts open, as it does on a fresh Tibia character.
+      const backpack = this.player.backpack;
+      if (backpack) this.openContainers = [backpack];
       this.emitPlayerStats();
       this.emitInventory();
+      this.emitSkills();
+      this.emitInventoryState();
       this.log("info", "You wake up in Oakhollow.");
     });
   }
 
+  /** Keep the world view to the left of the sidebar, as in the Tibia client. */
+  private applyUiLayout(sidebarWidth: number, reservedWidth: number) {
+    this.uiSidebarWidth = sidebarWidth;
+    this.uiReservedWidth = reservedWidth;
+    const width = Math.max(1, this.scale.width - sidebarWidth);
+    this.cameras.main.setViewport(0, 0, width, this.scale.height);
+    this.applyZoom();
+  }
+
   private applyZoom() {
     // Matches classic Tibia's 15-tile-wide field of view (verified: the
-    // client's game window renders 15x11 tiles at default zoom).
+    // client's game window renders 15x11 tiles at default zoom). Measured
+    // against the camera viewport, not the canvas, so the sidebar doesn't
+    // squeeze the world view.
     const desiredTilesVisible = 15;
-    const zoom = Phaser.Math.Clamp(this.scale.width / (desiredTilesVisible * TILE_SIZE), 0.5, 3);
+    const zoom = Phaser.Math.Clamp(this.cameras.main.width / (desiredTilesVisible * TILE_SIZE), 0.5, 3);
     this.cameras.main.setZoom(zoom);
   }
 
@@ -159,7 +236,9 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private handleTap(pointer: Phaser.Input.Pointer) {
-    if (this.modalOpen) return; // a UI panel (shop/vocation/inventory) is up — don't also move the player
+    if (this.modalOpen) return; // a UI panel (shop/vocation/dialogue) is up — don't also move the player
+    // Taps on the sidebar belong to the UI, even though this scene also sees them.
+    if (this.uiReservedWidth > 0 && pointer.x >= this.scale.width - this.uiReservedWidth) return;
 
     const wx = pointer.worldX;
     const wy = pointer.worldY;
@@ -249,6 +328,71 @@ export class WorldScene extends Phaser.Scene {
 
     this.updateCombat(delta);
     this.updatePlayerMovement(delta);
+
+    // Skill training fires many times a second; push one refresh per frame.
+    if (this.skillsDirty) this.emitSkills();
+
+    this.battleListTimer -= delta;
+    if (this.battleListTimer <= 0) {
+      this.battleListTimer = BATTLE_LIST_INTERVAL_MS;
+      this.emitBattleList();
+    }
+
+    this.regenTimer -= delta;
+    if (this.regenTimer <= 0) {
+      this.regenTimer = REGEN_INTERVAL_MS;
+      this.regenerate();
+    }
+  }
+
+  private regenerate() {
+    const player = this.player;
+    const healedHp = player.hp < player.maxHp;
+    const healedMana = player.mana < player.maxMana;
+    if (!healedHp && !healedMana) return;
+
+    player.heal(Math.max(1, Math.floor(player.maxHp * HP_REGEN_FRACTION)));
+    player.restoreMana(Math.max(1, Math.floor(player.maxMana * MANA_REGEN_FRACTION)));
+    this.emitPlayerStats();
+  }
+
+  /** Nearby monsters, for the Battle tab — far easier to target than tapping a 32px sprite. */
+  private emitBattleList() {
+    const entries = this.monsters
+      .map((monster, id) => ({ monster, id }))
+      .filter(({ monster }) => monster.alive && chebyshevDistance(this.player.tile, monster.tile) <= BATTLE_LIST_RANGE)
+      .sort(
+        (a, b) =>
+          chebyshevDistance(this.player.tile, a.monster.tile) - chebyshevDistance(this.player.tile, b.monster.tile),
+      )
+      .slice(0, 8)
+      .map(({ monster, id }) => ({
+        id,
+        name: monster.def.name,
+        hp: monster.hp,
+        maxHp: monster.def.hp,
+        targeted: monster === this.target,
+      }));
+    bus.emit(EVENTS.BATTLE_LIST, { entries });
+  }
+
+  /**
+   * Decide how the equipped weapon actually attacks. A bow with no quiver and
+   * a wand with no mana both fall back to swinging, so the player is never
+   * left unable to fight.
+   */
+  private resolveAttackMode(): { mode: AttackMode; range: number } {
+    const equipment = this.player.equipment;
+    switch (equipment.weaponType()) {
+      case "distance":
+        if ((equipment.get("ammo")?.count ?? 0) > 0) return { mode: "distance", range: equipment.attackRange() };
+        return { mode: "melee", range: MELEE_RANGE };
+      case "wand":
+        if (this.player.mana >= WAND_MANA_COST) return { mode: "wand", range: WAND_RANGE };
+        return { mode: "melee", range: MELEE_RANGE };
+      default:
+        return { mode: "melee", range: MELEE_RANGE };
+    }
   }
 
   private updateCombat(delta: number) {
@@ -258,25 +402,13 @@ export class WorldScene extends Phaser.Scene {
       return;
     }
 
+    const { mode, range } = this.resolveAttackMode();
     const dist = chebyshevDistance(this.player.tile, target.tile);
     this.player.attackCooldown -= delta;
 
-    if (dist <= MELEE_RANGE) {
+    if (dist <= range) {
       this.playerPath = []; // stop walking once in range, mirrors classic click-to-attack
-      if (this.player.attackCooldown <= 0) {
-        const dmg = rollDamage(this.player.weapon.min, this.player.weapon.max);
-        const died = target.takeDamage(dmg);
-        this.log("damage", `You hit the ${target.def.name} for ${dmg}.`);
-        this.floatText(this.spriteCenterX(target.sprite), this.spriteTopY(target.sprite), `-${dmg}`, "#ffffff");
-        this.player.attackCooldown = this.player.weapon.intervalMs;
-
-        if (died) {
-          this.rewardKill(target);
-          this.clearTarget();
-        } else {
-          bus.emit(EVENTS.TARGET, { name: target.def.name, hp: target.hp, maxHp: target.def.hp });
-        }
-      }
+      if (this.player.attackCooldown <= 0) this.performAttack(target, mode);
       return;
     }
 
@@ -285,6 +417,136 @@ export class WorldScene extends Phaser.Scene {
       this.chaseTimer = RECHASE_INTERVAL_MS;
       this.playerPath = findPath(isWalkable, this.player.tile, target.tile);
     }
+  }
+
+  private performAttack(target: Monster, mode: AttackMode) {
+    const player = this.player;
+    const equipment = player.equipment;
+    player.attackCooldown = player.attackIntervalMs;
+    player.setFacing(target.tileX - player.tileX, target.tileY - player.tileY);
+
+    let damage: number;
+    if (mode === "wand") {
+      // Wands convert mana into magic damage, and that mana is what trains
+      // magic level — same rule as casting a spell.
+      player.spendMana(WAND_MANA_COST);
+      this.trainSkill("magic", WAND_MANA_COST);
+      damage = spellDamage(player.skills.level("magic"), player.level, equipment.attackValue(), 1.5);
+      this.fireProjectile(target, "spell-flame");
+    } else {
+      const skill: SkillId = mode === "distance" ? "distance" : "melee";
+      const max = weaponMaxDamage(player.skills.level(skill), equipment.attackValue(), player.level);
+      damage = rollDamage(weaponMinDamage(max), max);
+      this.trainSkill(skill, 1);
+      if (mode === "distance") {
+        this.consumeAmmo();
+        this.fireProjectile(target, "arrow");
+      }
+    }
+
+    const died = target.takeDamage(damage);
+    this.log("damage", `You hit the ${target.def.name} for ${damage}.`);
+    this.floatText(this.spriteCenterX(target.sprite), this.spriteTopY(target.sprite), `-${damage}`, "#ffffff");
+
+    if (died) {
+      this.rewardKill(target);
+      this.clearTarget();
+    } else {
+      bus.emit(EVENTS.TARGET, { name: target.def.name, hp: target.hp, maxHp: target.def.hp });
+    }
+    this.emitPlayerStats();
+  }
+
+  private consumeAmmo() {
+    const equipment = this.player.equipment;
+    const ammo = equipment.get("ammo");
+    if (!ammo) return;
+    ammo.count -= 1;
+    if (ammo.count <= 0) {
+      equipment.set("ammo", null);
+      this.log("info", "You have run out of ammunition.");
+    }
+    this.emitInventoryState();
+  }
+
+  /** A quick sprite tween from the player to the target, for ranged attacks. */
+  private fireProjectile(target: Monster, textureKey: string) {
+    const shot = this.add
+      .image(this.spriteCenterX(this.player.sprite), this.spriteTopY(this.player.sprite) + 12, textureKey)
+      .setDepth(60)
+      .setScale(0.7);
+    this.tweens.add({
+      targets: shot,
+      x: this.spriteCenterX(target.sprite),
+      y: this.spriteTopY(target.sprite) + 12,
+      duration: 180,
+      onComplete: () => shot.destroy(),
+    });
+  }
+
+  /**
+   * Feed tries into a skill and announce any level gained. The UI refresh is
+   * deferred to the end of the frame — shielding trains on every incoming
+   * blow, so this runs several times a second.
+   */
+  private trainSkill(skill: SkillId, amount: number) {
+    const gained = this.player.skills.train(skill, amount, this.player.vocation);
+    if (gained > 0) {
+      this.log("levelup", `You advanced to ${SKILL_NAMES[skill]} level ${this.player.skills.level(skill)}.`);
+    }
+    this.skillsDirty = true;
+  }
+
+  private castSpell(spellId: string) {
+    const spell = SPELLS[spellId];
+    if (!spell) return;
+    const player = this.player;
+
+    if (player.mana < spell.manaCost) {
+      this.log("info", "You do not have enough mana.");
+      return;
+    }
+
+    let target: Monster | null = null;
+    if (spell.kind === "attack") {
+      target = this.target;
+      if (!target || !target.alive) {
+        this.log("info", "You need a target for that spell.");
+        return;
+      }
+      if (chebyshevDistance(player.tile, target.tile) > (spell.range ?? 1)) {
+        this.log("info", "The target is too far away.");
+        return;
+      }
+    }
+
+    player.spendMana(spell.manaCost);
+    this.trainSkill("magic", spell.manaCost);
+    this.log("info", `You say: "${spell.words}".`);
+
+    const power = spellDamage(player.skills.level("magic"), player.level, spell.base, spell.factor);
+    if (spell.kind === "heal") {
+      player.heal(power);
+      this.floatText(
+        this.spriteCenterX(player.sprite),
+        this.spriteTopY(player.sprite),
+        `+${power}`,
+        "#7cff7c",
+      );
+    } else if (target) {
+      this.fireProjectile(target, spell.textureKey);
+      const died = target.takeDamage(power);
+      this.log("damage", `You hit the ${target.def.name} for ${power}.`);
+      this.floatText(this.spriteCenterX(target.sprite), this.spriteTopY(target.sprite), `-${power}`, "#ff9f4a");
+      if (died) {
+        this.rewardKill(target);
+        this.clearTarget();
+      } else {
+        bus.emit(EVENTS.TARGET, { name: target.def.name, hp: target.hp, maxHp: target.def.hp });
+      }
+    }
+
+    this.emitPlayerStats();
   }
 
   private updatePlayerMovement(_delta: number) {
@@ -314,7 +576,13 @@ export class WorldScene extends Phaser.Scene {
       .setTint(0x808080)
       .setScale(1, 0.55)
       .setAlpha(0.9);
-    const corpse: Corpse = { sprite, loot, name: monster.def.name };
+
+    // The corpse is just another container, so looting is the same drag the
+    // player already uses between backpacks.
+    const container = new Container(`Dead ${monster.def.name}`, monster.def.textureKey, CORPSE_CAPACITY);
+    for (const drop of loot) container.addItem(drop.itemId, drop.amount);
+
+    const corpse: Corpse = { sprite, container, name: monster.def.name };
     this.corpses.push(corpse);
     this.time.delayedCall(CORPSE_DECAY_MS, () => this.removeCorpse(corpse));
   }
@@ -322,28 +590,134 @@ export class WorldScene extends Phaser.Scene {
   private removeCorpse(corpse: Corpse) {
     const idx = this.corpses.indexOf(corpse);
     if (idx >= 0) this.corpses.splice(idx, 1);
+    this.closeContainer(corpse.container); // don't leave a window onto a vanished corpse
     corpse.sprite.destroy();
   }
 
   private lootCorpse(corpse: Corpse) {
-    if (corpse.loot.length === 0) {
-      this.log("info", `There is nothing left to loot.`);
+    if (corpse.container.usedSlots === 0) {
+      this.log("info", "There is nothing left to loot.");
       this.removeCorpse(corpse);
       return;
     }
-    for (const drop of corpse.loot) {
-      this.player.addItem(drop.itemId, drop.amount);
-      const name = ITEMS[drop.itemId]?.name ?? drop.itemId;
-      this.log("loot", `Looted ${drop.amount}x ${name}.`);
+    this.openContainer(corpse.container);
+  }
+
+  // --- Container windows --------------------------------------------------
+
+  private openContainer(container: Container) {
+    if (!this.openContainers.includes(container)) this.openContainers.push(container);
+    this.emitInventoryState();
+  }
+
+  private closeContainer(container: Container) {
+    const idx = this.openContainers.indexOf(container);
+    if (idx < 0) return;
+    this.openContainers.splice(idx, 1);
+    this.emitInventoryState();
+  }
+
+  /** The convenience button on a loot window: sweep everything into the backpack. */
+  private lootAll(container: Container) {
+    const backpack = this.player.backpack;
+    if (!backpack) return;
+
+    let tookSomething = false;
+    let full = false;
+    for (let i = 0; i < container.slots.length; i++) {
+      const stack = container.slots[i];
+      if (!stack) continue;
+      const leftover = backpack.addItem(stack.itemId, stack.count);
+      const moved = stack.count - leftover;
+      if (moved > 0) {
+        this.log("loot", `Looted ${moved}x ${ITEMS[stack.itemId]?.name ?? stack.itemId}.`);
+        tookSomething = true;
+      }
+      if (leftover > 0) {
+        stack.count = leftover;
+        full = true;
+      } else {
+        container.slots[i] = null;
+      }
     }
+
+    if (!tookSomething) this.log("info", "You cannot carry any more.");
+    else if (full) this.log("info", "Your backpack is full.");
+
+    // A corpse emptied by Loot All has served its purpose — clear it away.
+    const corpse = this.corpses.find((c) => c.container === container);
+    if (corpse && container.usedSlots === 0) this.removeCorpse(corpse);
+
     this.emitInventory();
-    this.removeCorpse(corpse);
+    this.emitInventoryState();
+  }
+
+  // --- Item movement ------------------------------------------------------
+
+  /**
+   * The single point where inventory mutations happen. UIScene only ever
+   * describes a move; the rules (does this fit the slot, would it orphan the
+   * backpack) are enforced here.
+   */
+  private readonly slotAccessor: SlotAccessor = {
+    get: (ref: SlotRef) =>
+      ref.kind === "container" ? (ref.container.slots[ref.index] ?? null) : this.player.equipment.get(ref.slot as EquipSlot),
+    canSet: (ref: SlotRef, stack: ItemStack | null) => {
+      if (ref.kind === "container") return ref.index >= 0 && ref.index < ref.container.slots.length;
+      // Taking the backpack off would strand every item inside it, so the
+      // back slot may be swapped but never emptied.
+      if (ref.slot === "back" && !stack) return false;
+      return this.player.equipment.canEquip(ref.slot as EquipSlot, stack);
+    },
+    set: (ref: SlotRef, stack: ItemStack | null) => {
+      if (ref.kind === "container") ref.container.slots[ref.index] = stack;
+      else this.player.equipment.set(ref.slot as EquipSlot, stack);
+    },
+  };
+
+  private moveItem(from: SlotRef, to: SlotRef) {
+    if (!moveStack(this.slotAccessor, from, to)) return;
+
+    // A container that just left the tree (swapped out of a slot, dropped in a
+    // corpse) shouldn't keep a window open onto it.
+    for (const container of [...this.openContainers]) {
+      if (!this.isContainerReachable(container)) this.closeContainer(container);
+    }
+
+    this.emitInventory();
+    this.emitInventoryState();
+    this.emitSkills(); // weapon/armor swaps change the attack & defense readouts
+  }
+
+  /** True if the container is the player's, nested in it, or an open corpse. */
+  private isContainerReachable(container: Container): boolean {
+    if (this.corpses.some((c) => c.container === container)) return true;
+    const backpack = this.player.backpack;
+    return backpack ? backpack.contains(container) : false;
   }
 
   private damagePlayer(amount: number, attackerName: string) {
-    this.player.takeDamage(amount);
-    this.log("damage", `The ${attackerName} hits you for ${amount}.`);
-    this.floatText(this.spriteCenterX(this.player.sprite), this.spriteTopY(this.player.sprite), `-${amount}`, "#ff5c5c");
+    const equipment = this.player.equipment;
+    const defense = equipment.defenseValue();
+
+    // Shielding trains on every blow aimed at you, blocked or not.
+    this.trainSkill("shielding", 1);
+
+    if (defense > 0 && Math.random() < blockChance(this.player.skills.level("shielding"), defense)) {
+      this.log("damage", `You block the ${attackerName}.`);
+      this.floatText(this.spriteCenterX(this.player.sprite), this.spriteTopY(this.player.sprite), "block", "#8fd0ff");
+      return;
+    }
+
+    const reduced = Math.max(0, amount - armorReduction(equipment.armorValue()));
+    if (reduced <= 0) {
+      this.log("damage", `The ${attackerName} hits you, but your armor holds.`);
+      return;
+    }
+
+    this.player.takeDamage(reduced);
+    this.log("damage", `The ${attackerName} hits you for ${reduced}.`);
+    this.floatText(this.spriteCenterX(this.player.sprite), this.spriteTopY(this.player.sprite), `-${reduced}`, "#ff5c5c");
     this.emitPlayerStats();
   }
 
@@ -373,6 +747,7 @@ export class WorldScene extends Phaser.Scene {
     this.log("info", `You use a ${item.name}.`);
     this.emitPlayerStats();
     this.emitInventory();
+    this.emitInventoryState();
   }
 
   private buyItem(npcId: string, itemId: string) {
@@ -381,6 +756,11 @@ export class WorldScene extends Phaser.Scene {
     if (!offer) return;
     const itemName = ITEMS[itemId]?.name ?? itemId;
 
+    const backpack = this.player.backpack;
+    if (!backpack?.hasRoomFor(itemId, 1)) {
+      this.log("info", `You have no room for a ${itemName}.`);
+      return;
+    }
     if (!this.player.removeItem("gold_coin", offer.price)) {
       this.log("info", `You don't have enough gold for a ${itemName}.`);
       return;
@@ -388,6 +768,7 @@ export class WorldScene extends Phaser.Scene {
     this.player.addItem(itemId, 1);
     this.log("loot", `Bought a ${itemName} for ${offer.price} gold.`);
     this.emitInventory();
+    this.emitInventoryState();
   }
 
   private sellItem(npcId: string, itemId: string) {
@@ -403,6 +784,7 @@ export class WorldScene extends Phaser.Scene {
     this.player.addItem("gold_coin", offer.price);
     this.log("loot", `Sold a ${itemName} for ${offer.price} gold.`);
     this.emitInventory();
+    this.emitInventoryState();
   }
 
   private chooseVocation(vocation: ChosenVocation) {
@@ -410,6 +792,7 @@ export class WorldScene extends Phaser.Scene {
     this.player.setVocation(vocation);
     this.log("levelup", `You have become a ${VOCATION_NAMES[vocation]}!`);
     this.emitPlayerStats();
+    this.emitSkills(); // vocation changes how fast every skill trains
   }
 
   // Sprites use a bottom-right origin (oblique-projection anchor), so the
@@ -457,7 +840,37 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private emitInventory() {
-    bus.emit(EVENTS.INVENTORY, { items: { ...this.player.inventory } });
+    bus.emit(EVENTS.INVENTORY, { items: this.player.inventoryTotals() });
+  }
+
+  private emitSkills() {
+    const player = this.player;
+    this.skillsDirty = false;
+    bus.emit(EVENTS.SKILLS, {
+      vocationName: vocationDisplayName(player.vocation),
+      level: player.level,
+      exp: player.exp,
+      expIntoLevel: player.expIntoLevel(),
+      expForLevel: player.expForLevel(),
+      skills: SKILL_ORDER.map((id) => ({
+        id,
+        name: SKILL_NAMES[id],
+        level: player.skills.level(id),
+        progress: player.skills.progress(id, player.vocation),
+      })),
+      attack: player.equipment.attackValue(),
+      defense: player.equipment.defenseValue(),
+      armor: player.equipment.armorValue(),
+    });
+  }
+
+  private emitInventoryState() {
+    bus.emit(EVENTS.INVENTORY_STATE, {
+      equipment: this.player.equipment,
+      openContainers: [...this.openContainers],
+      capacityUsed: this.player.capacityUsed(),
+      maxCapacity: this.player.maxCapacity,
+    });
   }
 
   private log(kind: LogKind, text: string) {
