@@ -57,9 +57,18 @@ export class Player {
     private scene: Phaser.Scene,
     tileX: number,
     tileY: number,
+    init?: { vocation?: Vocation; exp?: number },
   ) {
     this.tileX = tileX;
     this.tileY = tileY;
+    // A returning character hydrates their vocation and exp from the saved
+    // profile; level is derived from exp so it stays consistent with the
+    // curve if the numbers ever change.
+    if (init?.vocation) this.vocation = init.vocation;
+    if (init?.exp && init.exp > 0) {
+      this.exp = init.exp;
+      this.level = levelForExp(this.exp);
+    }
     this.maxHp = maxHpFor(this.vocation, this.level);
     this.hp = this.maxHp;
     this.maxMana = maxManaFor(this.vocation, this.level);

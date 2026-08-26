@@ -27,7 +27,7 @@ import { Monster } from "../game/entities/Monster";
 import { findPath, chebyshevDistance, TileCoord } from "../game/pathfinding";
 import { DebugOverlay } from "../game/debugOverlay";
 import { DayNightCycle } from "../game/dayNight";
-import { loadProfile } from "../game/profile";
+import { getActiveCharacter, updateActiveCharacter, setActiveCharacter } from "../game/profile";
 import { rollDamage, rollLoot } from "../game/combat";
 import { Container, ItemStack, SlotAccessor, SlotRef, moveStack } from "../game/containers";
 import {
@@ -135,7 +135,15 @@ export class WorldScene extends Phaser.Scene {
     this.buildTileLayer();
     this.buildEnvironmentDecoration();
 
-    this.player = new Player(this, TEMPLE_SPAWN.x, TEMPLE_SPAWN.y);
+    // Hydrate from the character the player picked on the select screen.
+    // Missing (a bug in the flow, or storage wiped mid-session) falls through
+    // to a defaultless player, which lets the world still boot rather than
+    // dead-ending the user on a blank canvas.
+    const character = getActiveCharacter();
+    this.player = new Player(this, TEMPLE_SPAWN.x, TEMPLE_SPAWN.y, {
+      vocation: character?.vocation,
+      exp: character?.exp,
+    });
     this.buildNpcs();
 
     this.monsters = MONSTER_SPAWNS.map((spawn) => {
@@ -166,6 +174,7 @@ export class WorldScene extends Phaser.Scene {
     // The forge fire shows through its window whatever the hour.
     lights.push({ x: 27, y: 22, radius: 5, flicker: 0.05 });
     this.dayNight = new DayNightCycle(this, lights);
+    this.buildLogoutButton();
 
     this.debug = new DebugOverlay(this, {
       sprites: () => [this.player.sprite, ...this.monsters.filter((m) => m.alive).map((m) => m.sprite)],
@@ -208,8 +217,7 @@ export class WorldScene extends Phaser.Scene {
       this.emitInventory();
       this.emitSkills();
       this.emitInventoryState();
-      const profile = loadProfile();
-      const greeting = profile ? `You wake up in Oakhollow, ${profile.name}.` : "You wake up in Oakhollow.";
+      const greeting = character ? `You wake up in Oakhollow, ${character.name}.` : "You wake up in Oakhollow.";
       this.log("info", greeting);
     });
   }
@@ -731,8 +739,67 @@ export class WorldScene extends Phaser.Scene {
     void this.player.stepTo(next.x, next.y).then(() => this.emitPlayerStats());
   }
 
+  private saveCharacter() {
+    updateActiveCharacter({
+      vocation: this.player.vocation,
+      level: this.player.level,
+      exp: this.player.exp,
+    });
+  }
+
+  /** DOM logout button in the corner of the viewport. */
+  private logoutButton: HTMLButtonElement | null = null;
+
+  /**
+   * Log Out sits above the canvas as an HTML button. Doing it in the DOM
+   * sidesteps camera zoom, scene draw-order and the sidebar's viewport
+   * carve-out — the button is always exactly where and how big the CSS says.
+   */
+  private buildLogoutButton() {
+    if (this.logoutButton) return;
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.textContent = "Log Out";
+    btn.style.cssText = [
+      "position: absolute",
+      "top: 8px",
+      "left: 8px",
+      "z-index: 20",
+      "padding: 6px 12px",
+      "font-family: monospace",
+      "font-size: 12px",
+      "color: #f4e6c8",
+      "background: rgba(13,13,13,0.85)",
+      "border: 1px solid #3a3a3a",
+      "border-radius: 3px",
+      "cursor: pointer",
+    ].join(";");
+    btn.addEventListener("click", () => this.logout());
+    document.body.appendChild(btn);
+    this.logoutButton = btn;
+
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.destroyLogoutButton());
+  }
+
+  private destroyLogoutButton() {
+    if (this.logoutButton?.parentNode) this.logoutButton.parentNode.removeChild(this.logoutButton);
+    this.logoutButton = null;
+  }
+
+  private logout() {
+    this.saveCharacter();
+    setActiveCharacter(null);
+    this.destroyLogoutButton();
+    // Fully tear the game down so the next login re-hydrates cleanly rather
+    // than inheriting this session's sprites, tweens and event listeners.
+    this.scene.stop("UI");
+    this.scene.stop("World");
+    this.scene.start("Select");
+  }
+
   private rewardKill(monster: Monster) {
     const { leveledUp } = this.player.gainExp(monster.def.xp);
+    this.saveCharacter(); // exp / level are what the select screen shows
     this.log("xp", `You destroy the ${monster.def.name}. +${monster.def.xp} exp.`);
     this.floatText(this.spriteCenterX(this.player.sprite), this.spriteTopY(this.player.sprite) - 14, `+${monster.def.xp} xp`, "#8fd0ff");
     if (leveledUp) {
@@ -981,6 +1048,7 @@ export class WorldScene extends Phaser.Scene {
   private chooseVocation(vocation: ChosenVocation) {
     if (this.player.vocation !== "none") return;
     this.player.setVocation(vocation);
+    this.saveCharacter();
     this.log("levelup", `You have become a ${VOCATION_NAMES[vocation]}!`);
     this.emitPlayerStats();
     this.emitSkills(); // vocation changes how fast every skill trains
