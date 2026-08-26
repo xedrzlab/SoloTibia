@@ -859,6 +859,9 @@ export class WorldScene extends Phaser.Scene {
   private moveItem(from: SlotRef, to: SlotRef) {
     if (!moveStack(this.slotAccessor, from, to)) return;
 
+    // What the character is wearing just changed, so redraw the paper doll.
+    if (from.kind === "equip" || to.kind === "equip") this.player.refreshAppearance();
+
     // A container that just left the tree (swapped out of a slot, dropped in a
     // corpse) shouldn't keep a window open onto it.
     for (const container of [...this.openContainers]) {

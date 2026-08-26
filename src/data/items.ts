@@ -29,6 +29,12 @@ export interface ItemDef {
   range?: number;
   /** Slot count when this item is a container. */
   containerCapacity?: number;
+  /**
+   * Which paper-doll layer this item draws on the character, if any. The value
+   * names a sheet registered in src/data/assets.ts; items sharing a look share
+   * a layer (a sword and an axe are the same silhouette at 32px).
+   */
+  paperDoll?: string;
 }
 
 export const ITEMS: Record<string, ItemDef> = {
@@ -69,6 +75,7 @@ export const ITEMS: Record<string, ItemDef> = {
     stackable: false,
     weight: 18,
     equipSlot: "back",
+    paperDoll: "backpack",
     containerCapacity: 12,
   },
   bag: {
@@ -79,6 +86,7 @@ export const ITEMS: Record<string, ItemDef> = {
     stackable: false,
     weight: 6,
     equipSlot: "back",
+    paperDoll: "backpack",
     containerCapacity: 8,
   },
 
@@ -91,6 +99,7 @@ export const ITEMS: Record<string, ItemDef> = {
     stackable: false,
     weight: 35,
     equipSlot: "left",
+    paperDoll: "weapon-blade",
     weaponType: "melee",
     attack: 12,
     defense: 11,
@@ -103,6 +112,7 @@ export const ITEMS: Record<string, ItemDef> = {
     stackable: false,
     weight: 40,
     equipSlot: "left",
+    paperDoll: "weapon-blade",
     weaponType: "melee",
     attack: 15,
     defense: 8,
@@ -117,6 +127,7 @@ export const ITEMS: Record<string, ItemDef> = {
     stackable: false,
     weight: 32,
     equipSlot: "left",
+    paperDoll: "weapon-bow",
     weaponType: "distance",
     attack: 0, // a bow's damage comes from its ammunition
     range: 5,
@@ -141,6 +152,7 @@ export const ITEMS: Record<string, ItemDef> = {
     stackable: false,
     weight: 19,
     equipSlot: "left",
+    paperDoll: "weapon-wand",
     weaponType: "wand",
     attack: 8,
     defense: 5,
@@ -155,6 +167,7 @@ export const ITEMS: Record<string, ItemDef> = {
     stackable: false,
     weight: 40,
     equipSlot: "right",
+    paperDoll: "shield",
     defense: 9,
   },
   steel_shield: {
@@ -165,6 +178,7 @@ export const ITEMS: Record<string, ItemDef> = {
     stackable: false,
     weight: 60,
     equipSlot: "right",
+    paperDoll: "shield",
     defense: 15,
   },
 
@@ -177,6 +191,7 @@ export const ITEMS: Record<string, ItemDef> = {
     stackable: false,
     weight: 12,
     equipSlot: "head",
+    paperDoll: "helmet-light",
     armor: 2,
   },
   steel_helmet: {
@@ -187,6 +202,7 @@ export const ITEMS: Record<string, ItemDef> = {
     stackable: false,
     weight: 46,
     equipSlot: "head",
+    paperDoll: "helmet-heavy",
     armor: 6,
   },
   leather_armor: {
@@ -197,6 +213,7 @@ export const ITEMS: Record<string, ItemDef> = {
     stackable: false,
     weight: 40,
     equipSlot: "armor",
+    paperDoll: "armor-light",
     armor: 4,
   },
   plate_armor: {
@@ -207,6 +224,7 @@ export const ITEMS: Record<string, ItemDef> = {
     stackable: false,
     weight: 110,
     equipSlot: "armor",
+    paperDoll: "armor-heavy",
     armor: 9,
   },
   leather_legs: {

@@ -101,6 +101,23 @@ Which canopy and detail a tree gets is hashed from its tile position, so a
 wood looks composed rather than rolled and is identical every time the map is
 built. Anything else tall and varied should follow the same pattern.
 
+**The player is a paper doll** built the same way: a base body wearing only a
+plain shirt, with armour, helmet, weapon, shield and backpack as separate
+sheets stacked over it in `PAPER_DOLL_ORDER`. Every layer shares the base
+sheet's frame indices and geometry constants (`PG`), because a layer that
+disagrees with the body by one pixel is glaring in motion. `ItemDef.paperDoll`
+names which sheet an item draws; items that share a silhouette at this size —
+a sword and an axe — share a layer.
+
+The base body deliberately wears muted cloth. The player's identity used to be
+a red tunic; that job now belongs to whatever they are actually wearing, and a
+silhouette cast one pixel down-right keeps them separable from the ground when
+it doesn't — plate armour on the cobbled plaza is otherwise grey on grey.
+
+Which parts are worth splitting: things tall enough to walk behind, and things
+whose pieces recombine. One-tile props, item icons and effects are neither —
+splitting those is filing for its own sake.
+
 ## 7. Reference assets
 
 When making something new, open the nearest of these and match it. These are

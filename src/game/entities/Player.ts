@@ -13,6 +13,8 @@ import {
 import { SkillSet } from "../skills";
 import { Equipment } from "../equipment";
 import { Container, createStack } from "../containers";
+import { ITEMS } from "../../data/items";
+import { PAPER_DOLL_ORDER, paperDollKey } from "../../data/assets";
 import { Direction, directionFromDelta, directionalFrameIndex } from "../directionalSprite";
 
 // Matches the player sheet built by scripts/generate-assets.mjs:
@@ -44,6 +46,9 @@ export class Player {
 
   readonly skills = new SkillSet();
   readonly equipment = new Equipment();
+  /** Worn layers drawn over the base body, rebuilt when equipment changes. */
+  private equipLayers: Phaser.GameObjects.Sprite[] = [];
+  private silhouette!: Phaser.GameObjects.Sprite;
 
   attackIntervalMs = BASE_ATTACK_INTERVAL_MS;
   attackCooldown = 0;
@@ -71,6 +76,60 @@ export class Player {
     );
     this.sprite.setOrigin(1, 1);
     this.sprite.setDepth(depthForTileY(tileY));
+
+    // A silhouette cast one pixel down-right, behind the body. Two jobs: it
+    // follows the world's upper-left light like every other shadow, and it
+    // keeps the player separable from the ground they're standing on —
+    // plate armour on the cobbled plaza is grey on grey without it, and the
+    // player has to stay the easiest figure on screen to find.
+    this.silhouette = scene.add
+      .sprite(this.sprite.x + 1, this.sprite.y + 1, "player", this.sprite.frame.name)
+      .setOrigin(1, 1)
+      .setTint(0x000000)
+      .setAlpha(0.4)
+      .setDepth(this.sprite.depth - 0.05);
+
+    this.refreshAppearance();
+  }
+
+  /**
+   * Rebuild the worn layers from what's equipped. Called whenever equipment
+   * changes, so armour and weapons are visible on the character rather than
+   * only in the stat readout.
+   */
+  refreshAppearance() {
+    for (const layer of this.equipLayers) layer.destroy();
+    this.equipLayers = [];
+
+    // Depth steps stay under 1 so the whole doll still sorts as one figure
+    // against everything standing on neighbouring tiles.
+    let depthStep = 0.1;
+    for (const slot of PAPER_DOLL_ORDER) {
+      const stack = this.equipment.get(slot);
+      const layerName = stack ? ITEMS[stack.itemId]?.paperDoll : undefined;
+      if (!layerName) continue;
+      const sprite = this.scene.add
+        .sprite(this.sprite.x, this.sprite.y, paperDollKey(layerName), this.sprite.frame.name)
+        .setOrigin(1, 1)
+        .setDepth(this.sprite.depth + depthStep);
+      this.equipLayers.push(sprite);
+      depthStep += 0.1;
+    }
+  }
+
+  /** Keep the worn layers on the body: same position, frame and sort order. */
+  private syncLayers() {
+    this.silhouette.setPosition(this.sprite.x + 1, this.sprite.y + 1);
+    this.silhouette.setFrame(this.sprite.frame.name);
+    this.silhouette.setDepth(this.sprite.depth - 0.05);
+
+    let depthStep = 0.1;
+    for (const layer of this.equipLayers) {
+      layer.setPosition(this.sprite.x, this.sprite.y);
+      layer.setFrame(this.sprite.frame.name);
+      layer.setDepth(this.sprite.depth + depthStep);
+      depthStep += 0.1;
+    }
   }
 
   private equipStartingGear() {
@@ -104,11 +163,13 @@ export class Player {
   private applyFrame(idle: boolean) {
     const frameInDirection = idle ? 0 : this.stepToggle ? 1 : 2;
     this.sprite.setFrame(directionalFrameIndex(this.facing, frameInDirection, PLAYER_FRAMES_PER_DIRECTION));
+    this.syncLayers();
   }
 
   /** Hold the swing pose briefly, so a blow reads as an action. */
   playAttack() {
     this.sprite.setFrame(directionalFrameIndex(this.facing, ATTACK_FRAME, PLAYER_FRAMES_PER_DIRECTION));
+    this.syncLayers();
     this.scene.time.delayedCall(ATTACK_POSE_MS, () => {
       // Walking takes priority: stepTo drives the frame itself while moving.
       if (!this.moving) this.applyFrame(true);
@@ -130,6 +191,7 @@ export class Player {
         x: tileAnchorX(x),
         y: tileAnchorY(y),
         duration: BASE_STEP_MS,
+        onUpdate: () => this.syncLayers(), // layers ride the tween with the body
         onComplete: () => {
           this.moving = false;
           this.applyFrame(true);
@@ -229,5 +291,6 @@ export class Player {
     this.sprite.x = tileAnchorX(x);
     this.sprite.y = tileAnchorY(y);
     this.sprite.setDepth(depthForTileY(y));
+    this.syncLayers();
   }
 }
