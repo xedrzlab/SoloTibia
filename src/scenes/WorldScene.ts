@@ -220,6 +220,10 @@ export class WorldScene extends Phaser.Scene {
       this.emitInventoryState();
       const greeting = character ? `You wake up in Oakhollow, ${character.name}.` : "You wake up in Oakhollow.";
       this.log("info", greeting);
+      // A fresh character wakes in the temple basement — the tutorial flow
+      // starts underground and climbs out through the church. Returning
+      // characters skip this and stand outside the church door.
+      if (character && !character.worldEntered) this.zoneIntoTemple();
     });
   }
 
@@ -749,6 +753,37 @@ export class WorldScene extends Phaser.Scene {
   }
 
   /**
+   * A fresh character's tutorial entry: skip the outdoor spawn tile and drop
+   * straight into the temple basement. Once the character walks out of the
+   * church, `worldEntered` flips true and this stops firing on future logins.
+   */
+  private zoneIntoTemple() {
+    this.playerPath = [];
+    this.clearTarget();
+    // Pause halts updates but keeps the scene visible under the interior;
+    // hiding as well prevents the outdoor tiles and NPCs showing through.
+    this.scene.pause();
+    this.scene.setVisible(false);
+    this.scene.launch("Interior", {
+      roomId: "temple_basement",
+      returnTile: { x: TEMPLE_SPAWN.x, y: TEMPLE_SPAWN.y },
+      playerState: {
+        vocation: this.player.vocation,
+        exp: this.player.exp,
+        hp: this.player.hp,
+        mana: this.player.mana,
+      },
+      onExit: (state: { hp: number; mana: number }) => {
+        this.player.hp = state.hp;
+        this.player.mana = state.mana;
+        this.player.teleportTo(TEMPLE_SPAWN.x, TEMPLE_SPAWN.y);
+        updateActiveCharacter({ worldEntered: true });
+        this.emitPlayerStats();
+      },
+    });
+  }
+
+  /**
    * If the player has just stepped onto a door tile in front of a shop,
    * pause the world and launch the interior scene for that shop. The
    * outdoor player state (HP/mana) rides along so the shop can render the
@@ -763,7 +798,10 @@ export class WorldScene extends Phaser.Scene {
     this.playerPath = [];
     this.clearTarget();
 
+    // Pause halts updates but keeps the scene visible under the interior;
+    // hiding as well prevents the outdoor tiles and NPCs showing through.
     this.scene.pause();
+    this.scene.setVisible(false);
     this.scene.launch("Interior", {
       roomId: entry.interiorId,
       returnTile: { x: entry.x, y: entry.y },

@@ -24,6 +24,12 @@ export interface CharacterSave {
   vocation: Vocation;
   level: number;
   exp: number;
+  /**
+   * True once the character has stepped out of the temple into the town for
+   * the first time. New characters wake in the temple basement — this flag
+   * suppresses that on later logins so a returning player lands outside.
+   */
+  worldEntered?: boolean;
 }
 
 interface Store {

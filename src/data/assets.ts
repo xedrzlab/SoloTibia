@@ -78,6 +78,12 @@ export const IMAGE_ASSETS: ImageAsset[] = [
   { key: "counter", path: "props/counter_01.png" },
   { key: "statue", path: "props/statue_01.png" },
   { key: "planter", path: "props/planter_01.png" },
+  { key: "altar", path: "props/altar_01.png" },
+  { key: "stairs-up", path: "props/stairs_up_01.png" },
+  { key: "stairs-down", path: "props/stairs_down_01.png" },
+  { key: "shop-sign-sword", path: "props/shop_sign_sword_01.png" },
+  { key: "shop-sign-bow", path: "props/shop_sign_bow_01.png" },
+  { key: "shop-sign-potion", path: "props/shop_sign_potion_01.png" },
   // Farm-animal props — static one-tile sprites used as background dressing,
   // not creatures (they don't fight, patrol or drop loot).
   { key: "chicken", path: "props/animal_chicken_01.png" },
@@ -89,6 +95,7 @@ export const IMAGE_ASSETS: ImageAsset[] = [
   { key: "building-cottage", path: "buildings/cottage_01.png" },
   { key: "building-house", path: "buildings/house_01.png" },
   { key: "building-guardpost", path: "buildings/guardpost_01.png" },
+  { key: "building-church", path: "buildings/church_01.png" },
 
   // --- npcs ---
   { key: "npc-borin", path: "characters/npc_borin.png" },
@@ -97,6 +104,7 @@ export const IMAGE_ASSETS: ImageAsset[] = [
   { key: "npc-fenn", path: "characters/npc_fenn.png" },
   { key: "npc-farmer-01", path: "characters/npc_farmer_01.png" },
   { key: "npc-farmer-02", path: "characters/npc_farmer_02.png" },
+  { key: "npc-priest", path: "characters/npc_priest.png" },
 
   // --- effects ---
   { key: "fx-hit", path: "effects/hit_spark_01.png" },

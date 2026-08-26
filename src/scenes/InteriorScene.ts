@@ -1,29 +1,29 @@
 import Phaser from "phaser";
 import { TILE_SIZE, NPC_INTERACT_RANGE } from "../game/constants";
 import { tileAnchorX, tileAnchorY, depthForTileY } from "../game/tileAnchor";
-import { INTERIORS, InteriorRoom, isFloorTile } from "../data/interiors";
+import { INTERIORS, InteriorRoom, isFloorTile, tileKind } from "../data/interiors";
 import { findPath, chebyshevDistance, TileCoord } from "../game/pathfinding";
 import { Player } from "../game/entities/Player";
 import { bus, EVENTS } from "../game/events";
 
-/** How much dead space to leave around the room, so it's not flush against the viewport edges. */
 const ROOM_MARGIN_TILES = 2;
 
 /**
- * A shop interior — a small room the player has zoned into from the world.
- * Renders its own tilemap (walls + wooden floor + door), places the
- * shopkeeper behind their counter, and hands NPC/dialogue events to the same
- * global bus the outdoor game uses so the shop UI just works.
+ * A building's interior — a small room the player has zoned into from the
+ * world, or transitioned into from another interior room (via stairs).
  *
- * Data comes in via scene.launch(..., { roomId, returnTile, playerState }).
- * WorldScene is paused while the interior is up; on exit we resume it and
- * put the player back on the door tile they stepped through.
+ * Data comes in via scene.launch(..., { roomId, returnTile, playerState,
+ * onExit, onTransition }). WorldScene owns the outdoor player and stays
+ * paused while any interior is up; interior→interior transitions restart
+ * this same scene with the new roomId.
  */
 
 interface InteriorInit {
   roomId: string;
   /** Tile in the outdoor world to return the player to on exit. */
   returnTile: { x: number; y: number };
+  /** Optional override for the player's spawn tile inside the room. */
+  spawn?: { x: number; y: number };
   /** Snapshot of the player so we can rebuild them here without cloning sprites. */
   playerState: {
     vocation: string;
@@ -31,18 +31,15 @@ interface InteriorInit {
     hp: number;
     mana: number;
   };
-  /**
-   * Called with the departing interior state when the scene stops, so the
-   * outdoor WorldScene can absorb any HP/mana changes and know we're back.
-   */
+  /** Called with final HP/mana when the interior exits back to the world. */
   onExit: (finalState: { hp: number; mana: number }) => void;
 }
 
-// Marker letters in the room grid. Kept here rather than exported since only
-// this scene consumes them; the data file describes what each means.
 const CH_WALL = "W";
 const CH_COUNTER = "C";
 const CH_DOOR = "D";
+const CH_STAIRS_UP = "U";
+const CH_STAIRS_DOWN = "d";
 
 export class InteriorScene extends Phaser.Scene {
   private room!: InteriorRoom;
@@ -53,9 +50,9 @@ export class InteriorScene extends Phaser.Scene {
   private initData!: InteriorInit;
 
   private player!: Player;
-  private npcSprite!: Phaser.GameObjects.Image;
+  private npcSprite: Phaser.GameObjects.Image | null = null;
   private playerPath: TileCoord[] = [];
-  private exitScheduled = false;
+  private transitionScheduled = false;
 
   constructor() {
     super("Interior");
@@ -63,17 +60,13 @@ export class InteriorScene extends Phaser.Scene {
 
   init(data: InteriorInit) {
     this.initData = data;
-    this.exitScheduled = false;
+    this.transitionScheduled = false;
     this.playerPath = [];
   }
-
-  // ---------------------------------------------------------------------
 
   create() {
     const room = INTERIORS[this.initData.roomId];
     if (!room) {
-      // If we can't find the room, don't strand the player — bounce right
-      // back to the world.
       this.exitToWorld();
       return;
     }
@@ -81,8 +74,6 @@ export class InteriorScene extends Phaser.Scene {
     this.roomW = room.rows[0].length;
     this.roomH = room.rows.length;
 
-    // Centre the room in the viewport so the whole shop fits, with a small
-    // margin so walls aren't flush against the screen edges.
     const worldSize = {
       w: (this.roomW + ROOM_MARGIN_TILES * 2) * TILE_SIZE,
       h: (this.roomH + ROOM_MARGIN_TILES * 2) * TILE_SIZE,
@@ -95,33 +86,47 @@ export class InteriorScene extends Phaser.Scene {
     this.cameras.main.centerOn(worldSize.w / 2, worldSize.h / 2);
     this.applyZoom(worldSize);
 
-    // --- Paint the room. Walls, floor, counter and door are drawn per-tile
-    // rather than baked into one texture — a shop is tiny, redrawing it is
-    // effectively free, and per-tile sprites keep the door sortable against
-    // the player like every other tall object in the game.
+    // Always hide World while we're up. Belt-and-braces: setVisible works for
+    // the initial launch but Phaser's scene.restart appears to re-show a
+    // sibling scene, so we also lay a black backdrop underneath everything
+    // in the interior at scroll-factor 0 to cover anything that leaks
+    // through around the room.
+    this.scene.setVisible(false, "World");
+    const backdrop = this.add
+      .rectangle(0, 0, this.scale.width, this.scale.height, 0x0a0a0a)
+      .setOrigin(0, 0)
+      .setScrollFactor(0)
+      .setDepth(-1000);
+    this.scale.on("resize", () => backdrop.setSize(this.scale.width, this.scale.height));
+
+    // Paint the room, tile by tile. Every cell gets a floor, then walls,
+    // counter or stairs sit on top of it as their own sprites.
     for (let y = 0; y < this.roomH; y++) {
       for (let x = 0; x < this.roomW; x++) {
         const ch = room.rows[y][x];
         const wx = this.tileWorldX(x);
         const wy = this.tileWorldY(y);
-        // Every cell has a floor beneath it (walls sit ON a wooden floor
-        // strip so the wall base has something to hide against).
-        this.add.image(wx, wy, "wood-floor").setOrigin(0, 0).setDepth(0);
+        const worldTileY = y + this.tileOffsetY;
+        const kind = tileKind(ch);
+        // Floor beneath every cell — stone in the church/temple, wooden
+        // planks in the shops. Walls draw over their own base so the wall
+        // has something to hide under its silhouette.
+        const floorKey = kind === "stone-floor" || ch === CH_WALL && this.roomLooksLikeTemple() ? "temple-floor" : "wood-floor";
+        this.add.image(wx, wy, floorKey).setOrigin(0, 0).setDepth(0);
         if (ch === CH_WALL) {
-          this.add.image(wx, wy, "stone-wall").setOrigin(0, 0).setDepth(depthForTileY(y + this.tileOffsetY));
+          this.add.image(wx, wy, "stone-wall").setOrigin(0, 0).setDepth(depthForTileY(worldTileY));
         } else if (ch === CH_COUNTER) {
           this.add
-            .image(tileAnchorX(x + this.tileOffsetX), tileAnchorY(y + this.tileOffsetY), "counter")
+            .image(tileAnchorX(x + this.tileOffsetX), tileAnchorY(worldTileY), "counter")
             .setOrigin(1, 1)
-            .setDepth(depthForTileY(y + this.tileOffsetY));
+            .setDepth(depthForTileY(worldTileY));
         }
-        // CH_DOOR draws no extra sprite — it's just a walkable floor tile
-        // whose position triggers the exit. The door is visually the gap in
-        // the south wall.
+        // CH_DOOR / CH_STAIRS_UP / CH_STAIRS_DOWN don't draw here — they're
+        // added by the room's own `decor` list where a visible prop is
+        // wanted (e.g. the stairs sprite over a U tile).
       }
     }
 
-    // Decor from the room definition.
     for (const decor of room.decor) {
       this.add
         .image(tileAnchorX(decor.x + this.tileOffsetX), tileAnchorY(decor.y + this.tileOffsetY), decor.textureKey)
@@ -129,26 +134,26 @@ export class InteriorScene extends Phaser.Scene {
         .setDepth(depthForTileY(decor.y + this.tileOffsetY));
     }
 
-    // Shopkeeper NPC, tap-interactive.
-    this.npcSprite = this.add
-      .image(
-        tileAnchorX(room.npc.x + this.tileOffsetX),
-        tileAnchorY(room.npc.y + this.tileOffsetY),
-        room.npc.textureKey,
-      )
-      .setOrigin(1, 1)
-      .setDepth(depthForTileY(room.npc.y + this.tileOffsetY))
-      .setInteractive({ useHandCursor: true });
-    this.npcSprite.on("pointerdown", () => this.talkToNpc());
+    if (room.npc) {
+      const npc = room.npc;
+      this.npcSprite = this.add
+        .image(
+          tileAnchorX(npc.x + this.tileOffsetX),
+          tileAnchorY(npc.y + this.tileOffsetY),
+          npc.textureKey,
+        )
+        .setOrigin(1, 1)
+        .setDepth(depthForTileY(npc.y + this.tileOffsetY))
+        .setInteractive({ useHandCursor: true });
+      this.npcSprite.on("pointerdown", () => this.talkToNpc());
+    }
 
-    // Player — a fresh Player instance in this scene, hydrated from the
-    // exterior character's saved state. Combat isn't a thing indoors, so
-    // this instance is only used for rendering and movement.
-    const spawn = {
-      x: room.spawn.x + this.tileOffsetX,
-      y: room.spawn.y + this.tileOffsetY,
+    const spawn = this.initData.spawn ?? room.spawn;
+    const spawnWorld = {
+      x: spawn.x + this.tileOffsetX,
+      y: spawn.y + this.tileOffsetY,
     };
-    this.player = new Player(this, spawn.x, spawn.y, {
+    this.player = new Player(this, spawnWorld.x, spawnWorld.y, {
       vocation: this.initData.playerState.vocation as never,
       exp: this.initData.playerState.exp,
     });
@@ -158,8 +163,12 @@ export class InteriorScene extends Phaser.Scene {
     this.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => this.handleTap(pointer));
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.input.removeAllListeners());
-
     this.scale.on("resize", () => this.applyZoom(worldSize));
+  }
+
+  /** Very rough — the temple rooms use stone floor; shops use wood. */
+  private roomLooksLikeTemple(): boolean {
+    return this.room.id.startsWith("temple_");
   }
 
   private applyZoom(worldSize: { w: number; h: number }) {
@@ -172,10 +181,8 @@ export class InteriorScene extends Phaser.Scene {
   // --- Movement & interaction --------------------------------------------
 
   private handleTap(pointer: Phaser.Input.Pointer) {
-    if (this.exitScheduled) return;
-
-    // Tap on the NPC sprite goes through its own handler.
-    if (this.npcSprite.getBounds().contains(pointer.worldX, pointer.worldY)) return;
+    if (this.transitionScheduled) return;
+    if (this.npcSprite && this.npcSprite.getBounds().contains(pointer.worldX, pointer.worldY)) return;
 
     const tx = Math.floor(pointer.worldX / TILE_SIZE);
     const ty = Math.floor(pointer.worldY / TILE_SIZE);
@@ -190,48 +197,81 @@ export class InteriorScene extends Phaser.Scene {
   }
 
   update() {
-    if (this.exitScheduled) return;
+    if (this.transitionScheduled) return;
     if (this.player.moving || this.playerPath.length === 0) {
-      // Also check for exit any time we're standing still, so a player who
-      // tapped the door and finished walking there gets out on this frame.
-      if (!this.player.moving) this.checkExit();
+      if (!this.player.moving) this.checkTransition();
       return;
     }
     const next = this.playerPath.shift()!;
-    void this.player.stepTo(next.x, next.y).then(() => this.checkExit());
+    void this.player.stepTo(next.x, next.y).then(() => this.checkTransition());
   }
 
-  private checkExit() {
+  /** After each step, decide whether the tile the player just landed on triggers a transition. */
+  private checkTransition() {
     const localX = this.player.tileX - this.tileOffsetX;
     const localY = this.player.tileY - this.tileOffsetY;
     if (localY < 0 || localY >= this.roomH || localX < 0 || localX >= this.roomW) return;
-    if (this.room.rows[localY][localX] === CH_DOOR) this.exitToWorld();
+    const ch = this.room.rows[localY][localX];
+
+    if (ch === CH_DOOR) {
+      this.exitToWorld();
+      return;
+    }
+    if (ch === CH_STAIRS_UP && this.room.stairsUp) {
+      this.transitionToRoom(this.room.stairsUp.toRoomId, this.room.stairsUp.spawn);
+      return;
+    }
+    if (ch === CH_STAIRS_DOWN && this.room.stairsDown) {
+      this.transitionToRoom(this.room.stairsDown.toRoomId, this.room.stairsDown.spawn);
+      return;
+    }
+  }
+
+  /** Move to another interior room, keeping the outdoor return tile and player state. */
+  private transitionToRoom(toRoomId: string, spawn: { x: number; y: number }) {
+    if (this.transitionScheduled) return;
+    this.transitionScheduled = true;
+    const nextInit: InteriorInit = {
+      roomId: toRoomId,
+      returnTile: this.initData.returnTile,
+      spawn,
+      playerState: {
+        vocation: this.initData.playerState.vocation,
+        exp: this.initData.playerState.exp,
+        hp: this.player.hp,
+        mana: this.player.mana,
+      },
+      onExit: this.initData.onExit,
+    };
+    // Restart in place: Phaser tears down and reboots this scene with the
+    // new init data. Simpler than stop-then-launch, and it keeps the scene
+    // lifecycle strictly serial.
+    this.scene.restart(nextInit);
   }
 
   private exitToWorld() {
-    if (this.exitScheduled) return;
-    this.exitScheduled = true;
-    // Forward the player's carried-over HP/mana so the outdoor scene can
-    // resume with them, then hand control back to the world.
+    if (this.transitionScheduled) return;
+    this.transitionScheduled = true;
     this.initData.onExit({ hp: this.player.hp, mana: this.player.mana });
     this.scene.stop("Interior");
     this.scene.resume("World");
+    this.scene.setVisible(true, "World");
   }
 
   private talkToNpc() {
-    // Same range/emit shape the outdoor NPC talk uses, so the UI's shop and
-    // vocation panels light up exactly the way they do outside.
-    if (chebyshevDistance(this.player.tile, { x: this.room.npc.x + this.tileOffsetX, y: this.room.npc.y + this.tileOffsetY }) > NPC_INTERACT_RANGE) {
-      bus.emit(EVENTS.LOG, { kind: "info", text: `Walk closer to talk to ${this.room.npc.name}.` });
+    if (!this.room.npc) return;
+    const npc = this.room.npc;
+    if (chebyshevDistance(this.player.tile, { x: npc.x + this.tileOffsetX, y: npc.y + this.tileOffsetY }) > NPC_INTERACT_RANGE) {
+      bus.emit(EVENTS.LOG, { kind: "info", text: `Walk closer to talk to ${npc.name}.` });
       return;
     }
     bus.emit(EVENTS.OPEN_DIALOGUE, {
-      npcId: this.room.npc.id,
-      npcName: this.room.npc.name,
-      textureKey: this.room.npc.textureKey,
-      role: this.room.npc.role,
-      greeting: this.room.npc.greeting,
-      about: this.room.npc.about,
+      npcId: npc.id,
+      npcName: npc.name,
+      textureKey: npc.textureKey,
+      role: npc.role,
+      greeting: npc.greeting,
+      about: npc.about,
     });
   }
 
@@ -245,19 +285,19 @@ export class InteriorScene extends Phaser.Scene {
     return (localY + this.tileOffsetY) * TILE_SIZE;
   }
 
-  /** True if a world-tile position sits inside the room and is walkable. */
   private isWalkableWorld(worldTileX: number, worldTileY: number): boolean {
     const localX = worldTileX - this.tileOffsetX;
     const localY = worldTileY - this.tileOffsetY;
     if (localY < 0 || localY >= this.roomH || localX < 0 || localX >= this.roomW) return false;
     const ch = this.room.rows[localY][localX];
     if (!isFloorTile(ch)) return false;
-    // Decor and the NPC block their tiles too.
-    if (this.room.npc.x === localX && this.room.npc.y === localY) return false;
+    if (this.room.npc && this.room.npc.x === localX && this.room.npc.y === localY) return false;
     for (const d of this.room.decor) {
       if (d.blocks && d.x === localX && d.y === localY) return false;
     }
     return true;
   }
-
 }
+
+// Silence unused-import warnings.
+void isFloorTile;

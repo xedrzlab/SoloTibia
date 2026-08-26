@@ -66,9 +66,14 @@ for (let i = 0; i < WALL_GATES.east.h; i++) {
 b.rect(34, TOWN.y, 2, TOWN.h, "R");
 b.rect(TOWN.x, 24, TOWN.w, 2, "R");
 
+// The church stands in the middle of town, on what used to be the empty
+// plaza. The plaza has been trimmed to the cobbled skirt just outside the
+// church doors — the church itself is the centrepiece now, not an empty
+// square. TEMPLE_SPAWN is the outdoor tile the player lands on when they
+// exit the church into town.
 const PLAZA = { x: 30, y: 21, w: 10, h: 8 };
 b.rect(PLAZA.x, PLAZA.y, PLAZA.w, PLAZA.h, "T");
-export const TEMPLE_SPAWN = { x: 34, y: 24 };
+export const TEMPLE_SPAWN = { x: 34, y: 26 }; // one tile south of the church door
 
 // Dirt walkways from each shop's door out to the road, so the doors don't
 // hang in the grass.
@@ -98,10 +103,16 @@ export const BUILDINGS: BuildingPlacement[] = [
   { textureKey: "building-house", footprintX: 25, footprintY: 28, footprintW: 3, footprintH: 3 },
   // SE: Elder Corwin's cottage — vocation NPC (interior later; outside for now).
   { textureKey: "building-cottage", footprintX: 42, footprintY: 28, footprintW: 3, footprintH: 3 },
-  // Guardpost over the north gate.
-  { textureKey: "building-guardpost", footprintX: 32, footprintY: 15, footprintW: 3, footprintH: 3 },
+  // Guardpost isn't over the north gate any more — the church is the town's
+  // north-facing landmark now, and the guardpost is a small watchpost tucked
+  // to the west of the plaza.
+  { textureKey: "building-guardpost", footprintX: 30, footprintY: 15, footprintW: 3, footprintH: 3 },
   // Farmer's cottage on the south road.
   { textureKey: "building-cottage", footprintX: 32, footprintY: 40, footprintW: 3, footprintH: 3 },
+  // The church — the centrepiece of town, footprint 4x3 tiles. The roof and
+  // steeple in the sprite extend above the footprint by design (see the art
+  // note on visual size vs collision footprint).
+  { textureKey: "building-church", footprintX: 32, footprintY: 21, footprintW: 4, footprintH: 3 },
 ];
 for (const building of BUILDINGS) {
   b.rect(building.footprintX, building.footprintY, building.footprintW, building.footprintH, "W");
@@ -124,7 +135,7 @@ export const ENTRY_POINTS: EntryPoint[] = [
   { x: 26, y: 20, interiorId: "melee_shop" }, // in front of Borin's forge
   { x: 43, y: 20, interiorId: "ranged_shop" }, // in front of Fenn's cottage
   { x: 26, y: 27, interiorId: "magic_shop" }, // in front of Wren's house
-  { x: 43, y: 27, interiorId: "elder_house" }, // in front of Elder Corwin's cottage
+  { x: 34, y: 25, interiorId: "temple_main" }, // in front of the church door
 ];
 for (const entry of ENTRY_POINTS) {
   b.set(entry.x, entry.y, "D");
@@ -223,19 +234,23 @@ export const PROPS: PropPlacement[] = [
   { textureKey: "chest", x: 28, y: 27, blocks: true }, // Wren's yard
   { textureKey: "barrel", x: 45, y: 27, blocks: true }, // Elder's yard
 
-  // Plaza dressing.
-  { textureKey: "statue", x: 35, y: 25, blocks: true },
-  { textureKey: "well", x: 32, y: 22, blocks: true },
-  { textureKey: "planter", x: PLAZA.x, y: PLAZA.y, blocks: true },
-  { textureKey: "planter", x: PLAZA.x + PLAZA.w - 1, y: PLAZA.y, blocks: true },
+  // --- Shop signs so a player can read what a shop is from the street. ---
+  { textureKey: "shop-sign-sword", x: 27, y: 20 },
+  { textureKey: "shop-sign-bow", x: 41, y: 20 },
+  { textureKey: "shop-sign-potion", x: 27, y: 27 },
+
+  // --- Cobbled skirt around the church, dressed to read as a plaza ---
+  // Torches flanking the church door.
+  { textureKey: "torch", x: 33, y: 25, blocks: true },
+  { textureKey: "torch", x: 36, y: 25, blocks: true },
+  // Two planters at the corners of the plaza skirt.
   { textureKey: "planter", x: PLAZA.x, y: PLAZA.y + PLAZA.h - 1, blocks: true },
   { textureKey: "planter", x: PLAZA.x + PLAZA.w - 1, y: PLAZA.y + PLAZA.h - 1, blocks: true },
-  { textureKey: "torch", x: 32, y: 25, blocks: true },
-  { textureKey: "torch", x: 37, y: 25, blocks: true },
-  { textureKey: "torch", x: 32, y: 27, blocks: true },
-  { textureKey: "torch", x: 37, y: 27, blocks: true },
-  { textureKey: "bench", x: 34, y: 26, blocks: true },
-  { textureKey: "bench", x: 36, y: 22, blocks: true },
+  // A well tucked to the west of the church.
+  { textureKey: "well", x: 30, y: 22, blocks: true },
+  // A bench facing the church, opposite the door.
+  { textureKey: "bench", x: 34, y: 27, blocks: true },
+  { textureKey: "bench", x: 35, y: 27, blocks: true },
 
   // Farm yard dressing.
   { textureKey: "sack", x: 32, y: 44, blocks: true },

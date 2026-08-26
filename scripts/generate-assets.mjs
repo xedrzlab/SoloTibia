@@ -1497,6 +1497,259 @@ function buildingHouse() {
   return s;
 }
 
+/**
+ * The town church: bigger than every other building, stone-walled, red-tiled
+ * roof pitched steeply, a bell tower with a small cross topping the ridge. A
+ * tall arched door and one big rose window face the street.
+ *
+ * Sized larger than the standard 48x56 house — 64x80 source — because a
+ * church needs to dominate the plaza it stands on. The bottom 2 rows are
+ * shadow / ground contact, above that is the wall face; the top ~40 rows are
+ * the roof plus steeple.
+ */
+function buildingChurch() {
+  const W = 64;
+  const H = 80;
+  const s = new Sprite(W, H);
+  const wall = WALL_STONE;
+  const roof = ROOF_CLAY;
+  const ridgeY = 20; // where the roof meets the steeple base
+  const eaveY = 48; // roof drops to here at the eave
+  const wallY = 50;
+  const foundationY = 66;
+  const groundY = 76;
+
+  // Ground shadow
+  s.fillRect(4, groundY, W - 6, 2, "#14110f");
+  s.fillRect(8, groundY + 2, W - 12, 1, "#1a1712");
+
+  // Foundation
+  s.fillRect(3, foundationY, W - 6, groundY - foundationY, wall.dark);
+  for (let x = 4; x < W - 6; x += 7) {
+    s.fillRect(x, foundationY + 1, 5, 3, wall.mid);
+    s.fillRect(x, foundationY + 1, 5, 1, wall.light);
+  }
+
+  // Wall face
+  s.fillRect(3, wallY, W - 6, foundationY - wallY, wall.mid);
+  s.fillRect(3, wallY, 2, foundationY - wallY, wall.light);
+  s.fillRect(W - 5, wallY, 2, foundationY - wallY, wall.dark);
+  s.speckleRect(5, wallY + 2, W - 12, foundationY - wallY - 3, 34, wall.dark, 71);
+  s.speckleRect(5, wallY + 2, W - 12, foundationY - wallY - 3, 18, wall.light, 72);
+
+  // Roof: main pitched body from ridgeY to eaveY
+  s.fillRect(2, eaveY, W - 4, 2, roof.dark); // eave line
+  s.fillRect(3, wallY, W - 6, 1, "#1a1512"); // shadow just below eave
+  s.fillRect(4, ridgeY, W - 8, eaveY - ridgeY, roof.mid);
+  for (let y = ridgeY + 4; y < eaveY; y += 4) {
+    s.line(4, y, W - 5, y, roof.dark);
+    s.line(4, y + 1, W - 5, y + 1, roof.light);
+  }
+  // Staggered vertical seams
+  for (let y = ridgeY; y < eaveY; y += 4) {
+    for (let x = 6 + ((y / 4) % 2) * 4; x < W - 6; x += 8) {
+      s.setPixel(x, y + 2, roof.dark);
+      s.setPixel(x, y + 3, roof.dark);
+    }
+  }
+  s.fillRect(4, ridgeY, 12, eaveY - ridgeY, roof.light); // lit left face
+  s.fillRect(W - 10, ridgeY, 6, eaveY - ridgeY, roof.dark); // shaded right
+  // Ridge cap
+  s.fillRect(4, ridgeY - 1, W - 8, 2, roof.dark);
+  s.fillRect(5, ridgeY - 1, W - 14, 1, roof.hi);
+
+  // Bell tower / steeple: narrow rectangular block rising from the ridge
+  const towerW = 14;
+  const towerX = Math.floor(W / 2) - Math.floor(towerW / 2);
+  const towerTop = 4;
+  const towerBase = ridgeY;
+  s.fillRect(towerX, towerTop, towerW, towerBase - towerTop, wall.mid);
+  s.fillRect(towerX, towerTop, 2, towerBase - towerTop, wall.light);
+  s.fillRect(towerX + towerW - 2, towerTop, 2, towerBase - towerTop, wall.dark);
+  // Belfry arches (two dark openings)
+  s.fillRect(towerX + 3, towerTop + 6, 2, 5, "#0a0a0c");
+  s.fillRect(towerX + towerW - 5, towerTop + 6, 2, 5, "#0a0a0c");
+  // Tower roof — small pointed pyramid
+  s.fillRect(towerX - 1, towerTop - 3, towerW + 2, 3, roof.dark);
+  s.fillRect(towerX + 1, towerTop - 5, towerW - 2, 2, roof.mid);
+  // Small cross on the very top
+  s.setPixel(Math.floor(W / 2), towerTop - 8, "#e6c34a");
+  s.setPixel(Math.floor(W / 2), towerTop - 7, "#e6c34a");
+  s.setPixel(Math.floor(W / 2), towerTop - 6, "#e6c34a");
+  s.setPixel(Math.floor(W / 2) - 1, towerTop - 7, "#e6c34a");
+  s.setPixel(Math.floor(W / 2) + 1, towerTop - 7, "#e6c34a");
+
+  // Rose window above the door
+  const rwCx = Math.floor(W / 2);
+  s.fillCircle(rwCx, wallY + 6, 4, DOOR_WOOD.dark);
+  s.fillCircle(rwCx, wallY + 6, 3.2, "#2f3d7a");
+  s.fillCircle(rwCx, wallY + 6, 2, "#6fa2ff");
+  s.setPixel(rwCx - 1, wallY + 5, "#dfe8ff");
+  s.setPixel(rwCx, wallY + 5, "#dfe8ff");
+
+  // Tall double doors — arched at top
+  const doorTop = wallY + 12;
+  const doorBottom = foundationY - 1;
+  const doorLeft = rwCx - 6;
+  const doorRight = rwCx + 5;
+  s.fillRect(doorLeft - 1, doorTop, doorRight - doorLeft + 2, doorBottom - doorTop, DOOR_WOOD.dark);
+  s.fillRect(doorLeft, doorTop + 1, doorRight - doorLeft, doorBottom - doorTop - 1, DOOR_WOOD.mid);
+  // Split in the middle for double doors
+  s.line(rwCx, doorTop + 1, rwCx, doorBottom - 1, DOOR_WOOD.dark);
+  // Iron banding
+  s.line(doorLeft, doorTop + 4, doorRight, doorTop + 4, "#3a3a3a");
+  s.line(doorLeft, doorBottom - 3, doorRight, doorBottom - 3, "#3a3a3a");
+  // Handles
+  s.setPixel(rwCx - 2, doorTop + Math.floor((doorBottom - doorTop) / 2), "#c9a24a");
+  s.setPixel(rwCx + 2, doorTop + Math.floor((doorBottom - doorTop) / 2), "#c9a24a");
+  // Arched doorway highlight
+  s.setPixel(doorLeft, doorTop + 1, DOOR_WOOD.light);
+  s.setPixel(doorLeft + 1, doorTop, DOOR_WOOD.light);
+
+  // Two narrow side windows flanking the door
+  drawWindow(s, 8, wallY + 8, 5, 8, null);
+  drawWindow(s, W - 13, wallY + 8, 5, 8, null);
+
+  // Doorstep
+  s.fillRect(doorLeft - 2, foundationY, doorRight - doorLeft + 4, 2, wall.light);
+  return s;
+}
+
+/** Hanging shop-sign: a wooden plank with a coloured symbol, hung from a small bracket. */
+function shopSignSprite(kind) {
+  const s = new Sprite(16, 16);
+  const bracket = "#3a2717";
+  const plank = "#8a6a3d";
+  const plankHi = "#a3814f";
+  const plankLo = "#5a3d22";
+  const chain = "#5c5762";
+  // Shadow
+  s.fillRect(4, 15, 8, 1, "#0a0a0a");
+  // Bracket arm anchored to the building (top-left)
+  s.fillRect(0, 2, 3, 1, bracket);
+  s.setPixel(2, 3, bracket);
+  // Chain / rope down to the sign
+  s.setPixel(3, 4, chain);
+  s.setPixel(11, 4, chain);
+  // Wooden plank
+  s.fillRect(2, 5, 12, 8, plank);
+  s.fillRect(2, 5, 12, 1, plankHi);
+  s.fillRect(2, 12, 12, 1, plankLo);
+  s.fillRect(2, 5, 1, 8, plankHi);
+  s.fillRect(13, 5, 1, 8, plankLo);
+  // Symbol
+  if (kind === "sword") {
+    s.fillRect(7, 6, 2, 5, "#c9ccd1");
+    s.setPixel(7, 6, "#eef0f3");
+    s.fillRect(6, 10, 4, 1, "#c9a24a");
+    s.setPixel(8, 11, "#5a3d22");
+  } else if (kind === "bow") {
+    // Small bow arc + arrow
+    s.setPixel(6, 6, plankLo);
+    s.setPixel(5, 7, plankLo);
+    s.setPixel(5, 8, plankLo);
+    s.setPixel(5, 9, plankLo);
+    s.setPixel(5, 10, plankLo);
+    s.setPixel(6, 11, plankLo);
+    s.line(6, 7, 6, 10, "#3a2717");
+    s.line(7, 8, 12, 8, "#c9ccd1"); // arrow shaft
+    s.setPixel(11, 7, "#c9ccd1");
+    s.setPixel(11, 9, "#c9ccd1");
+  } else if (kind === "potion") {
+    // Small red potion silhouette
+    s.setPixel(7, 6, "#3a2717");
+    s.setPixel(8, 6, "#3a2717");
+    s.fillEllipse(8, 10, 2.2, 2.4, "#c9302f");
+    s.setPixel(7, 9, "#ff8f8b");
+    s.fillRect(7, 6, 2, 1, "#c9ccd1"); // cork
+  }
+  return s;
+}
+
+/**
+ * Stone altar — a flat-topped stone block with a lit candle at each end.
+ * Used in temple / church interiors as the room's focal point.
+ */
+function altarSprite() {
+  const s = new Sprite(16, 16);
+  const stone = "#7d7887";
+  const stoneHi = "#a29cac";
+  const stoneLo = "#4a4650";
+  const cloth = "#c9302f";
+  const clothHi = "#e05a58";
+  const wax = "#e8e4c0";
+  const flame = "#ffe08a";
+  s.fillEllipse(8, 15, 6, 1, "#0a0a0a");
+  // Altar body (broader base, narrower top gives a plinth silhouette)
+  s.fillRect(2, 10, 12, 4, stone);
+  s.fillRect(2, 10, 12, 1, stoneHi);
+  s.fillRect(2, 13, 12, 1, stoneLo);
+  s.fillRect(3, 8, 10, 2, stoneHi); // top slab
+  s.fillRect(3, 8, 10, 1, "#c9c4d0"); // lit top edge
+  // Red altar cloth draped down the middle
+  s.fillRect(6, 7, 4, 8, cloth);
+  s.fillRect(6, 7, 4, 1, clothHi);
+  s.setPixel(7, 14, clothHi);
+  // Candles at each end
+  s.fillRect(3, 5, 1, 4, wax);
+  s.fillRect(12, 5, 1, 4, wax);
+  s.setPixel(3, 4, flame);
+  s.setPixel(12, 4, flame);
+  return s;
+}
+
+/**
+ * Stone stairs going up — steps ascending from the bottom of the tile to the
+ * top, drawn as receding parallel rectangles for the top-down perspective.
+ */
+function stairsUpSprite() {
+  const s = new Sprite(16, 16);
+  const stone = "#7d7887";
+  const stoneHi = "#a29cac";
+  const stoneLo = "#4a4650";
+  const stoneDeep = "#2c2832";
+  // Ground shadow
+  s.fillRect(0, 15, 16, 1, "#0a0a0a");
+  // Landing at the bottom (widest, closest to the viewer)
+  s.fillRect(1, 12, 14, 3, stone);
+  s.fillRect(1, 12, 14, 1, stoneHi);
+  s.fillRect(1, 14, 14, 1, stoneLo);
+  // Successive narrower steps going up (receding into the tile)
+  s.fillRect(2, 9, 12, 3, stone);
+  s.fillRect(2, 9, 12, 1, stoneHi);
+  s.fillRect(3, 6, 10, 3, stone);
+  s.fillRect(3, 6, 10, 1, stoneHi);
+  s.fillRect(4, 3, 8, 3, stone);
+  s.fillRect(4, 3, 8, 1, stoneHi);
+  // Doorway hole at the very top: the step recedes into shadow.
+  s.fillRect(5, 1, 6, 2, stoneDeep);
+  s.fillRect(5, 0, 6, 1, "#0a0a0a");
+  return s;
+}
+
+/** Stone stairs going down — inverse of stairsUp, with a dark pit at the base. */
+function stairsDownSprite() {
+  const s = new Sprite(16, 16);
+  const stone = "#7d7887";
+  const stoneHi = "#a29cac";
+  const stoneLo = "#4a4650";
+  const pit = "#0a0a0c";
+  s.fillRect(0, 15, 16, 1, "#0a0a0a");
+  // Top rim (widest, above the pit)
+  s.fillRect(1, 3, 14, 2, stone);
+  s.fillRect(1, 3, 14, 1, stoneHi);
+  // Dark pit descending — steps going into darkness
+  s.fillRect(3, 5, 10, 9, pit);
+  s.fillRect(4, 6, 8, 1, stoneLo);
+  s.fillRect(5, 8, 6, 1, stoneLo);
+  s.fillRect(6, 10, 4, 1, stoneLo);
+  s.fillRect(7, 12, 2, 1, stoneLo);
+  // Front lip of the pit
+  s.fillRect(1, 14, 14, 1, stone);
+  s.fillRect(1, 14, 14, 1, stoneLo);
+  return s;
+}
+
 /** The guard post: squat stone blockhouse, arrow slits, a banner over the door. */
 function buildingGuardPost() {
   const s = buildingBase({ roof: ROOF_SLATE, wall: WALL_STONE });
@@ -1626,6 +1879,44 @@ function elderFrame() {
   // staff prop with a small gem
   s.fillRect(13, 2, 1, 11, staff);
   s.fillCircle(13.5, 2, 1.1, "#6fb2ff");
+  return s;
+}
+
+/** Father Aldwin, the temple priest: white cassock, gold sash, holy symbol at the neck. */
+function priestFrame() {
+  const s = new Sprite(16, 16);
+  const cassock = "#e8e4d0";
+  const cassockDark = "#b8b4a0";
+  const cassockLo = "#8a8770";
+  const gold = "#c9a24a";
+  const goldHi = "#f0d67a";
+  const skin = "#e0b58a";
+  s.setPixel(6, 13, "#241a12");
+  s.setPixel(9, 13, "#241a12");
+  // Long white cassock reaching the ground
+  s.fillRect(5, 9, 6, 4, cassock);
+  s.fillRect(5, 9, 1, 4, cassockDark);
+  s.fillRect(10, 9, 1, 4, cassockDark);
+  s.fillRect(5, 12, 6, 1, cassockLo);
+  // Gold rope belt
+  s.fillRect(5, 11, 6, 1, gold);
+  // Upper body
+  s.fillRect(5, 6, 6, 4, cassock);
+  s.fillRect(5, 6, 1, 4, cassockDark);
+  s.fillRect(10, 6, 1, 4, cassockDark);
+  // Arms
+  s.fillRect(4, 7, 1, 3, cassock);
+  s.fillRect(11, 7, 1, 3, cassock);
+  // Holy symbol pendant
+  s.setPixel(8, 7, gold);
+  s.setPixel(8, 8, goldHi);
+  s.setPixel(7, 8, gold);
+  s.setPixel(9, 8, gold);
+  // Head with short tonsure fringe
+  s.fillCircle(8, 3, 2.4, skin);
+  s.fillRect(6, 1, 4, 1, "#5a3d22");
+  s.setPixel(7, 3, "#241a12");
+  s.setPixel(9, 3, "#241a12");
   return s;
 }
 
@@ -2386,6 +2677,12 @@ saveSprite(fenceGateSprite(), SCALE, `${OUT}/props/fence_gate_01.png`);
 saveSprite(counterSprite(), SCALE, `${OUT}/props/counter_01.png`);
 saveSprite(statueSprite(), SCALE, `${OUT}/props/statue_01.png`);
 saveSprite(planterSprite(), SCALE, `${OUT}/props/planter_01.png`);
+saveSprite(altarSprite(), SCALE, `${OUT}/props/altar_01.png`);
+saveSprite(stairsUpSprite(), SCALE, `${OUT}/props/stairs_up_01.png`);
+saveSprite(stairsDownSprite(), SCALE, `${OUT}/props/stairs_down_01.png`);
+saveSprite(shopSignSprite("sword"), SCALE, `${OUT}/props/shop_sign_sword_01.png`);
+saveSprite(shopSignSprite("bow"), SCALE, `${OUT}/props/shop_sign_bow_01.png`);
+saveSprite(shopSignSprite("potion"), SCALE, `${OUT}/props/shop_sign_potion_01.png`);
 
 // --- farm animals (background dressing) ----------------------------------
 saveSprite(chickenSprite(), SCALE, `${OUT}/props/animal_chicken_01.png`);
@@ -2397,6 +2694,7 @@ saveSprite(buildingForge(), SCALE, `${OUT}/buildings/forge_01.png`);
 saveSprite(buildingCottage(), SCALE, `${OUT}/buildings/cottage_01.png`);
 saveSprite(buildingHouse(), SCALE, `${OUT}/buildings/house_01.png`);
 saveSprite(buildingGuardPost(), SCALE, `${OUT}/buildings/guardpost_01.png`);
+saveSprite(buildingChurch(), SCALE, `${OUT}/buildings/church_01.png`);
 
 // --- characters ----------------------------------------------------------
 // The player is a paper doll: one sheet per layer, all sharing frame indices
@@ -2412,6 +2710,7 @@ saveSprite(elderFrame(), SCALE, `${OUT}/characters/npc_corwin.png`);
 saveSprite(fennFrame(), SCALE, `${OUT}/characters/npc_fenn.png`);
 saveSprite(farmerFrame(0), SCALE, `${OUT}/characters/npc_farmer_01.png`);
 saveSprite(farmerFrame(1), SCALE, `${OUT}/characters/npc_farmer_02.png`);
+saveSprite(priestFrame(), SCALE, `${OUT}/characters/npc_priest.png`);
 
 // --- creatures -----------------------------------------------------------
 const trollMeta = saveSpriteSheet(directionalFrames(trollFrame), SCALE, `${OUT}/creatures/troll_sheet.png`);
