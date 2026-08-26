@@ -66,15 +66,46 @@ for (let i = 0; i < WALL_GATES.east.h; i++) {
   b.set(TOWN.x, WALL_GATES.west.y + i, "R");
 }
 
-// The two main street spines — a north-south road through both town gates
-// and an east-west road through the east/west gates.
-b.rect(34, TOWN.y, 2, TOWN.h, "R");
+// Streets used to be perfectly straight — a grid the eye reads as a housing
+// estate, not a village. Every street now has at least one jog in it so
+// walking through town isn't a straight line; houses on each row sit against
+// whichever segment their door faces.
+//
+// N-S spine: straight through the north gate, jogs east once, jogs back.
+b.path(
+  [
+    { x: 34, y: TOWN.y },
+    { x: 34, y: 20 },
+    { x: 37, y: 20 },
+    { x: 37, y: 30 },
+    { x: 34, y: 30 },
+    { x: 34, y: TOWN.y + TOWN.h - 1 },
+  ],
+  "R",
+  2,
+);
+
+// E-W spine stays straight — five buildings on the middle band open onto it
+// (bank, Wren, church, Elder, depot), so jogging it would strand their doors.
 b.rect(TOWN.x, 24, TOWN.w, 2, "R");
 
-// Secondary E-W streets so both rows of houses have a road at their front.
+// Secondary E-W streets serving each row of houses — kept straight because
+// each row's houses depend on the street's Y coordinate matching their door
+// row. The winding character of the town comes from the N-S spine above and
+// from short diagonal-feeling dirt alleys added further down.
 b.rect(TOWN.x, 13, TOWN.w, 1, "R"); // upper street
 b.rect(TOWN.x, 30, TOWN.w, 1, "R"); // lower street
-b.rect(TOWN.x, 36, TOWN.w, 1, "R"); // southernmost street
+b.rect(TOWN.x, 36, TOWN.w, 1, "R"); // southernmost
+
+// Approach lanes for the northern shops — the N-S spine no longer runs
+// straight past them (it jogs east at y=20), so each shop gets a short
+// cobble spur back to the spine.
+b.rect(26, 20, 9, 1, "R"); // Borin's approach
+b.rect(35, 20, 9, 1, "R"); // Fenn's approach
+// A short dirt alley between the north and middle rows on each side, so
+// the two rows aren't hermetically separated.
+b.rect(24, 14, 1, 3, "D"); // west side alley — through grass gap
+b.rect(45, 14, 1, 3, "D"); // east side mirror
 
 // The old flagstone plaza is gone — an empty stone rectangle reads as a
 // parade ground, not a working village. In its place: a tiny safe-zone
@@ -85,12 +116,8 @@ b.rect(TOWN.x, 36, TOWN.w, 1, "R"); // southernmost street
 b.rect(34, 24, 2, 2, "T");
 export const TEMPLE_SPAWN = { x: 34, y: 26 }; // one tile south of the church door
 
-// Branch streets from the N-S spine out to each door row. Northern shops open
-// onto y=20; the middle-band shops (Wren, Elder, Church) sit right on the
-// E-W spine so no extra branch is needed for them.
-b.rect(26, 20, 9, 1, "R"); // Borin's forge (NW) → spine
-b.rect(35, 20, 9, 1, "R"); // Fenn's fletchery (NE) → spine
-// Short branch north to the guardpost.
+// Short spur north to the guardpost, since it doesn't sit on any of the
+// main streets.
 b.rect(30, 18, 5, 1, "R");
 
 // ---------------------------------------------------------------------------
@@ -287,14 +314,15 @@ export const PROPS: PropPlacement[] = [
   { textureKey: "cat", x: 38, y: 30 },
   { textureKey: "cat", x: 30, y: 26 },
 
-  // --- Icon shop-signs at each service, so a walker can read what the shop
-  // --- is from the street without stopping on the signpost. Each hangs on
-  // --- the tile next to the shop's door row.
-  { textureKey: "shop-sign-melee", x: 27, y: 20 }, // Borin's Forge — sword + shield
-  { textureKey: "shop-sign-ranged", x: 41, y: 20 }, // Fenn's Fletchery — bow + arrow
-  { textureKey: "shop-sign-magic", x: 27, y: 24 }, // Wren's Apothecary — potion + wand
-  { textureKey: "shop-sign-bank", x: 16, y: 24 }, // Bank — coin with green $
-  { textureKey: "shop-sign-depot", x: 51, y: 24 }, // Depot — metal box
+  // --- Icon shop-signs sit on the corner tile immediately adjacent to each
+  // --- shop's door — same row as the door on the road side, one tile east
+  // --- of the door itself. On the corner, over the roof-line edge, so the
+  // --- sign hangs "on the shop" visually rather than floating on the road.
+  { textureKey: "shop-sign-melee", x: 28, y: 19 }, // Borin — sword + shield
+  { textureKey: "shop-sign-ranged", x: 45, y: 19 }, // Fenn — bow + arrow
+  { textureKey: "shop-sign-magic", x: 28, y: 23 }, // Wren — potion + wand
+  { textureKey: "shop-sign-bank", x: 17, y: 23 }, // Bank — coin with green $
+  { textureKey: "shop-sign-depot", x: 54, y: 23 }, // Depot — metal box
 
   // --- Small pieces of street furniture along the roads. Kept sparse — the
   // --- plaza is gone on purpose, so nothing here should read as one. ---
