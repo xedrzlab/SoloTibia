@@ -12,6 +12,7 @@ import {
   BUILDINGS,
   SIGNS,
   NpcSpawn,
+  variantForCell,
 } from "../data/tilemap";
 import { MONSTERS } from "../data/monsters";
 import { EquipSlot, ITEMS } from "../data/items";
@@ -199,7 +200,7 @@ export class WorldScene extends Phaser.Scene {
     const rt = this.add.renderTexture(0, 0, mapWidthPx, mapHeightPx).setOrigin(0, 0);
     rt.setDepth(0);
     forEachTile((x, y, tile) => {
-      rt.draw(tile.textureKey, x * TILE_SIZE, y * TILE_SIZE);
+      rt.draw(variantForCell(tile, x, y), x * TILE_SIZE, y * TILE_SIZE);
       if (tile.overlayKey) rt.draw(tile.overlayKey, x * TILE_SIZE, y * TILE_SIZE);
     });
   }

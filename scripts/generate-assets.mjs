@@ -1,9 +1,23 @@
-// Generates the sprites that don't (yet) have real-art replacements:
-// void-wall tile, rat/cave-rat/slime monsters, item icons, and app icons.
-// Player, troll, and the grass/dirt/cave-floor/temple-floor/water/stone-wall
-// tiles now come from the uploaded asset pack via
-// `npm run process:assets` (scripts/process-uploaded-assets.mjs) — don't
-// regenerate those here, or this script would clobber the real art.
+// Every visual asset in the game is generated here: terrain, props, buildings,
+// characters, creatures, item icons and the app icons. Nothing is imported.
+//
+// This file is the art direction, in executable form. The rules it holds every
+// asset to, so the world reads as the work of one hand:
+//
+//   PIXEL DENSITY  One art pixel is two screen pixels. Sprites are authored on
+//                  a 16px grid and saved at SCALE, giving 32x32 world tiles.
+//                  Anything authored at a finer density looks foreign next to
+//                  the rest, however good it is on its own.
+//   LIGHT          One source, upper left, for everything. Top and left-facing
+//                  surfaces take the highlight; right and lower faces darken;
+//                  contact shadows fall to the lower right.
+//   PERSPECTIVE    Top-down, neither flat-on nor isometric. Tall things show a
+//                  little of their front face below what you see from above.
+//   PALETTE        Shared families (P_GRASS, P_STONE, ...) rather than per-asset
+//                  colour. Saturation is reserved for what the player must
+//                  find: loot, effects, the player themself.
+//   DETAIL         Only where it says something — a crack, an edge, a material
+//                  change. Noise for its own sake reads as dirt on the screen.
 //
 // Run with `npm run gen:assets`. Re-run any time definitions below change.
 
@@ -16,6 +30,195 @@ const SCALE = 2; // 16x16 source canvas -> 32x32 tiles, matching the 1-tile-per-
 // ---------------------------------------------------------------------------
 // Tiles (only the ones with no real-art replacement)
 // ---------------------------------------------------------------------------
+
+// Terrain palettes. Every tile draws from these families so the ground reads
+// as one continuous world rather than a set of unrelated textures.
+const P_GRASS = { deep: "#25451c", dark: "#2f5620", mid: "#3d6b2a", light: "#4f8034", hi: "#61944a" };
+const P_DIRT = { deep: "#3a2717", dark: "#4f351f", mid: "#6b4a2a", light: "#82603a", hi: "#9a774d" };
+const P_STONE = { deep: "#1f1d24", dark: "#2c2832", mid: "#4a4650", light: "#615c6b", hi: "#7d7887" };
+const P_COBBLE = { deep: "#2a2730", dark: "#45414d", mid: "#6d6875", light: "#8a8592", hi: "#a29cac" };
+const P_WATER = { deep: "#12304a", dark: "#1a3f5e", mid: "#245a7d", light: "#3a7fa3", hi: "#6fb2c9" };
+
+/**
+ * Lay down small rectangular patches rather than loose pixels. Ground texture
+ * built from clusters reads as material; the same pixel count scattered one at
+ * a time reads as static, which is the fastest way to make pixel art look
+ * machine-made.
+ */
+function clusters(s, spots, hex) {
+  for (const [x, y, w = 2, h = 1] of spots) s.fillRect(x, y, w, h, hex);
+}
+
+/**
+ * Grass. Kept deliberately quiet: the ground is background, so it carries
+ * broad tonal variation and a few blade tufts rather than detail that would
+ * compete with characters and loot standing on it.
+ */
+function grassTile(variant = 0) {
+  const s = new Sprite(16, 16);
+  s.fillRect(0, 0, 16, 16, P_GRASS.mid);
+
+  // Broad shading patches, so the tile has areas rather than an even field.
+  clusters(
+    s,
+    [[0, 2, 4, 2], [6, 0, 3, 2], [11, 4, 5, 3], [2, 7, 4, 2], [8, 9, 3, 2], [0, 12, 5, 2], [12, 12, 4, 2]],
+    P_GRASS.dark,
+  );
+  clusters(s, [[4, 1, 2, 1], [9, 3, 3, 1], [1, 5, 3, 1], [7, 6, 2, 1], [12, 8, 3, 1], [5, 11, 3, 1], [9, 14, 3, 1]], P_GRASS.light);
+
+  // Blade tufts: a lit tip over a darker base reads as standing grass.
+  for (const [x, y] of [[2, 3], [7, 1], [13, 5], [4, 9], [10, 11], [14, 9], [6, 13]]) {
+    s.setPixel(x, y, P_GRASS.hi);
+    s.setPixel(x, y + 1, P_GRASS.deep);
+  }
+
+  if (variant === 1) {
+    // A single small flower. More than one reads as a pattern once the variant
+    // repeats across a field, and the ground is meant to stay quiet.
+    s.setPixel(11, 9, "#c9b86a");
+    s.setPixel(11, 10, P_GRASS.deep);
+  } else if (variant === 2) {
+    // One small stone, warm-toned so it sits in the earth palette rather than
+    // reading as a cold speck against the green.
+    s.fillRect(9, 3, 2, 1, "#8a8175");
+    s.fillRect(9, 4, 2, 1, "#54503f");
+  }
+  return s;
+}
+
+/** Bare earth: packed dirt with small embedded stones. */
+function dirtTile(variant = 0) {
+  const s = new Sprite(16, 16);
+  s.fillRect(0, 0, 16, 16, P_DIRT.mid);
+
+  clusters(
+    s,
+    variant === 1
+      ? [[2, 1, 4, 2], [9, 3, 4, 2], [0, 7, 3, 2], [6, 9, 5, 2], [12, 12, 4, 2]]
+      : [[0, 2, 3, 2], [7, 0, 4, 2], [11, 5, 5, 2], [3, 8, 4, 2], [9, 11, 4, 2], [0, 13, 4, 2]],
+    P_DIRT.dark,
+  );
+  clusters(s, [[5, 3, 3, 1], [1, 6, 2, 1], [12, 9, 3, 1], [6, 13, 3, 1]], P_DIRT.light);
+  clusters(s, [[4, 5, 2, 1], [13, 2, 2, 1], [8, 14, 2, 1]], P_DIRT.deep);
+
+  // Small stones: a lit top edge over a shadowed base, per the global light.
+  const stones = variant === 1 ? [[4, 6], [11, 12]] : [[3, 4], [12, 7], [7, 12]];
+  for (const [x, y] of stones) {
+    s.fillRect(x, y, 2, 1, "#8a8175");
+    s.fillRect(x, y + 1, 2, 1, "#3f382c");
+  }
+  return s;
+}
+
+/** Cave floor: cold, dark stone, worn smooth with a few short fractures. */
+function caveFloorTile() {
+  const s = new Sprite(16, 16);
+  s.fillRect(0, 0, 16, 16, P_STONE.mid);
+
+  clusters(s, [[1, 1, 4, 2], [8, 2, 5, 2], [3, 6, 4, 2], [11, 8, 4, 2], [0, 11, 4, 2], [7, 13, 5, 2]], P_STONE.dark);
+  clusters(s, [[6, 4, 3, 1], [1, 9, 3, 1], [12, 5, 2, 1], [5, 11, 3, 1]], P_STONE.light);
+
+  // Short fractures only. Long diagonals would tile into a visible repeating
+  // slash across the whole cave floor.
+  for (const [x, y, len] of [[3, 4, 3], [10, 12, 3]]) {
+    s.fillRect(x, y, len, 1, P_STONE.deep);
+    s.fillRect(x, y - 1, len, 1, P_STONE.light); // lit lip on the upper side
+  }
+  return s;
+}
+
+/** Town cobblestone: irregular blocks with mortar between them. */
+function cobbleTile() {
+  const s = new Sprite(16, 16);
+  s.fillRect(0, 0, 16, 16, P_COBBLE.deep); // mortar shows through the gaps
+
+  // Staggered courses, so the seams don't line up into a grid.
+  const rows = [
+    { y: 0, h: 5, xs: [0, 6, 11] },
+    { y: 5, h: 6, xs: [0, 4, 10] },
+    { y: 11, h: 5, xs: [0, 7, 12] },
+  ];
+  for (const row of rows) {
+    for (let i = 0; i < row.xs.length; i++) {
+      const x = row.xs[i];
+      const w = (row.xs[i + 1] ?? 16) - x - 1;
+      if (w <= 0) continue;
+      s.fillRect(x, row.y, w, row.h - 1, P_COBBLE.mid);
+      s.fillRect(x, row.y, w, 1, P_COBBLE.light); // lit top edge
+      s.fillRect(x, row.y, 1, row.h - 1, P_COBBLE.light); // lit left edge
+      s.fillRect(x + w - 1, row.y, 1, row.h - 1, P_COBBLE.dark); // shaded right
+      s.fillRect(x, row.y + row.h - 2, w, 1, P_COBBLE.dark); // shaded bottom
+      s.setPixel(x + 1, row.y + 1, P_COBBLE.hi); // upper-left catch light
+    }
+  }
+  s.speckleRect(0, 0, 16, 16, 16, P_COBBLE.dark, 480);
+  return s;
+}
+
+/** Still water: darker with depth, with a few surface highlights. */
+function waterTile() {
+  const s = new Sprite(16, 16);
+  s.fillRect(0, 0, 16, 16, P_WATER.mid);
+
+  // Depth pooling in broad bands rather than per-pixel noise.
+  clusters(s, [[0, 0, 6, 3], [9, 2, 7, 2], [2, 7, 5, 3], [11, 9, 5, 3], [0, 13, 7, 3]], P_WATER.dark);
+  clusters(s, [[3, 1, 3, 1], [12, 3, 3, 1], [4, 8, 3, 1], [13, 10, 3, 1]], P_WATER.deep);
+
+  // Ripple crests: a bright leading edge above a darker trough.
+  for (const [x, y, w] of [[2, 4, 5], [9, 6, 4], [4, 11, 4], [10, 14, 5]]) {
+    s.fillRect(x, y, w, 1, P_WATER.light);
+    s.fillRect(x + 1, y - 1, w - 2, 1, P_WATER.hi);
+    s.fillRect(x, y + 1, w, 1, P_WATER.dark);
+  }
+  return s;
+}
+
+/** Mortared block wall — the built walls of houses and the cave. */
+function stoneWallTile() {
+  const s = new Sprite(16, 16);
+  s.fillRect(0, 0, 16, 16, P_STONE.deep); // mortar
+
+  // Two staggered courses of blocks.
+  const courses = [
+    { y: 0, h: 8, offset: 0 },
+    { y: 8, h: 8, offset: 4 },
+  ];
+  for (const course of courses) {
+    for (let x = -course.offset; x < 16; x += 8) {
+      const bx = Math.max(0, x);
+      // Clamp to the tile edge, not to one block width — clamping to 8 left
+      // the right-hand half of every tile as bare mortar.
+      const bw = Math.min(16, x + 8) - bx - 1;
+      if (bw <= 0) continue;
+      s.fillRect(bx, course.y, bw, course.h - 1, P_STONE.mid);
+      s.fillRect(bx, course.y, bw, 1, P_STONE.hi); // top plane, lit
+      s.fillRect(bx, course.y, 1, course.h - 1, P_STONE.light);
+      s.fillRect(bx + bw - 1, course.y, 1, course.h - 1, P_STONE.dark);
+      s.fillRect(bx, course.y + course.h - 2, bw, 1, P_STONE.dark);
+    }
+  }
+  clusters(s, [[2, 2, 3, 1], [10, 3, 3, 1], [5, 10, 3, 1], [12, 11, 3, 1]], P_STONE.dark);
+  return s;
+}
+
+/** Rocky mountain ground: dry earth with stone breaking through. */
+function rockyGroundTile() {
+  const s = new Sprite(16, 16);
+  s.fillRect(0, 0, 16, 16, "#574c42");
+  clusters(s, [[0, 0, 5, 2], [7, 3, 4, 2], [12, 0, 4, 2], [1, 7, 3, 2], [10, 13, 5, 2], [6, 8, 3, 1]], "#463d35");
+  clusters(s, [[6, 1, 3, 1], [2, 6, 3, 1], [11, 9, 3, 1], [4, 14, 3, 1]], "#6b5f52");
+
+  // Embedded stones, each with a lit top-left and a shadow to the lower right.
+  for (const [x, y, w, h] of [[1, 2, 5, 4], [9, 5, 5, 4], [4, 10, 6, 4]]) {
+    s.fillRect(x, y, w, h, P_STONE.mid);
+    s.fillRect(x, y, w, 1, P_STONE.light);
+    s.fillRect(x, y, 1, h, P_STONE.light);
+    s.fillRect(x + w - 1, y, 1, h, P_STONE.dark);
+    s.fillRect(x, y + h - 1, w, 1, "#2f2a26"); // contact shadow
+    s.setPixel(x + 1, y + 1, P_STONE.hi);
+  }
+  return s;
+}
 
 function voidWallTile() {
   const s = new Sprite(16, 16);
@@ -138,6 +341,244 @@ function wellSprite() {
   s.fillRect(2, 2, 12, 1, "#5a3d22"); // roof beam
   s.fillRect(3, 1, 10, 1, "#6b4a2a"); // roof cap
   return s;
+}
+
+// ---------------------------------------------------------------------------
+// Player and troll — original directional sheets, drawn at the same pixel
+// density as everything else here (16px-grid art doubled to 32px tiles).
+//
+// Sheet layout must match DIRECTION_ORDER in src/game/directionalSprite.ts:
+// three frames per direction, in the order down, left, right, up. Frame 0 is
+// idle; frames 1 and 2 are the alternating walk steps.
+// ---------------------------------------------------------------------------
+
+const PC = {
+  skinHi: "#e0a877",
+  skin: "#c98a5c",
+  skinDark: "#a06b42",
+  hair: "#7a4a22",
+  hairHi: "#96612e",
+  tunicHi: "#d4614a",
+  tunic: "#b8442f",
+  tunicDark: "#8a2f20",
+  belt: "#4a2f1a",
+  gold: "#e6c34a",
+  legs: "#4a3d5a",
+  legsDark: "#362c42",
+  boot: "#3a2717",
+  eye: "#1a1a1e",
+};
+
+/** Ground contact shadow shared by every character frame. */
+function footShadow(s, cx, y, rx) {
+  s.fillEllipse(cx, y, rx, 1, "#1a2412");
+}
+
+/**
+ * One player frame. The palette is deliberately the warmest thing on screen:
+ * against green grass and grey stone the player stays the easiest figure to
+ * find, which matters more than costume detail at this size.
+ */
+function playerFrame(direction, pose) {
+  const s = new Sprite(16, 16);
+  const facingSide = direction === "left" || direction === "right";
+  const back = direction === "up";
+
+  footShadow(s, 8, 15, 4);
+
+  // --- Legs: the walk cycle lives here, not in a whole-sprite bob ---
+  const legY = 11;
+  const legs = facingSide
+    ? { near: 6, far: 8 } // profile: one leg in front of the other
+    : { near: 5, far: 9 };
+  // Boots stop at row 14 so the contact shadow on row 15 stays visible —
+  // without it the character reads as hovering rather than standing.
+  if (pose === "idle") {
+    for (const x of [legs.near, legs.far]) {
+      s.fillRect(x, legY, 2, 2, PC.legs);
+      s.fillRect(x, legY + 2, 2, 2, PC.boot);
+    }
+    s.fillRect(legs.far, legY, 1, 2, PC.legsDark); // shaded inner edge
+  } else {
+    const lead = pose === "stepA" ? legs.near : legs.far;
+    const trail = pose === "stepA" ? legs.far : legs.near;
+    // Leading leg reaches down and plants, toe extended forward.
+    s.fillRect(lead, legY, 2, 2, PC.legs);
+    s.fillRect(lead - (facingSide && direction === "right" ? 0 : 1), legY + 2, 3, 2, PC.boot);
+    // Trailing leg is lifted, so it's shorter and sits in shadow.
+    s.fillRect(trail, legY, 2, 1, PC.legsDark);
+    s.fillRect(trail, legY + 1, 2, 2, PC.boot);
+  }
+
+  // --- Torso: wide at the shoulders, tapering to the belt ---
+  const bodyX = facingSide ? 5 : 4;
+  const bodyW = facingSide ? 6 : 8;
+  s.fillRect(bodyX, 6, bodyW, 1, PC.tunicHi); // lit shoulder line
+  s.fillRect(bodyX, 7, bodyW, 2, PC.tunic);
+  s.fillRect(bodyX + 1, 9, bodyW - 2, 1, PC.tunic); // taper toward the waist
+  s.fillRect(bodyX, 7, 1, 2, PC.tunicHi); // lit left flank
+  s.fillRect(bodyX + bodyW - 1, 7, 1, 2, PC.tunicDark); // shaded right flank
+  s.fillRect(bodyX + 1, 10, bodyW - 2, 1, PC.belt);
+  if (!facingSide && !back) s.setPixel(8, 10, PC.gold); // buckle, front view only
+
+  // --- Arms: swing opposite the legs, and stay clear of the torso ---
+  const swing = pose === "idle" ? 0 : pose === "stepA" ? 1 : -1;
+  if (facingSide) {
+    // In profile only the near arm reads; it swings fore and aft.
+    const ax = pose === "stepA" ? 10 : pose === "stepB" ? 4 : 9;
+    s.fillRect(ax, 7, 2, 3, PC.tunicDark);
+    s.fillRect(ax, 10, 2, 1, PC.skin); // hand
+  } else {
+    const leftY = 7 + Math.max(0, swing);
+    const rightY = 7 + Math.max(0, -swing);
+    s.fillRect(3, leftY, 1, 3, PC.tunicHi);
+    s.setPixel(3, leftY + 3, PC.skin);
+    s.fillRect(12, rightY, 1, 3, PC.tunicDark);
+    s.setPixel(12, rightY + 3, PC.skinDark);
+  }
+
+  // --- Neck: one pixel of separation is what stops the head reading as a box ---
+  s.fillRect(7, 5, 2, 1, PC.skinDark);
+
+  // --- Head ---
+  const headX = facingSide ? (direction === "right" ? 6 : 5) : 5;
+  s.fillRect(headX, 1, 6, 4, PC.skin);
+  s.fillRect(headX + 1, 1, 4, 1, PC.skinHi); // lit crown
+  s.fillRect(headX + 5, 2, 1, 3, PC.skinDark); // shaded right cheek
+
+  if (back) {
+    // From behind, hair covers the whole skull — no face to read.
+    s.fillRect(headX, 1, 6, 4, PC.hair);
+    s.fillRect(headX + 1, 1, 4, 1, PC.hairHi);
+    s.fillRect(headX, 4, 6, 1, PC.hair);
+  } else if (facingSide) {
+    s.fillRect(headX, 1, 6, 2, PC.hair); // fringe
+    s.fillRect(headX + 1, 1, 3, 1, PC.hairHi);
+    s.fillRect(headX + 4, 1, 2, 4, PC.hair); // hair down the back of the head
+    s.setPixel(headX + 1, 3, PC.eye);
+    s.setPixel(headX, 3, PC.skinHi); // brow/nose catching the light
+  } else {
+    s.fillRect(headX, 1, 6, 2, PC.hair);
+    s.fillRect(headX + 1, 1, 3, 1, PC.hairHi);
+    s.setPixel(headX, 2, PC.hair); // sideburns
+    s.setPixel(headX + 5, 2, PC.hair);
+    s.setPixel(headX + 1, 3, PC.eye);
+    s.setPixel(headX + 4, 3, PC.eye);
+    s.fillRect(headX + 2, 4, 2, 1, PC.skinDark); // mouth
+  }
+
+  return direction === "left" ? s.flippedHorizontal() : s;
+}
+
+const TROLL = {
+  skinHi: "#8a9a63",
+  skin: "#6b7a4a",
+  skinDark: "#4f5c36",
+  skinDeep: "#3a4527",
+  belly: "#9aa47a",
+  tusk: "#e0dcc2",
+  claw: "#c9c2a4",
+  eye: "#c93a2f",
+  cloth: "#6b4a2a",
+  clothDark: "#4a2f1a",
+};
+
+/**
+ * One troll frame. Silhouette first: a hunched brute, wider at the shoulders
+ * than it is tall in the legs, so it reads as heavy even before any detail.
+ */
+function trollFrame(direction, pose) {
+  const s = new Sprite(20, 26);
+  const facingSide = direction === "left" || direction === "right";
+  const back = direction === "up";
+
+  s.fillEllipse(10, 25, 6, 1.4, "#1a2412");
+
+  // --- Legs: short, thick, planted wide ---
+  const legY = 19;
+  if (pose === "idle") {
+    s.fillRect(5, legY, 4, 5, TROLL.skin);
+    s.fillRect(11, legY, 4, 5, TROLL.skinDark);
+    s.fillRect(5, legY, 1, 5, TROLL.skinHi); // lit outer edge keeps legs off the shadow
+    s.fillRect(4, legY + 4, 5, 2, TROLL.skinDark); // splayed feet
+    s.fillRect(11, legY + 4, 5, 2, TROLL.skinDeep);
+  } else {
+    const lead = pose === "stepA" ? 5 : 11;
+    const trail = pose === "stepA" ? 11 : 5;
+    s.fillRect(lead, legY, 4, 5, TROLL.skinDark);
+    s.fillRect(lead - 1, legY + 4, 6, 2, TROLL.skinDeep);
+    s.fillRect(trail, legY, 4, 3, TROLL.skinDeep);
+    s.fillRect(trail, legY + 3, 4, 2, TROLL.skinDeep);
+  }
+
+  // --- Loincloth ---
+  s.fillRect(5, 17, 10, 3, TROLL.cloth);
+  s.fillRect(5, 17, 10, 1, "#82603a");
+  s.fillRect(5, 19, 10, 1, TROLL.clothDark);
+
+  // --- Torso: broad, sloping shoulders ---
+  s.fillRect(4, 9, 12, 8, TROLL.skin);
+  s.fillRect(4, 9, 2, 8, TROLL.skinHi); // lit left flank
+  s.fillRect(14, 9, 2, 8, TROLL.skinDark); // shaded right flank
+  s.fillRect(5, 8, 10, 1, TROLL.skinHi); // shoulder highlight
+  if (!back) {
+    s.fillRect(7, 12, 6, 5, TROLL.belly);
+    s.fillRect(7, 12, 6, 1, TROLL.skinHi);
+  }
+
+  // --- Arms: long, hanging below the waist ---
+  const swing = pose === "idle" ? 0 : pose === "stepA" ? 1 : -1;
+  const leftArmY = 10 + Math.max(0, swing);
+  const rightArmY = 10 + Math.max(0, -swing);
+  s.fillRect(1, leftArmY, 3, 8, TROLL.skin);
+  s.fillRect(1, leftArmY, 1, 8, TROLL.skinHi);
+  s.fillRect(1, leftArmY + 8, 3, 2, TROLL.skinDark); // fist
+  s.fillRect(16, rightArmY, 3, 8, TROLL.skinDark);
+  s.fillRect(16, rightArmY + 8, 3, 2, TROLL.skinDeep);
+  if (!back) {
+    // Claws sit on the lower edge of each fist. Drawn detached they read as
+    // stray pixels, so they stay attached to the silhouette.
+    s.setPixel(1, leftArmY + 9, TROLL.claw);
+    s.setPixel(3, leftArmY + 9, TROLL.claw);
+    s.setPixel(16, rightArmY + 9, TROLL.claw);
+    s.setPixel(18, rightArmY + 9, TROLL.claw);
+  }
+
+  // --- Head: big, low-slung, no real neck ---
+  s.fillRect(6, 2, 8, 7, TROLL.skin);
+  s.fillRect(6, 2, 8, 1, TROLL.skinHi);
+  s.fillRect(6, 2, 1, 7, TROLL.skinHi);
+  s.fillRect(13, 2, 1, 7, TROLL.skinDark);
+  s.fillRect(5, 4, 1, 3, TROLL.skinDark); // ears
+  s.fillRect(14, 4, 1, 3, TROLL.skinDark);
+
+  if (back) {
+    s.fillRect(6, 2, 8, 7, TROLL.skin);
+    s.fillRect(6, 2, 8, 1, TROLL.skinHi);
+    s.speckleRect(7, 3, 6, 5, 6, TROLL.skinDark, 55); // matted hide
+  } else if (facingSide) {
+    s.fillRect(13, 4, 3, 3, TROLL.skin); // snout pushed forward
+    s.fillRect(13, 4, 3, 1, TROLL.skinHi);
+    s.setPixel(11, 5, TROLL.eye);
+    s.setPixel(14, 7, TROLL.tusk); // single visible tusk
+  } else {
+    s.fillRect(8, 6, 4, 2, TROLL.skinDark); // heavy brow over the muzzle
+    s.setPixel(8, 5, TROLL.eye);
+    s.setPixel(11, 5, TROLL.eye);
+    s.setPixel(8, 8, TROLL.tusk); // tusks jutting up from the lower jaw
+    s.setPixel(11, 8, TROLL.tusk);
+  }
+
+  return direction === "left" ? s.flippedHorizontal() : s;
+}
+
+/** Assemble a 4-direction x 3-frame sheet in DIRECTION_ORDER. */
+function directionalFrames(makeFrame) {
+  const frames = [];
+  for (const direction of ["down", "left", "right", "up"]) {
+    for (const pose of ["idle", "stepA", "stepB"]) frames.push(makeFrame(direction, pose));
+  }
+  return frames;
 }
 
 // ---------------------------------------------------------------------------
@@ -828,6 +1269,16 @@ function appIcon(size) {
 // Write everything out
 // ---------------------------------------------------------------------------
 
+saveSprite(grassTile(0), SCALE, `${OUT}/tiles/grass.png`);
+saveSprite(grassTile(1), SCALE, `${OUT}/tiles/grass-2.png`);
+saveSprite(grassTile(2), SCALE, `${OUT}/tiles/grass-3.png`);
+saveSprite(dirtTile(0), SCALE, `${OUT}/tiles/dirt.png`);
+saveSprite(dirtTile(1), SCALE, `${OUT}/tiles/dirt-2.png`);
+saveSprite(caveFloorTile(), SCALE, `${OUT}/tiles/cave-floor.png`);
+saveSprite(cobbleTile(), SCALE, `${OUT}/tiles/temple-floor.png`);
+saveSprite(waterTile(), SCALE, `${OUT}/tiles/water.png`);
+saveSprite(stoneWallTile(), SCALE, `${OUT}/tiles/stone-wall.png`);
+saveSprite(rockyGroundTile(), SCALE, `${OUT}/tiles/rocky-ground.png`);
 saveSprite(voidWallTile(), SCALE, `${OUT}/tiles/void-wall.png`);
 saveSprite(mountainTile(), SCALE, `${OUT}/tiles/mountain.png`);
 saveSprite(roadTile(), SCALE, `${OUT}/tiles/road.png`);
@@ -848,6 +1299,9 @@ saveSprite(buildingGuardPost(), SCALE, `${OUT}/props/building-guardpost.png`);
 saveSprite(barrelSprite(), SCALE, `${OUT}/props/barrel.png`);
 saveSprite(crateSprite(), SCALE, `${OUT}/props/crate.png`);
 saveSprite(wellSprite(), SCALE, `${OUT}/props/well.png`);
+
+const playerMeta = saveSpriteSheet(directionalFrames(playerFrame), SCALE, `${OUT}/entities/player.png`);
+const trollMeta = saveSpriteSheet(directionalFrames(trollFrame), SCALE, `${OUT}/entities/troll.png`);
 
 const ratFrames = [ratFrame({ step: 0 }), ratFrame({ step: 1 })];
 const ratMeta = saveSpriteSheet(ratFrames, SCALE, `${OUT}/entities/rat.png`);
@@ -889,7 +1343,9 @@ saveSprite(flameSpellIcon(), SCALE, `${OUT}/items/spell-flame.png`);
 savePNG(appIcon(192).toPNG(1), `${ICONS}/icon-192.png`);
 savePNG(appIcon(512).toPNG(1), `${ICONS}/icon-512.png`);
 
-console.log("Generated void-wall tile, rat/cave-rat/slime sheets, items, and app icons.");
+console.log("Generated every game asset: terrain, props, buildings, characters, items, app icons.");
+console.log("PLAYER_SHEET must match:", playerMeta);
+console.log("TROLL_SHEET must match:", trollMeta);
 console.log("rat sheet meta:", ratMeta);
 console.log("cave rat sheet meta:", caveRatMeta);
 console.log("slime sheet meta:", slimeMeta);

@@ -192,16 +192,33 @@ b.set(TEMPLE_SPAWN.x, TEMPLE_SPAWN.y, "T");
 export interface TileInfo {
   walkable: boolean;
   textureKey: string;
+  /**
+   * Interchangeable versions of textureKey. The renderer picks one per cell
+   * from the cell's coordinates, so large stretches of ground break up
+   * without ever looking randomly noisy — and the choice is stable between
+   * runs, since it's derived rather than rolled.
+   */
+  variants?: string[];
   /** A transparent-background decoration drawn on top of textureKey (e.g. a tree over grass). */
   overlayKey?: string;
   safe: boolean; // protection-zone tiles: no monster aggro, valid respawn point
 }
 
+/**
+ * Pick a tile's variant from its position. A cheap integer hash keeps the
+ * pattern from lining up into visible stripes the way (x + y) would.
+ */
+export function variantForCell(tile: TileInfo, x: number, y: number): string {
+  if (!tile.variants || tile.variants.length === 0) return tile.textureKey;
+  const hash = Math.abs(Math.imul(x * 374761393 + y * 668265263, 1274126177)) >>> 0;
+  return tile.variants[hash % tile.variants.length];
+}
+
 const LEGEND: Record<string, TileInfo> = {
   "#": { walkable: false, textureKey: "void-wall", safe: false },
-  ".": { walkable: true, textureKey: "grass", safe: false },
+  ".": { walkable: true, textureKey: "grass", variants: ["grass", "grass-2", "grass-3"], safe: false },
   T: { walkable: true, textureKey: "temple-floor", safe: true },
-  D: { walkable: true, textureKey: "dirt", safe: false },
+  D: { walkable: true, textureKey: "dirt", variants: ["dirt", "dirt-2"], safe: false },
   C: { walkable: true, textureKey: "cave-floor", safe: false },
   W: { walkable: false, textureKey: "stone-wall", safe: false },
   "~": { walkable: false, textureKey: "water", safe: false },
@@ -210,9 +227,9 @@ const LEGEND: Record<string, TileInfo> = {
   R: { walkable: true, textureKey: "road", safe: false },
   // t/b/o only ever scatter onto grass ('.') cells (see the scatter() calls
   // above), so grass is always the correct base to draw underneath them.
-  t: { walkable: false, textureKey: "grass", overlayKey: "tree", safe: false },
-  b: { walkable: false, textureKey: "grass", overlayKey: "bush", safe: false },
-  o: { walkable: false, textureKey: "grass", overlayKey: "boulder", safe: false },
+  t: { walkable: false, textureKey: "grass", variants: ["grass", "grass-2"], overlayKey: "tree", safe: false },
+  b: { walkable: false, textureKey: "grass", variants: ["grass", "grass-2"], overlayKey: "bush", safe: false },
+  o: { walkable: false, textureKey: "grass", variants: ["grass", "grass-3"], overlayKey: "boulder", safe: false },
   k: { walkable: false, textureKey: "grass", overlayKey: "barrel", safe: false },
   x: { walkable: false, textureKey: "grass", overlayKey: "crate", safe: false },
   w: { walkable: false, textureKey: "temple-floor", overlayKey: "well", safe: true },

@@ -23,6 +23,6 @@ export const VOCATION_CHOICE_LEVEL = 8;
 export const NPC_INTERACT_RANGE = 3;
 
 // Frame dimensions for directional sheets built by
-// scripts/process-uploaded-assets.mjs — must match its printed output.
-export const PLAYER_SHEET = { frameWidth: 25, frameHeight: 32 };
-export const TROLL_SHEET = { frameWidth: 39, frameHeight: 52 };
+// scripts/generate-assets.mjs — must match its printed output.
+export const PLAYER_SHEET = { frameWidth: 32, frameHeight: 32 };
+export const TROLL_SHEET = { frameWidth: 40, frameHeight: 52 };

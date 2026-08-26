@@ -1,5 +1,5 @@
 // Shared frame-indexing contract between the game code and
-// scripts/process-uploaded-assets.mjs: directional sheets are laid out as
+// scripts/generate-assets.mjs: directional sheets are laid out as
 // framesPerDirection frames for each direction, in this order.
 export const DIRECTION_ORDER = ["down", "left", "right", "up"] as const;
 export type Direction = (typeof DIRECTION_ORDER)[number];

@@ -15,7 +15,7 @@ import { Equipment } from "../equipment";
 import { Container, createStack } from "../containers";
 import { Direction, directionFromDelta, directionalFrameIndex } from "../directionalSprite";
 
-// Matches the player sheet built by scripts/process-uploaded-assets.mjs:
+// Matches the player sheet built by scripts/generate-assets.mjs:
 // 3 frames per direction (0 = idle, 1/2 = alternating walk steps).
 const PLAYER_FRAMES_PER_DIRECTION = 3;
 

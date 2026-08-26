@@ -9,6 +9,9 @@ export class BootScene extends Phaser.Scene {
   preload() {
     const base = "assets";
     this.load.image("grass", `${base}/tiles/grass.png`);
+    this.load.image("grass-2", `${base}/tiles/grass-2.png`);
+    this.load.image("grass-3", `${base}/tiles/grass-3.png`);
+    this.load.image("dirt-2", `${base}/tiles/dirt-2.png`);
     this.load.image("cave-floor", `${base}/tiles/cave-floor.png`);
     this.load.image("dirt", `${base}/tiles/dirt.png`);
     this.load.image("stone-wall", `${base}/tiles/stone-wall.png`);

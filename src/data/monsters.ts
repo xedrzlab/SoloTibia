@@ -13,7 +13,7 @@ export interface MonsterDef {
   name: string;
   textureKey: string;
   frameCount: number;
-  /** Set for sheets built by scripts/process-uploaded-assets.mjs (4 directions x N frames). Omit for simple non-directional 2-frame sheets. */
+  /** Set for sheets built by scripts/generate-assets.mjs (4 directions x N frames). Omit for simple non-directional 2-frame sheets. */
   framesPerDirection?: number;
   hp: number;
   xp: number;

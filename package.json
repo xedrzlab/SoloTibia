@@ -7,8 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview --host",
-    "gen:assets": "node scripts/generate-assets.mjs",
-    "process:assets": "node scripts/process-uploaded-assets.mjs"
+    "gen:assets": "node scripts/generate-assets.mjs"
   },
   "dependencies": {
     "phaser": "^3.90.0"
@@ -17,7 +16,6 @@
     "typescript": "^5.7.2",
     "vite": "^6.0.5",
     "vite-plugin-pwa": "^0.21.1",
-    "pngjs": "^7.0.0",
-    "sharp": "^0.34.4"
+    "pngjs": "^7.0.0"
   }
 }
