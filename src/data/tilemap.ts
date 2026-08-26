@@ -63,24 +63,27 @@ for (let i = 0; i < WALL_GATES.east.h; i++) {
   b.set(TOWN.x, WALL_GATES.west.y + i, "R");
 }
 
+// The two main street spines — a north-south road through both town gates
+// and an east-west road through the east/west gates.
 b.rect(34, TOWN.y, 2, TOWN.h, "R");
 b.rect(TOWN.x, 24, TOWN.w, 2, "R");
 
-// The church stands in the middle of town, on what used to be the empty
-// plaza. The plaza has been trimmed to the cobbled skirt just outside the
-// church doors — the church itself is the centrepiece now, not an empty
-// square. TEMPLE_SPAWN is the outdoor tile the player lands on when they
-// exit the church into town.
-const PLAZA = { x: 30, y: 21, w: 10, h: 8 };
-b.rect(PLAZA.x, PLAZA.y, PLAZA.w, PLAZA.h, "T");
+// The old flagstone plaza is gone — an empty stone rectangle reads as a
+// parade ground, not a working village. In its place: a tiny safe-zone
+// square at the crossroads (2x2, so a respawn always lands on safe cobble)
+// and short branch streets that connect each shop's door back to the main
+// spine, so buildings hang off the road network rather than sitting alone
+// in the middle of grass.
+b.rect(34, 24, 2, 2, "T");
 export const TEMPLE_SPAWN = { x: 34, y: 26 }; // one tile south of the church door
 
-// Dirt walkways from each shop's door out to the road, so the doors don't
-// hang in the grass.
-b.rect(26, 20, 1, 4, "D");
-b.rect(43, 20, 1, 4, "D");
-b.rect(26, 25, 1, 4, "D");
-b.rect(43, 25, 1, 4, "D");
+// Branch streets from the N-S spine out to each shop's door row.
+b.rect(26, 20, 9, 1, "R"); // Borin's forge (NW) → spine
+b.rect(35, 20, 9, 1, "R"); // Fenn's fletchery (NE) → spine
+b.rect(26, 27, 9, 1, "R"); // Wren's apothecary (SW) → spine
+b.rect(35, 27, 9, 1, "R"); // Elder Corwin's cottage (SE) → spine
+// Short branch from the west spine (x=30..35) north to the guardpost door row.
+b.rect(30, 18, 5, 1, "R");
 
 // ---------------------------------------------------------------------------
 // Buildings — drawn as roofed sprites. Doors are entry points into interiors.
@@ -239,18 +242,19 @@ export const PROPS: PropPlacement[] = [
   { textureKey: "shop-sign-bow", x: 41, y: 20 },
   { textureKey: "shop-sign-potion", x: 27, y: 27 },
 
-  // --- Cobbled skirt around the church, dressed to read as a plaza ---
-  // Torches flanking the church door.
-  { textureKey: "torch", x: 33, y: 25, blocks: true },
-  { textureKey: "torch", x: 36, y: 25, blocks: true },
-  // Two planters at the corners of the plaza skirt.
-  { textureKey: "planter", x: PLAZA.x, y: PLAZA.y + PLAZA.h - 1, blocks: true },
-  { textureKey: "planter", x: PLAZA.x + PLAZA.w - 1, y: PLAZA.y + PLAZA.h - 1, blocks: true },
-  // A well tucked to the west of the church.
+  // --- Small pieces of street furniture along the roads. Kept sparse — the
+  // --- plaza is gone on purpose, so nothing here should read as one. ---
+  // A well on the grass, north-west of the church.
   { textureKey: "well", x: 30, y: 22, blocks: true },
-  // A bench facing the church, opposite the door.
-  { textureKey: "bench", x: 34, y: 27, blocks: true },
-  { textureKey: "bench", x: 35, y: 27, blocks: true },
+  // A planter tucked between the well and the church's north-west corner.
+  { textureKey: "planter", x: 31, y: 22, blocks: true },
+  // A bench on the south branch by the church, opposite the door.
+  { textureKey: "bench", x: 37, y: 27, blocks: true },
+  // Two torches on the grass strip immediately south of the church door,
+  // one either side of the doorway. They light the safe zone at night
+  // without blocking the E-W spine.
+  { textureKey: "torch", x: 33, y: 26, blocks: true },
+  { textureKey: "torch", x: 36, y: 26, blocks: true },
 
   // Farm yard dressing.
   { textureKey: "sack", x: 32, y: 44, blocks: true },
