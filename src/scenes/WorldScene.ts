@@ -27,6 +27,7 @@ import { Monster } from "../game/entities/Monster";
 import { findPath, chebyshevDistance, TileCoord } from "../game/pathfinding";
 import { DebugOverlay } from "../game/debugOverlay";
 import { DayNightCycle } from "../game/dayNight";
+import { loadProfile } from "../game/profile";
 import { rollDamage, rollLoot } from "../game/combat";
 import { Container, ItemStack, SlotAccessor, SlotRef, moveStack } from "../game/containers";
 import {
@@ -207,7 +208,9 @@ export class WorldScene extends Phaser.Scene {
       this.emitInventory();
       this.emitSkills();
       this.emitInventoryState();
-      this.log("info", "You wake up in Oakhollow.");
+      const profile = loadProfile();
+      const greeting = profile ? `You wake up in Oakhollow, ${profile.name}.` : "You wake up in Oakhollow.";
+      this.log("info", greeting);
     });
   }
 

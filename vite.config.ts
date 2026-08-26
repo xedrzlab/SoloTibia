@@ -33,6 +33,9 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ["**/*.{js,css,html,png,svg,woff2}"],
+        // Title banner is a ~2.3 MB illustration; keep the ceiling comfortably
+        // above so the PWA can precache the whole first-launch experience.
+        maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
       },
     }),
   ],

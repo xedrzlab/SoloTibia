@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { registerSW } from "virtual:pwa-register";
+import { TitleScene } from "./scenes/TitleScene";
 import { BootScene } from "./scenes/BootScene";
 import { WorldScene } from "./scenes/WorldScene";
 import { UIScene } from "./scenes/UIScene";
@@ -28,7 +29,9 @@ const game = new Phaser.Game({
     antialias: false,
     powerPreference: "low-power",
   },
-  scene: [BootScene, WorldScene, UIScene],
+  // Title runs first (Phaser auto-starts the first scene in this list); it
+  // hands off to Boot once the player taps Enter / picks a name.
+  scene: [TitleScene, BootScene, WorldScene, UIScene],
 });
 
 // Dev-only handle so the running game can be inspected from a test harness.
