@@ -37,10 +37,17 @@ export const IMAGE_ASSETS: ImageAsset[] = [
   { key: "road", path: "terrain/road_01.png" },
 
   // --- environment ---
-  { key: "tree", path: "environment/tree_oak_01.png" },
-  { key: "tree-oak-2", path: "environment/tree_oak_02.png" },
-  { key: "tree-pine", path: "environment/tree_pine_01.png" },
-  { key: "tree-dead", path: "environment/tree_dead_01.png" },
+  // Trees are layered: trunk, canopy and optional detail are separate sprites
+  // so the canopy can sort above a player walking behind the trunk.
+  { key: "tree-oak-trunk", path: "environment/tree_oak_trunk_01.png" },
+  { key: "tree-oak-canopy", path: "environment/tree_oak_canopy_01.png" },
+  { key: "tree-oak-canopy-2", path: "environment/tree_oak_canopy_02.png" },
+  { key: "tree-pine-trunk", path: "environment/tree_pine_trunk_01.png" },
+  { key: "tree-pine-canopy", path: "environment/tree_pine_canopy_01.png" },
+  { key: "tree-dead-trunk", path: "environment/tree_dead_trunk_01.png" },
+  { key: "tree-detail-fruit", path: "environment/tree_detail_fruit_01.png" },
+  { key: "tree-detail-vine", path: "environment/tree_detail_vine_01.png" },
+  { key: "tree-detail-moss", path: "environment/tree_detail_moss_01.png" },
   { key: "bush", path: "environment/bush_01.png" },
   { key: "rock-small", path: "environment/rock_small_01.png" },
   { key: "rock-medium", path: "environment/rock_medium_01.png" },
@@ -121,3 +128,21 @@ export const SHEET_ASSETS: SheetAsset[] = [
 /** How many frames the water cycle has, and how long each is held. */
 export const WATER_FRAME_COUNT = 4;
 export const WATER_FRAME_MS = 420;
+
+export type TreeSpecies = "oak" | "pine" | "dead";
+
+export interface TreeLayers {
+  trunk: string;
+  /** Canopy variants; empty for species whose branches live on the trunk. */
+  canopies: string[];
+}
+
+export const TREE_LAYERS: Record<TreeSpecies, TreeLayers> = {
+  oak: { trunk: "tree-oak-trunk", canopies: ["tree-oak-canopy", "tree-oak-canopy-2"] },
+  pine: { trunk: "tree-pine-trunk", canopies: ["tree-pine-canopy"] },
+  dead: { trunk: "tree-dead-trunk", canopies: [] },
+};
+
+/** Accents layered over a canopy on some trees, chosen per position. */
+export const TREE_DETAILS = ["tree-detail-fruit", "tree-detail-vine", "tree-detail-moss"];
+

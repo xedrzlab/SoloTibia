@@ -17,6 +17,7 @@ import {
   overlayForCell,
 } from "../data/tilemap";
 import { MONSTERS } from "../data/monsters";
+import { TREE_DETAILS, TREE_LAYERS, TreeSpecies } from "../data/assets";
 import { EquipSlot, ITEMS } from "../data/items";
 import { SHOPS } from "../data/shops";
 import { SPELLS } from "../data/spells";
@@ -67,6 +68,17 @@ const CORPSE_CAPACITY = 8;
 /** Wands fire a small magic bolt: cheap on mana, shorter reach than a bow. */
 const WAND_MANA_COST = 4;
 const WAND_RANGE = 3;
+
+// Canopy placement, relative to the trunk tile's bottom-right anchor. The
+// canopy is 48px against a 32px tile, so it overhangs; the offsets sit it on
+// top of the trunk and lean it up and left like every other tall thing here.
+const CANOPY_OFFSET_X = 6;
+const CANOPY_OFFSET_Y = -14;
+/**
+ * How far above its own tile the canopy sorts. One step is enough to cover a
+ * player on the tile behind the trunk without covering one standing in front.
+ */
+const CANOPY_DEPTH_LIFT = 1;
 
 /** How often the Battle tab's nearby-monster list refreshes, and how far it looks. */
 const BATTLE_LIST_INTERVAL_MS = 400;
@@ -231,12 +243,15 @@ export class WorldScene extends Phaser.Scene {
     rt.setDepth(0);
 
     const animatedCells: { x: number; y: number; key: string }[] = [];
+    const treeCells: { x: number; y: number; species: TreeSpecies }[] = [];
     forEachTile((x, y, tile) => {
       if (tile.animated) {
         animatedCells.push({ x, y, key: tile.textureKey });
         return;
       }
+      // A tree's ground still bakes; only its trunk and canopy stand apart.
       rt.draw(variantForCell(tile, x, y), x * TILE_SIZE, y * TILE_SIZE);
+      if (tile.tree) treeCells.push({ x, y, species: tile.tree });
       const overlay = overlayForCell(tile, x, y);
       if (overlay) rt.draw(overlay, x * TILE_SIZE, y * TILE_SIZE);
     });
@@ -247,6 +262,43 @@ export class WorldScene extends Phaser.Scene {
         .setOrigin(0, 0)
         .setDepth(1)
         .play("water-flow");
+    }
+
+    for (const cell of treeCells) this.buildTree(cell.x, cell.y, cell.species);
+  }
+
+  /**
+   * Build one tree from its layers. The trunk sorts on its own tile so a
+   * player standing in front of it draws over it; the canopy sorts a little
+   * higher so a player walking behind is hidden by the leaves.
+   */
+  private buildTree(tileX: number, tileY: number, species: TreeSpecies) {
+    const layers = TREE_LAYERS[species];
+    const anchorX = tileAnchorX(tileX);
+    const anchorY = tileAnchorY(tileY);
+
+    this.add.image(anchorX, anchorY, layers.trunk).setOrigin(1, 1).setDepth(depthForTileY(tileY));
+
+    if (layers.canopies.length === 0) return;
+
+    // Deterministic per position, so a wood looks composed rather than rolled,
+    // and looks the same every time the map is built.
+    const hash = Math.abs(Math.imul(tileX * 668265263 + tileY * 374761393, 1274126177)) >>> 0;
+    const canopyKey = layers.canopies[hash % layers.canopies.length];
+
+    // The canopy is wider than its tile and leans up and to the left, matching
+    // how every other tall thing in the world overhangs.
+    const canopy = this.add
+      .image(anchorX + CANOPY_OFFSET_X, anchorY + CANOPY_OFFSET_Y, canopyKey)
+      .setOrigin(1, 1)
+      .setDepth(depthForTileY(tileY) + CANOPY_DEPTH_LIFT);
+
+    // Roughly a third of trees carry an accent, layered onto the canopy.
+    if (hash % 3 === 0) {
+      this.add
+        .image(canopy.x, canopy.y, TREE_DETAILS[(hash >>> 8) % TREE_DETAILS.length])
+        .setOrigin(1, 1)
+        .setDepth(canopy.depth + 1);
     }
   }
 

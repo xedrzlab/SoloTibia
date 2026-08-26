@@ -202,82 +202,182 @@ const WATER_FRAMES = 4;
 
 const P_BARK = { deep: "#241609", dark: "#3a2312", mid: "#4a2e18", light: "#5f3d22" };
 
-/** Trunk with a lit left face and roots flaring into the ground shadow. */
-function drawTrunk(s, cx, top, bottom, width = 2) {
-  const x = cx - Math.floor(width / 2);
-  s.fillRect(x, top, width, bottom - top, P_BARK.mid);
-  s.fillRect(x, top, 1, bottom - top, P_BARK.light); // lit left face
-  s.fillRect(x + width - 1, top, 1, bottom - top, P_BARK.dark); // shaded right
-  s.setPixel(x - 1, bottom - 1, P_BARK.dark); // roots
-  s.setPixel(x + width, bottom - 1, P_BARK.dark);
-  s.fillEllipse(cx, bottom, width + 2, 1, "#1a2412"); // contact shadow
-}
+// ---------------------------------------------------------------------------
+// Trees are built from separate layers rather than one sprite: a trunk that
+// sits on its tile, a canopy that overhangs it, and optional small details.
+//
+// Splitting them is not only for variety. A single baked sprite can never be
+// walked behind — the canopy has to be its own object to sort above a player
+// standing behind the tree while the trunk still sorts below one standing in
+// front. Layering also means three canopies and three details cover far more
+// ground than nine whole-tree sprites would.
+//
+// Trunks are one tile (16 source). Canopies are 24 source, so a tree reads as
+// bigger than the square it occupies.
+// ---------------------------------------------------------------------------
 
-/** Broad-canopied oak. Two variants so a wood doesn't repeat every tile. */
-function treeOak(variant = 0) {
+const CANOPY_SIZE = 24;
+
+/** Trunk layer: roots flaring into a contact shadow, bark, lit left face. */
+function treeTrunk(species) {
   const s = new Sprite(16, 16);
-  drawTrunk(s, 8, 9, 15);
+  const width = species === "pine" ? 3 : species === "dead" ? 3 : 4;
+  const top = species === "pine" ? 6 : 4;
+  const x = 8 - Math.round(width / 2);
 
-  // Canopy built from overlapping lobes, deliberately off-centre — a perfect
-  // circle is the clearest tell of a procedurally drawn tree.
-  const lobes =
-    variant === 0
-      ? [[8, 6, 6], [6, 5, 4], [11, 6.5, 3.5], [8, 8, 5]]
-      : [[8, 6.5, 5.5], [10, 5, 4], [5.5, 6, 3.5], [8, 8, 4.5]];
-  for (const [lx, ly, r] of lobes) s.fillCircle(lx, ly, r, P_GRASS.deep);
-  for (const [lx, ly, r] of lobes) s.fillCircle(lx - 0.4, ly - 0.4, r - 0.9, "#2f7a3e");
-  // Light from the upper left picks out the near-left lobes only.
-  s.fillCircle(variant === 0 ? 6 : 6.5, 4.6, 2.4, "#3f9450");
-  s.fillCircle(variant === 0 ? 5.6 : 6, 4, 1.2, "#6fc47f");
-  // A few dark gaps so the canopy has depth instead of reading as a dome.
-  s.setPixel(10, 7, P_GRASS.deep);
-  s.setPixel(9, 4, P_GRASS.deep);
-  return s;
-}
+  s.fillEllipse(8, 15, width + 3, 1.4, "#1a2412"); // contact shadow
 
-/** Conifer: a tiered spire, unmistakable against the oaks at a glance. */
-function treePine() {
-  const s = new Sprite(16, 16);
-  drawTrunk(s, 8, 11, 15);
-  // Three tiers, each wider than the one above.
-  const tiers = [
-    [1, 3],
-    [4, 5],
-    [7, 7],
-  ];
-  for (const [top, span] of tiers) {
-    for (let row = 0; row < 3; row++) {
-      const half = Math.round(((row + 1) / 3) * span * 0.5);
-      s.fillRect(8 - half, top + row, half * 2, 1, "#1f5c2e");
+  // Roots: a wider flare at the base is what makes a trunk look planted
+  // rather than pushed into the ground like a peg.
+  s.fillRect(x - 2, 13, width + 4, 2, P_BARK.dark);
+  s.setPixel(x - 3, 14, P_BARK.dark);
+  s.setPixel(x + width + 2, 14, P_BARK.deep);
+  s.fillRect(x - 2, 13, 2, 1, P_BARK.light);
+
+  s.fillRect(x, top, width, 14 - top, P_BARK.mid);
+  s.fillRect(x, top, 1, 14 - top, P_BARK.light); // lit left face
+  s.fillRect(x + width - 1, top, 1, 14 - top, P_BARK.deep); // shaded right face
+
+  // Bark: short horizontal breaks, never single scattered pixels.
+  for (let y = top + 2; y < 13; y += 3) {
+    s.fillRect(x + 1, y, Math.max(1, width - 2), 1, P_BARK.dark);
+  }
+
+  if (species === "dead") {
+    // Bare branches belong to the trunk layer here — a dead tree has no
+    // canopy to hang them from.
+    for (const [x0, y0, x1, y1] of [
+      [7, 7, 3, 4],
+      [9, 6, 13, 3],
+      [7, 4, 5, 1],
+    ]) {
+      s.line(x0, y0, x1, y1, P_BARK.mid);
+      s.setPixel(x1, y1, P_BARK.light);
     }
   }
-  // Lit left edge of each tier.
-  for (const [top, span] of tiers) {
-    const half = Math.round(span * 0.5);
-    s.setPixel(8 - half, top + 2, "#3f9450");
-    s.setPixel(8 - half + 1, top + 2, "#2f7a3e");
-  }
-  s.setPixel(8, 0, "#3f9450"); // tip
-  s.setPixel(8, 1, "#2f7a3e");
   return s;
 }
 
-/** Dead tree: bare branching silhouette, for the mountain and cave approaches. */
-function treeDead() {
-  const s = new Sprite(16, 16);
-  drawTrunk(s, 8, 5, 15, 2);
-  // Branches: each is a short diagonal with a lit upper-left pixel.
-  for (const [x0, y0, x1, y1] of [
-    [7, 8, 3, 5],
-    [9, 7, 13, 4],
-    [7, 5, 5, 2],
-    [9, 4, 11, 1],
-  ]) {
-    s.line(x0, y0, x1, y1, P_BARK.mid);
-    s.setPixel(x1, y1, P_BARK.light);
+/**
+ * Canopy layer. Built from overlapping lobes with a deliberately uneven edge:
+ * a perfect circle is the clearest tell of a procedurally drawn tree.
+ */
+function treeCanopy(species, variant = 0) {
+  const s = new Sprite(CANOPY_SIZE, CANOPY_SIZE);
+  const c = CANOPY_SIZE / 2;
+
+  if (species === "pine") {
+    // Tiered spire, unmistakable against the oaks at a glance.
+    const tiers = [
+      [3, 5],
+      [8, 9],
+      [13, 13],
+      [17, 16],
+    ];
+    for (const [top, span] of tiers) {
+      for (let row = 0; row < 5; row++) {
+        const half = Math.max(1, Math.round(((row + 1) / 5) * span * 0.5));
+        s.fillRect(c - half, top + row, half * 2, 1, "#1f5c2e");
+      }
+      const half = Math.round(span * 0.5);
+      s.fillRect(c - half, top + 4, 3, 1, "#3f9450"); // lit left edge of the tier
+      s.fillRect(c + half - 3, top + 4, 3, 1, "#193d1f"); // shaded right edge
+    }
+    s.fillRect(c - 1, 1, 2, 3, "#2f7a3e"); // leader
+    s.setPixel(c - 1, 1, "#6fc47f");
+    return s;
   }
-  s.setPixel(3, 4, P_BARK.dark); // twig ends
-  s.setPixel(13, 3, P_BARK.dark);
+
+  if (species === "dead") return s; // handled entirely by the trunk layer
+
+  const lobes =
+    variant === 0
+      ? [
+          [c, c + 1, 8.5],
+          [c - 5, c - 2, 6],
+          [c + 5, c, 5.5],
+          [c - 1, c + 6, 6.5],
+          [c + 3, c - 5, 5],
+        ]
+      : [
+          [c + 1, c, 8],
+          [c + 5, c - 3, 6],
+          [c - 5, c + 1, 6.5],
+          [c, c + 6, 6],
+          [c - 3, c - 5, 5],
+        ];
+
+  // Three passes: the mass, the mid tone inset up-left, then the lit crown.
+  for (const [lx, ly, r] of lobes) s.fillCircle(lx, ly, r, P_GRASS.deep);
+  for (const [lx, ly, r] of lobes) s.fillCircle(lx - 0.6, ly - 0.6, r - 1.1, "#2f7a3e");
+  for (const [lx, ly, r] of lobes) s.fillCircle(lx - 1.2, ly - 1.4, r - 2.6, "#3f9450");
+
+  const crown = variant === 0 ? [c - 5, c - 3] : [c - 4, c - 4];
+  s.fillCircle(crown[0], crown[1], 2.6, "#4fa862");
+  s.fillCircle(crown[0] - 0.6, crown[1] - 0.8, 1.3, "#6fc47f");
+
+  // Shadow between foliage clumps, so the canopy has depth instead of reading
+  // as a solid dome. Short dashes that follow the lobe edges — a blocky hole
+  // punched in the middle reads as a slot in the leaves, not as shade.
+  const shade =
+    variant === 0
+      ? [
+          [c + 2, c + 3, 3],
+          [c - 6, c + 2, 2],
+          [c + 1, c - 3, 2],
+        ]
+      : [
+          [c - 5, c + 3, 3],
+          [c + 4, c + 1, 2],
+          [c - 1, c - 4, 2],
+        ];
+  for (const [gx, gy, w] of shade) {
+    s.fillRect(gx, gy, w, 1, P_GRASS.deep);
+    s.fillRect(gx + 1, gy + 1, Math.max(1, w - 1), 1, "#256b33");
+  }
+
+  // Only the lower-right lobes sit in the canopy's own shadow; shading every
+  // one leaves a dark band across the bottom of the sprite.
+  for (const [lx, ly, r] of lobes) {
+    if (lx < c - 1 && ly < c) continue;
+    s.fillEllipse(lx + 0.6, ly + r - 1.2, r * 0.5, 1, "#193d1f");
+  }
+  return s;
+}
+
+/**
+ * Small details layered onto a tree. Kept separate so a handful of them can
+ * be spread across the whole wood rather than baked into one species.
+ */
+function treeDetail(kind) {
+  const s = new Sprite(CANOPY_SIZE, CANOPY_SIZE);
+  const c = CANOPY_SIZE / 2;
+
+  if (kind === "fruit") {
+    for (const [x, y] of [[c - 4, c + 2], [c + 3, c - 1], [c + 1, c + 5], [c - 6, c - 2]]) {
+      s.setPixel(x, y, "#a8402f");
+      s.setPixel(x + 1, y, "#8a2f20");
+      s.setPixel(x, y - 1, "#193d1f"); // stalk
+    }
+    return s;
+  }
+
+  if (kind === "vine") {
+    // Two trailing vines hanging off the lower edge of the canopy.
+    for (const [x, top, len] of [[c - 7, c + 4, 7], [c + 5, c + 2, 5]]) {
+      for (let i = 0; i < len; i++) {
+        s.setPixel(x + (i % 2), top + i, i > len - 3 ? "#4a8f52" : "#2f6b38");
+      }
+      s.setPixel(x, top + len, "#6fc47f"); // leaf tip
+    }
+    return s;
+  }
+
+  // Moss: patches clinging to the shaded, lower-right side.
+  for (const [x, y, w, h] of [[c + 2, c + 4, 3, 2], [c + 5, c + 1, 2, 2], [c - 1, c + 6, 3, 1]]) {
+    s.fillRect(x, y, w, h, "#2f6b38");
+    s.setPixel(x, y, "#4a8f52");
+  }
   return s;
 }
 
@@ -1738,10 +1838,17 @@ const waterMeta = saveSpriteSheet(
 );
 
 // --- environment ---------------------------------------------------------
-saveSprite(treeOak(0), SCALE, `${OUT}/environment/tree_oak_01.png`);
-saveSprite(treeOak(1), SCALE, `${OUT}/environment/tree_oak_02.png`);
-saveSprite(treePine(), SCALE, `${OUT}/environment/tree_pine_01.png`);
-saveSprite(treeDead(), SCALE, `${OUT}/environment/tree_dead_01.png`);
+// Trees ship as layers, composited in the world so the canopy can sort above
+// a player walking behind the trunk.
+saveSprite(treeTrunk("oak"), SCALE, `${OUT}/environment/tree_oak_trunk_01.png`);
+saveSprite(treeCanopy("oak", 0), SCALE, `${OUT}/environment/tree_oak_canopy_01.png`);
+saveSprite(treeCanopy("oak", 1), SCALE, `${OUT}/environment/tree_oak_canopy_02.png`);
+saveSprite(treeTrunk("pine"), SCALE, `${OUT}/environment/tree_pine_trunk_01.png`);
+saveSprite(treeCanopy("pine"), SCALE, `${OUT}/environment/tree_pine_canopy_01.png`);
+saveSprite(treeTrunk("dead"), SCALE, `${OUT}/environment/tree_dead_trunk_01.png`);
+saveSprite(treeDetail("fruit"), SCALE, `${OUT}/environment/tree_detail_fruit_01.png`);
+saveSprite(treeDetail("vine"), SCALE, `${OUT}/environment/tree_detail_vine_01.png`);
+saveSprite(treeDetail("moss"), SCALE, `${OUT}/environment/tree_detail_moss_01.png`);
 saveSprite(bushSprite(), SCALE, `${OUT}/environment/bush_01.png`);
 saveSprite(rockSmall(), SCALE, `${OUT}/environment/rock_small_01.png`);
 saveSprite(rockMedium(), SCALE, `${OUT}/environment/rock_medium_01.png`);

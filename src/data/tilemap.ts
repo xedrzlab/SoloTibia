@@ -5,6 +5,7 @@
 // a map this size can't be kept aligned by hand reliably.
 
 import { MapBuilder } from "../game/mapBuilder";
+import type { TreeSpecies } from "./assets";
 
 export const MAP_WIDTH = 70;
 export const MAP_HEIGHT = 50;
@@ -308,6 +309,8 @@ export interface TileInfo {
   overlayVariants?: string[];
   /** Drawn as an animated sprite rather than baked into the static tile layer. */
   animated?: boolean;
+  /** Spawns a layered tree (trunk + canopy + detail) standing on this cell. */
+  tree?: TreeSpecies;
   safe: boolean; // protection-zone tiles: no monster aggro, valid respawn point
 }
 
@@ -347,15 +350,12 @@ const LEGEND: Record<string, TileInfo> = {
 
   // Blocking vegetation and stone. These only ever scatter onto grass ('.')
   // cells (see the scatter() calls above), so grass is the correct base.
-  t: {
-    walkable: false,
-    textureKey: "grass",
-    variants: ["grass", "grass-2"],
-    overlayVariants: ["tree", "tree-oak-2"],
-    safe: false,
-  },
-  p: { walkable: false, textureKey: "grass", variants: ["grass", "grass-2"], overlayKey: "tree-pine", safe: false },
-  y: { walkable: false, textureKey: "rocky-ground", overlayKey: "tree-dead", safe: false },
+  // Trees draw nothing here but their ground: the trunk and canopy are built
+  // as separate sprites in WorldScene so the canopy can sort above a player
+  // standing behind the tree.
+  t: { walkable: false, textureKey: "grass", variants: ["grass", "grass-2"], tree: "oak", safe: false },
+  p: { walkable: false, textureKey: "grass", variants: ["grass", "grass-2"], tree: "pine", safe: false },
+  y: { walkable: false, textureKey: "rocky-ground", tree: "dead", safe: false },
   b: { walkable: false, textureKey: "grass", variants: ["grass", "grass-2"], overlayKey: "bush", safe: false },
   o: {
     walkable: false,

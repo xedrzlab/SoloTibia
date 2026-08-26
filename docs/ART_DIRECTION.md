@@ -85,6 +85,22 @@ A prop's blocking square is stored separately from the tile grid
 changing the ground drawn beneath it, and a large sprite's footprint need not
 match its art. A tree's canopy is wide; its trunk is what stops you.
 
+## 6b. Layered objects
+
+Trees are built from separate sprites — trunk, canopy, and an optional detail
+— composited in `WorldScene.buildTree()`. This is not only for variety:
+
+- **Occlusion.** A single sprite baked into the tile layer can never be walked
+  behind. With the canopy as its own object sorting one step above its tile, a
+  player behind the trunk is hidden by the leaves while one in front still
+  draws over it.
+- **Combinations.** Three canopies and three details cover far more ground
+  than nine whole-tree sprites, and each addition multiplies rather than adds.
+
+Which canopy and detail a tree gets is hashed from its tile position, so a
+wood looks composed rather than rolled and is identical every time the map is
+built. Anything else tall and varied should follow the same pattern.
+
 ## 7. Reference assets
 
 When making something new, open the nearest of these and match it. These are
@@ -94,7 +110,7 @@ not examples — they are the benchmark.
 |---|---|
 | Ground | `terrain/grass_01.png` |
 | Built surface | `terrain/cobble_01.png`, `terrain/wall_stone_01.png` |
-| Vegetation | `environment/tree_oak_01.png` |
+| Vegetation | `environment/tree_oak_trunk_01.png` + `tree_oak_canopy_01.png` |
 | Stone | `environment/rock_large_01.png` |
 | Character | `characters/player_sheet.png` |
 | Creature | `creatures/troll_sheet.png` |
