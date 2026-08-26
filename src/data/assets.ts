@@ -37,6 +37,7 @@ export const IMAGE_ASSETS: ImageAsset[] = [
   { key: "void-wall", path: "terrain/void_01.png" },
   { key: "mountain", path: "terrain/mountain_01.png" },
   { key: "road", path: "terrain/road_01.png" },
+  { key: "wood-floor", path: "terrain/wood_floor_01.png" },
 
   // --- environment ---
   // Trees are layered: trunk, canopy and optional detail are separate sprites
@@ -74,6 +75,9 @@ export const IMAGE_ASSETS: ImageAsset[] = [
   { key: "sack", path: "props/sack_01.png" },
   { key: "weapon-rack", path: "props/weapon_rack_01.png" },
   { key: "fence-gate", path: "props/fence_gate_01.png" },
+  { key: "counter", path: "props/counter_01.png" },
+  { key: "statue", path: "props/statue_01.png" },
+  { key: "planter", path: "props/planter_01.png" },
   // Farm-animal props — static one-tile sprites used as background dressing,
   // not creatures (they don't fight, patrol or drop loot).
   { key: "chicken", path: "props/animal_chicken_01.png" },

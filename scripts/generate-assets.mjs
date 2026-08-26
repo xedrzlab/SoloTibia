@@ -1797,6 +1797,129 @@ function catSprite() {
   return s;
 }
 
+/**
+ * Warm plank floor for the inside of houses and shops. Buildings are drawn
+ * roofless — walls and floor visible from above — so this tile is what the
+ * player is standing on whenever they step under a doorway.
+ */
+function woodFloorTile() {
+  const s = new Sprite(16, 16);
+  const plankMid = "#8a6a3d";
+  const plankHi = "#a3814f";
+  const plankLo = "#5a3d22";
+  const gap = "#3a2717";
+  // Two horizontal courses of planks, staggered so the seams don't line up.
+  const courses = [
+    { y: 0, h: 7, xs: [0, 6, 12] },
+    { y: 7, h: 9, xs: [0, 4, 10] },
+  ];
+  for (const c of courses) {
+    for (let i = 0; i < c.xs.length; i++) {
+      const x = c.xs[i];
+      const w = (c.xs[i + 1] ?? 16) - x - 1;
+      if (w <= 0) continue;
+      s.fillRect(x, c.y, w, c.h - 1, plankMid);
+      s.fillRect(x, c.y, w, 1, plankHi);
+      s.fillRect(x, c.y + c.h - 2, w, 1, plankLo);
+      s.setPixel(x + 1, c.y + 1, plankHi);
+    }
+    s.fillRect(0, c.y + c.h - 1, 16, 1, gap); // course gap
+  }
+  // A few knot-holes to break the pattern.
+  s.setPixel(3, 4, plankLo);
+  s.setPixel(11, 3, plankLo);
+  s.setPixel(6, 11, plankLo);
+  s.setPixel(13, 12, plankLo);
+  return s;
+}
+
+/**
+ * Wooden shop counter: a bar the shopkeeper stands behind. Draws as a low
+ * chest-high plank front with a lit top edge; occupies one tile and blocks
+ * movement so the customer is separated from the keeper.
+ */
+function counterSprite() {
+  const s = new Sprite(16, 16);
+  const wood = "#8a6a3d";
+  const woodHi = "#a3814f";
+  const woodLo = "#5a3d22";
+  const shadow = "#0a0a0a";
+  // ground shadow
+  s.fillRect(1, 15, 14, 1, shadow);
+  // Counter body: broad plank front standing on stubby legs.
+  s.fillRect(1, 6, 14, 8, wood);
+  s.fillRect(1, 6, 14, 1, woodHi); // lit top edge
+  s.fillRect(1, 13, 14, 1, woodLo); // bottom shadow
+  // Plank seams
+  s.fillRect(6, 7, 1, 6, woodLo);
+  s.fillRect(10, 7, 1, 6, woodLo);
+  // Rail / trim just under the top edge
+  s.fillRect(1, 8, 14, 1, woodLo);
+  s.setPixel(3, 9, woodHi);
+  s.setPixel(12, 9, woodHi);
+  return s;
+}
+
+/**
+ * Small hero statue on a stone pedestal: the plaza centrepiece. Blocks
+ * movement and is anchored at its base like every other tall thing.
+ */
+function statueSprite() {
+  const s = new Sprite(16, 16);
+  const stoneHi = "#a29cac";
+  const stone = "#7d7887";
+  const stoneLo = "#4a4650";
+  const shadow = "#0a0a0a";
+  s.fillEllipse(8, 15, 5, 1, shadow); // ground shadow
+  // Pedestal (three stepped tiers)
+  s.fillRect(3, 12, 10, 3, stone);
+  s.fillRect(3, 12, 10, 1, stoneHi);
+  s.fillRect(3, 14, 10, 1, stoneLo);
+  s.fillRect(4, 11, 8, 1, stoneHi);
+  // Figure: a robed hero silhouette
+  s.fillRect(6, 3, 4, 8, stone); // body
+  s.fillRect(6, 3, 4, 1, stoneHi);
+  s.fillRect(6, 10, 4, 1, stoneLo);
+  s.fillCircle(8, 3, 1.8, stone); // head
+  s.setPixel(7, 2, stoneHi);
+  // A sword held vertically down at the pedestal — reads at this size
+  s.fillRect(11, 4, 1, 7, stoneLo);
+  s.setPixel(11, 3, stoneHi);
+  s.fillRect(10, 10, 3, 1, stoneLo); // crossguard
+  return s;
+}
+
+/**
+ * Small stone planter with a flowering bush inside — plaza corner decoration.
+ * Blocks movement but is short enough not to hide the plaza behind it.
+ */
+function planterSprite() {
+  const s = new Sprite(16, 16);
+  const stone = "#7d7887";
+  const stoneHi = "#a29cac";
+  const stoneLo = "#4a4650";
+  const leaf = "#3d6b2a";
+  const leafHi = "#61944a";
+  const petal = "#c9302f";
+  const petalHi = "#ff9f4a";
+  s.fillEllipse(8, 15, 5, 1, "#0a0a0a"); // shadow
+  // Planter box
+  s.fillRect(3, 10, 10, 5, stone);
+  s.fillRect(3, 10, 10, 1, stoneHi);
+  s.fillRect(3, 14, 10, 1, stoneLo);
+  s.fillRect(3, 10, 1, 5, stoneLo);
+  s.fillRect(12, 10, 1, 5, stoneLo);
+  // Foliage inside the planter
+  s.fillEllipse(8, 8, 4, 3, leaf);
+  s.fillEllipse(7, 7, 3, 2, leafHi);
+  // Two little flowers
+  s.setPixel(5, 6, petal);
+  s.setPixel(6, 6, petalHi);
+  s.setPixel(10, 7, petal);
+  s.setPixel(11, 6, petalHi);
+  return s;
+}
+
 /** Wooden gate: a fence with the middle rail replaced by an open swing. */
 function fenceGateSprite() {
   const s = new Sprite(16, 16);
@@ -2207,6 +2330,7 @@ saveSprite(rockyGroundTile(), SCALE, `${OUT}/terrain/ground_rocky_01.png`);
 saveSprite(voidWallTile(), SCALE, `${OUT}/terrain/void_01.png`);
 saveSprite(mountainTile(), SCALE, `${OUT}/terrain/mountain_01.png`);
 saveSprite(roadTile(), SCALE, `${OUT}/terrain/road_01.png`);
+saveSprite(woodFloorTile(), SCALE, `${OUT}/terrain/wood_floor_01.png`);
 
 // Water is animated, so its frames ship as one sheet rather than a tile.
 const waterMeta = saveSpriteSheet(
@@ -2251,6 +2375,9 @@ saveSprite(chestSprite(), SCALE, `${OUT}/props/chest_01.png`);
 saveSprite(sackSprite(), SCALE, `${OUT}/props/sack_01.png`);
 saveSprite(weaponRackSprite(), SCALE, `${OUT}/props/weapon_rack_01.png`);
 saveSprite(fenceGateSprite(), SCALE, `${OUT}/props/fence_gate_01.png`);
+saveSprite(counterSprite(), SCALE, `${OUT}/props/counter_01.png`);
+saveSprite(statueSprite(), SCALE, `${OUT}/props/statue_01.png`);
+saveSprite(planterSprite(), SCALE, `${OUT}/props/planter_01.png`);
 
 // --- farm animals (background dressing) ----------------------------------
 saveSprite(chickenSprite(), SCALE, `${OUT}/props/animal_chicken_01.png`);
