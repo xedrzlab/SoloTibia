@@ -3,6 +3,7 @@ import {
   BattleListPayload,
   bus,
   EVENTS,
+  InteriorStatePayload,
   InventoryPayload,
   InventoryStatePayload,
   LogPayload,
@@ -104,7 +105,15 @@ export class UIScene extends Phaser.Scene {
   // --- Sidebar view state ---------------------------------------------------
   private sidebarLayer!: Phaser.GameObjects.Layer;
   private sidebarOpen = true;
+  /**
+   * When true, the equipment paperdoll + derived stats block collapses away,
+   * leaving just the health/mana bars on top of the sidebar body. Toggle via
+   * the ▾/▸ button next to the HP bar; state persists across sidebar
+   * refreshes.
+   */
+  private equipmentOpen = true;
   private activeTab: "skills" | "battle" = "skills";
+  // (interior state is only used to drive action-bar visibility inside onInteriorState)
   private scrollY = 0;
   private contentHeight = 0;
   private collapsed = new Set<string>();
@@ -180,6 +189,7 @@ export class UIScene extends Phaser.Scene {
     bus.on(EVENTS.INVENTORY, (inv: InventoryPayload) => this.onInventory(inv));
     bus.on(EVENTS.OPEN_VOCATION_CHOICE, () => this.openVocationPanel());
     bus.on(EVENTS.OPEN_DIALOGUE, (p: OpenDialoguePayload) => this.openDialogue(p));
+    bus.on(EVENTS.INTERIOR_STATE, (p: InteriorStatePayload) => this.onInteriorState(p.active));
 
     this.input.on("wheel", (_p: unknown, _o: unknown, _dx: number, dy: number) => this.scrollBy(dy * 0.5));
 
@@ -277,7 +287,10 @@ export class UIScene extends Phaser.Scene {
   }
 
   private headerHeight(): number {
-    return PAD + BAR_H * 2 + 2 + PAD + EQUIP_GRID_H + PAD + TAB_H + 2;
+    // 12px is the "▾ Equipment" toggle strip, always drawn even when the
+    // paperdoll below it is collapsed.
+    const equip = this.equipmentOpen ? EQUIP_GRID_H + PAD : 0;
+    return PAD + BAR_H * 2 + 2 + PAD + 12 + equip + TAB_H + 2;
   }
 
   private renderSidebar() {
@@ -333,8 +346,31 @@ export class UIScene extends Phaser.Scene {
     );
     y += BAR_H + PAD;
 
-    this.renderEquipmentGrid(left, y);
-    y += EQUIP_GRID_H + PAD;
+    // Small ▾/▸ toggle in the top-right of the equipment area, so a player
+    // who wants the map view can hide the paperdoll without collapsing the
+    // whole sidebar. Sits over the top-left cell rather than on its own row —
+    // a dedicated title bar would eat back the space we're trying to save.
+    const toggleLabel = this.equipmentOpen ? "▾" : "▸";
+    const toggle = this.add
+      .text(left + SIDEBAR_WIDTH - PAD, y, `${toggleLabel} Equipment`, {
+        ...TEXT,
+        fontSize: "10px",
+        color: "#e6c34a",
+      })
+      .setOrigin(1, 0)
+      .setScrollFactor(0)
+      .setInteractive({ useHandCursor: true });
+    toggle.on("pointerdown", () => {
+      this.equipmentOpen = !this.equipmentOpen;
+      this.sidebarDirty = true;
+    });
+    this.addToLayer(toggle);
+    y += 12;
+
+    if (this.equipmentOpen) {
+      this.renderEquipmentGrid(left, y);
+      y += EQUIP_GRID_H + PAD;
+    }
 
     this.renderTabs(left, y);
   }
@@ -840,6 +876,19 @@ export class UIScene extends Phaser.Scene {
         label.setColor("#7cc8ff");
       }
       this.actionSlots.push({ kind: entry.kind, id: entry.id, bg, icon, label });
+    }
+  }
+
+  /**
+   * Interior/exterior toggle: hide the action bar while indoors so it can't
+   * cover the exit door tile of a small shop room. Every action slot is a
+   * plain rectangle/image/text, so a visibility flip is enough.
+   */
+  private onInteriorState(active: boolean) {
+    for (const slot of this.actionSlots) {
+      slot.bg.setVisible(!active);
+      slot.icon.setVisible(!active);
+      slot.label.setVisible(!active);
     }
   }
 

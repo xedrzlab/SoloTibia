@@ -77,12 +77,12 @@ b.rect(TOWN.x, 24, TOWN.w, 2, "R");
 b.rect(34, 24, 2, 2, "T");
 export const TEMPLE_SPAWN = { x: 34, y: 26 }; // one tile south of the church door
 
-// Branch streets from the N-S spine out to each shop's door row.
+// Branch streets from the N-S spine out to each door row. Northern shops open
+// onto y=20; the middle-band shops (Wren, Elder, Church) sit right on the
+// E-W spine so no extra branch is needed for them.
 b.rect(26, 20, 9, 1, "R"); // Borin's forge (NW) → spine
 b.rect(35, 20, 9, 1, "R"); // Fenn's fletchery (NE) → spine
-b.rect(26, 27, 9, 1, "R"); // Wren's apothecary (SW) → spine
-b.rect(35, 27, 9, 1, "R"); // Elder Corwin's cottage (SE) → spine
-// Short branch from the west spine (x=30..35) north to the guardpost door row.
+// Short branch north to the guardpost.
 b.rect(30, 18, 5, 1, "R");
 
 // ---------------------------------------------------------------------------
@@ -97,25 +97,25 @@ export interface BuildingPlacement {
   footprintH: number;
 }
 
+// All buildings sit north of the road their door opens onto — the sprite
+// draws each door on the south face, so any building placed south of its
+// road would have its opening pointing away from the town. Moved the two
+// southern shops up into the middle band so every door faces a real road.
 export const BUILDINGS: BuildingPlacement[] = [
-  // NW: Borin's forge — melee shop.
+  // NW: Borin's forge — melee shop. Door faces the y=20 branch street.
   { textureKey: "building-forge", footprintX: 25, footprintY: 17, footprintW: 3, footprintH: 3 },
-  // NE: Fenn's fletchery — ranged shop.
+  // NE: Fenn's fletchery — ranged shop. Door on the y=20 branch.
   { textureKey: "building-cottage", footprintX: 42, footprintY: 17, footprintW: 3, footprintH: 3 },
-  // SW: Wren's apothecary — magic shop.
-  { textureKey: "building-house", footprintX: 25, footprintY: 28, footprintW: 3, footprintH: 3 },
-  // SE: Elder Corwin's cottage — vocation NPC (interior later; outside for now).
-  { textureKey: "building-cottage", footprintX: 42, footprintY: 28, footprintW: 3, footprintH: 3 },
-  // Guardpost isn't over the north gate any more — the church is the town's
-  // north-facing landmark now, and the guardpost is a small watchpost tucked
-  // to the west of the plaza.
+  // Guardpost, tucked to the west of the church.
   { textureKey: "building-guardpost", footprintX: 30, footprintY: 15, footprintW: 3, footprintH: 3 },
   // Farmer's cottage on the south road.
   { textureKey: "building-cottage", footprintX: 32, footprintY: 40, footprintW: 3, footprintH: 3 },
-  // The church — the centrepiece of town, footprint 4x3 tiles. The roof and
-  // steeple in the sprite extend above the footprint by design (see the art
-  // note on visual size vs collision footprint).
+
+  // Middle band: three buildings whose south face opens onto the E-W spine
+  // at y=24-25. Wren west of the church, Elder Corwin east of it.
+  { textureKey: "building-house", footprintX: 25, footprintY: 21, footprintW: 3, footprintH: 3 },
   { textureKey: "building-church", footprintX: 32, footprintY: 21, footprintW: 4, footprintH: 3 },
+  { textureKey: "building-cottage", footprintX: 42, footprintY: 21, footprintW: 3, footprintH: 3 },
 ];
 for (const building of BUILDINGS) {
   b.rect(building.footprintX, building.footprintY, building.footprintW, building.footprintH, "W");
@@ -137,19 +137,16 @@ export interface EntryPoint {
   exitY?: number;
 }
 
-// Each entry sits ON the building's own door tile (the bottom-centre of the
-// footprint for the northern shops and the church, or the top-centre for
-// buildings whose sprite door faces away from the town centre — the
-// interior scene is what the player is heading into either way, so the
-// tile is walkable through a "door" gap in the wall paint).
+// Every entry now sits on its building's south-face door tile, and every
+// door tile is adjacent to a real road — the northern shops open onto the
+// y=20 branch street, and the middle-band shops open onto the E-W spine at
+// y=24. No more "walk into the back wall" moments.
 export const ENTRY_POINTS: EntryPoint[] = [
-  { x: 26, y: 19, interiorId: "melee_shop" }, // Borin's forge — south face
-  { x: 43, y: 19, interiorId: "ranged_shop" }, // Fenn's cottage — south face
-  // Wren's shop opens on the north face; the tile immediately south of the
-  // door is still inside the footprint (a wall), so the exit lands the player
-  // one tile NORTH — back onto the branch street they came in from.
-  { x: 26, y: 28, interiorId: "magic_shop", exitX: 26, exitY: 27 },
-  { x: 34, y: 23, interiorId: "temple_main" }, // church — south face (arched doors)
+  { x: 26, y: 19, interiorId: "melee_shop" }, // Borin's forge
+  { x: 43, y: 19, interiorId: "ranged_shop" }, // Fenn's fletchery
+  { x: 26, y: 23, interiorId: "magic_shop" }, // Wren's apothecary
+  { x: 43, y: 23, interiorId: "elder_house" }, // Elder Corwin's cottage
+  { x: 34, y: 23, interiorId: "temple_main" }, // church arched doors
 ];
 // Punch each door tile out of the wall paint above, so the player can
 // actually step onto it. The building sprite still draws over the tile —
@@ -249,13 +246,13 @@ export const PROPS: PropPlacement[] = [
   { textureKey: "sack", x: 28, y: 20, blocks: true },
   { textureKey: "barrel", x: 45, y: 20, blocks: true }, // Fenn's yard
   { textureKey: "crate", x: 42, y: 20, blocks: true },
-  { textureKey: "chest", x: 28, y: 27, blocks: true }, // Wren's yard
-  { textureKey: "barrel", x: 45, y: 27, blocks: true }, // Elder's yard
+  { textureKey: "chest", x: 24, y: 24, blocks: true }, // Wren's yard (west of shop, on grass)
+  { textureKey: "barrel", x: 46, y: 24, blocks: true }, // Elder's yard (east of cottage)
 
   // --- Shop signs so a player can read what a shop is from the street. ---
   { textureKey: "shop-sign-sword", x: 27, y: 20 },
   { textureKey: "shop-sign-bow", x: 41, y: 20 },
-  { textureKey: "shop-sign-potion", x: 27, y: 27 },
+  { textureKey: "shop-sign-potion", x: 27, y: 24 }, // Wren, on the E-W spine next to her door
 
   // --- Small pieces of street furniture along the roads. Kept sparse — the
   // --- plaza is gone on purpose, so nothing here should read as one. ---
@@ -295,8 +292,8 @@ export const SIGNS: SignPlacement[] = [
   { x: 33, y: 38, text: "South: the farm and the shore." },
   { x: 27, y: 20, text: "Borin's Forge — weapons & armour." },
   { x: 41, y: 20, text: "Fenn's Fletchery — bows & arrows." },
-  { x: 27, y: 27, text: "Wren's Apothecary — magic & remedies." },
-  { x: 41, y: 27, text: "Elder Corwin — a path to walk." },
+  { x: 27, y: 24, text: "Wren's Apothecary — magic & remedies." },
+  { x: 41, y: 24, text: "Elder Corwin — a path to walk." },
 ];
 
 // ---------------------------------------------------------------------------
@@ -318,19 +315,8 @@ export interface NpcSpawn {
 }
 
 export const NPC_SPAWNS: NpcSpawn[] = [
-  // Elder Corwin stays outside on his front step — vocation talks happen in
-  // the open, and he's the first face a new arrival sees on the south side.
-  {
-    id: "elder",
-    name: "Elder Corwin",
-    textureKey: "npc-elder-corwin",
-    role: "vocation",
-    greeting: "Welcome, young one.",
-    about:
-      "I have watched many adventurers pass through Oakhollow and find their calling. When you are ready, come find me and we'll speak of yours.",
-    x: 43,
-    y: 27,
-  },
+  // Every shopkeeper and the elder live inside their buildings now; the
+  // outdoor NPC list is just ambient farm dressing.
   // Ambient farmers standing in the yard — no dialogue attached.
   {
     id: "farmer_gil",

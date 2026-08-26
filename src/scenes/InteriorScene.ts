@@ -162,7 +162,16 @@ export class InteriorScene extends Phaser.Scene {
 
     this.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => this.handleTap(pointer));
 
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.input.removeAllListeners());
+    // Tell the UI we're indoors — it hides the action bar and anything else
+    // that would clutter or overlap the tiny interior room.
+    bus.emit(EVENTS.INTERIOR_STATE, { active: true });
+
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.input.removeAllListeners();
+      // Only broadcast "back outside" if we're actually exiting to the
+      // world; a room-to-room transition (SHUTDOWN + create) keeps the
+      // action bar hidden by re-emitting active:true in the new create.
+    });
     this.scale.on("resize", () => this.applyZoom(worldSize));
   }
 
@@ -253,6 +262,7 @@ export class InteriorScene extends Phaser.Scene {
     if (this.transitionScheduled) return;
     this.transitionScheduled = true;
     this.initData.onExit({ hp: this.player.hp, mana: this.player.mana });
+    bus.emit(EVENTS.INTERIOR_STATE, { active: false });
     this.scene.stop("Interior");
     this.scene.resume("World");
     this.scene.setVisible(true, "World");

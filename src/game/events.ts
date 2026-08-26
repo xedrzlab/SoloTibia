@@ -31,7 +31,13 @@ export const EVENTS = {
   UI_LAYOUT: "ui-layout",
   BATTLE_LIST: "battle-list",
   SELECT_TARGET: "select-target",
+  /** true when the player is inside an interior room, false when back outdoors. */
+  INTERIOR_STATE: "interior-state",
 } as const;
+
+export interface InteriorStatePayload {
+  active: boolean;
+}
 
 export interface PlayerStatsPayload {
   level: number;
