@@ -1840,23 +1840,31 @@ function woodFloorTile() {
  */
 function counterSprite() {
   const s = new Sprite(16, 16);
-  const wood = "#8a6a3d";
-  const woodHi = "#a3814f";
-  const woodLo = "#5a3d22";
+  // Deliberately darker than the plank floor so the counter reads as
+  // furniture rather than blending into the wood beneath it.
+  const wood = "#4a2f1a";
+  const woodMid = "#6b4a2a";
+  const woodDark = "#2a1808";
+  const brass = "#c9a24a";
+  const brassHi = "#f0d67a";
   const shadow = "#0a0a0a";
   // ground shadow
   s.fillRect(1, 15, 14, 1, shadow);
-  // Counter body: broad plank front standing on stubby legs.
-  s.fillRect(1, 6, 14, 8, wood);
-  s.fillRect(1, 6, 14, 1, woodHi); // lit top edge
-  s.fillRect(1, 13, 14, 1, woodLo); // bottom shadow
-  // Plank seams
-  s.fillRect(6, 7, 1, 6, woodLo);
-  s.fillRect(10, 7, 1, 6, woodLo);
-  // Rail / trim just under the top edge
-  s.fillRect(1, 8, 14, 1, woodLo);
-  s.setPixel(3, 9, woodHi);
-  s.setPixel(12, 9, woodHi);
+  // Counter body: dark plank front with a broad chest-high bar.
+  s.fillRect(1, 5, 14, 9, wood);
+  s.fillRect(1, 5, 14, 1, brass); // brass top edge — the eye-catch
+  s.fillRect(1, 6, 14, 1, brassHi);
+  s.fillRect(1, 13, 14, 1, woodDark); // bottom shadow
+  // Vertical plank seams
+  s.fillRect(5, 7, 1, 6, woodDark);
+  s.fillRect(10, 7, 1, 6, woodDark);
+  // A thin lit rail across the middle for a bit of relief on the front.
+  s.fillRect(1, 9, 14, 1, woodMid);
+  // Corner posts, standing a touch above the counter top.
+  s.fillRect(0, 4, 2, 11, woodDark);
+  s.fillRect(14, 4, 2, 11, woodDark);
+  s.setPixel(1, 4, brass);
+  s.setPixel(14, 4, brass);
   return s;
 }
 

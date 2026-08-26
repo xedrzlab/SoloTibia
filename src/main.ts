@@ -4,6 +4,7 @@ import { TitleScene } from "./scenes/TitleScene";
 import { SelectScene } from "./scenes/SelectScene";
 import { BootScene } from "./scenes/BootScene";
 import { WorldScene } from "./scenes/WorldScene";
+import { InteriorScene } from "./scenes/InteriorScene";
 import { UIScene } from "./scenes/UIScene";
 import { TARGET_FPS } from "./game/constants";
 import { initOrientationLock } from "./game/orientationLock";
@@ -32,7 +33,7 @@ const game = new Phaser.Game({
   },
   // Title runs first (Phaser auto-starts the first scene in this list). Flow:
   // Title -> Select (pick or create a character) -> Boot -> World + UI.
-  scene: [TitleScene, SelectScene, BootScene, WorldScene, UIScene],
+  scene: [TitleScene, SelectScene, BootScene, WorldScene, InteriorScene, UIScene],
 });
 
 // Dev-only handle so the running game can be inspected from a test harness.

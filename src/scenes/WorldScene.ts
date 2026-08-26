@@ -15,6 +15,7 @@ import {
   PROPS,
   variantForCell,
   overlayForCell,
+  entryPointAt,
 } from "../data/tilemap";
 import { MONSTERS } from "../data/monsters";
 import { TREE_DETAILS, TREE_LAYERS, TreeSpecies } from "../data/assets";
@@ -741,7 +742,47 @@ export class WorldScene extends Phaser.Scene {
   private updatePlayerMovement(_delta: number) {
     if (this.player.moving || this.playerPath.length === 0) return;
     const next = this.playerPath.shift()!;
-    void this.player.stepTo(next.x, next.y).then(() => this.emitPlayerStats());
+    void this.player.stepTo(next.x, next.y).then(() => {
+      this.emitPlayerStats();
+      this.checkForZoneIn();
+    });
+  }
+
+  /**
+   * If the player has just stepped onto a door tile in front of a shop,
+   * pause the world and launch the interior scene for that shop. The
+   * outdoor player state (HP/mana) rides along so the shop can render the
+   * same character; when the interior stops it hands the updated HP/mana
+   * back through `onExit`.
+   */
+  private checkForZoneIn() {
+    const entry = entryPointAt(this.player.tileX, this.player.tileY);
+    if (!entry) return;
+
+    // Stop any pending path/target so we don't walk on the moment we come back.
+    this.playerPath = [];
+    this.clearTarget();
+
+    this.scene.pause();
+    this.scene.launch("Interior", {
+      roomId: entry.interiorId,
+      returnTile: { x: entry.x, y: entry.y },
+      playerState: {
+        vocation: this.player.vocation,
+        exp: this.player.exp,
+        hp: this.player.hp,
+        mana: this.player.mana,
+      },
+      onExit: (state: { hp: number; mana: number }) => {
+        // Take the interior's final HP/mana back onto the outdoor player.
+        this.player.hp = state.hp;
+        this.player.mana = state.mana;
+        // Nudge one tile south of the door so the player faces the road
+        // after exiting, rather than immediately re-triggering the door.
+        this.player.teleportTo(entry.x, entry.y + 1);
+        this.emitPlayerStats();
+      },
+    });
   }
 
   private saveCharacter() {
