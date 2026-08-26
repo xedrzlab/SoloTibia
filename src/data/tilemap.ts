@@ -256,7 +256,13 @@ export interface MonsterSpawn {
   y: number;
 }
 
-export const MONSTER_SPAWNS: MonsterSpawn[] = [
+// Monsters are disabled while the starting/tutorial area is being built out —
+// combat is intentionally off the table for now, so the world reads as a quiet
+// tutorial space rather than a hunting ground. Restore by moving entries out
+// of DISABLED_MONSTER_SPAWNS below back into MONSTER_SPAWNS.
+export const MONSTER_SPAWNS: MonsterSpawn[] = [];
+
+const DISABLED_MONSTER_SPAWNS: MonsterSpawn[] = [
   // Mountain — Trolls
   { monsterId: "troll", x: 12, y: 8 },
   { monsterId: "troll", x: 55, y: 6 },
@@ -273,6 +279,7 @@ export const MONSTER_SPAWNS: MonsterSpawn[] = [
   { monsterId: "cave_rat", x: 18, y: 44 },
   { monsterId: "cave_rat", x: 24, y: 39 },
 ];
+void DISABLED_MONSTER_SPAWNS; // silence unused-var while spawns are paused
 
 // Force every point-feature tile back to its intended terrain, in case a
 // scatter pass (which runs earlier) happened to land on the same cell.
