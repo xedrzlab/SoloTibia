@@ -116,8 +116,7 @@ b.rect(45, 14, 1, 3, "D"); // east side mirror
 b.rect(34, 24, 2, 2, "T");
 export const TEMPLE_SPAWN = { x: 34, y: 26 }; // one tile south of the church door
 
-// Short spur north to the guardpost, since it doesn't sit on any of the
-// main streets.
+// Short spur north connecting the forge street to the upper road.
 b.rect(30, 18, 5, 1, "R");
 
 // ---------------------------------------------------------------------------
@@ -154,8 +153,9 @@ export const BUILDINGS: BuildingPlacement[] = [
   { textureKey: "building-forge", footprintX: 25, footprintY: 17, footprintW: 3, footprintH: 3 },
   // Fenn's fletchery — ranged shop.
   { textureKey: "building-cottage", footprintX: 42, footprintY: 17, footprintW: 3, footprintH: 3 },
-  // Guardpost sits west of Borin, over the north road.
-  { textureKey: "building-guardpost", footprintX: 30, footprintY: 15, footprintW: 3, footprintH: 3 },
+  // Guardposts flank the town gates from outside the wall.
+  { textureKey: "building-guardpost", footprintX: 36, footprintY: 5, footprintW: 3, footprintH: 3 },  // north gate, east side
+  { textureKey: "building-guardpost", footprintX: 36, footprintY: 40, footprintW: 3, footprintH: 3 }, // south gate, east side
   // Flat-roof stone workshop beside the forge.
   { textureKey: "building-workshop", footprintX: 20, footprintY: 17, footprintW: 3, footprintH: 3 },
   // Another tower on the east side.
