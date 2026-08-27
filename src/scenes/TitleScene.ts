@@ -25,9 +25,10 @@ const BG_NATIVE_HEIGHT = 720;
 const DRAGON_CLEAR_Y = 106; // just below the dragon's lowest wingtip/tail
 const HOOD_CLEAR_Y = 225; // just above the top of the girl's hood
 
-// Explicit +30% over the dragon/hood gap's own limit, by request — this
+// Explicit boost over the dragon/hood gap's own limit, by request — this
 // overlaps the artwork slightly rather than staying strictly clear of it.
-const BANNER_SIZE_BOOST = 1.3;
+// Compounded twice now (1.3 * 1.3), each a +30% bump on the prior size.
+const BANNER_SIZE_BOOST = 1.69;
 
 /**
  * Front door of the game: banner over the forest illustration, tap to enter
