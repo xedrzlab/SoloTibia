@@ -8,7 +8,6 @@ import {
 } from "../constants";
 import { MonsterDef } from "../../data/monsters";
 import { findPath, chebyshevDistance, TileCoord } from "../pathfinding";
-import { rollDamage } from "../combat";
 import { Direction, directionFromDelta, directionalFrameIndex } from "../directionalSprite";
 import { tileAnchorX, tileAnchorY, depthForTileY } from "../tileAnchor";
 
@@ -232,7 +231,7 @@ export class Monster {
     playerTile: TileCoord,
     playerAlive: boolean,
     isWalkable: (x: number, y: number) => boolean,
-    onAttackPlayer: (damage: number, attackerName: string) => void,
+    onAttackPlayer: (attacker: MonsterDef) => void,
   ) {
     if (!this.alive) {
       this.respawnTimer -= dtMs;
@@ -255,7 +254,11 @@ export class Monster {
         // Face the player before swinging, so the pose points the right way.
         this.facing = directionFromDelta(playerTile.x - this.tileX, playerTile.y - this.tileY, this.facing);
         this.playAttack();
-        onAttackPlayer(rollDamage(this.def.minDamage, this.def.maxDamage), this.def.name);
+        // Hit chance, damage roll, and the whole defense pipeline are the
+        // world's job to resolve centrally (calculateArmorMitigation etc.
+        // must not be duplicated per-attacker) — this only reports that an
+        // attack is happening, with the stats it's happening with.
+        onAttackPlayer(this.def);
         this.attackCooldown = this.def.attackIntervalMs;
       }
       return;

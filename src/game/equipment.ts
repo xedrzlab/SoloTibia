@@ -98,9 +98,23 @@ export class Equipment {
     return ITEMS[weapon.itemId]?.range ?? 1;
   }
 
-  /** Weapon parry plus shield block, feeding the shielding roll. */
+  /** Weapon DEF + shield DEF combined — a single "Def" readout for the UI. Combat itself needs the two kept apart; see shieldDefense()/weaponDefenseBonus() below. */
   defenseValue(): number {
     return (ITEMS[this.slots.left?.itemId ?? ""]?.defense ?? 0) + (ITEMS[this.slots.right?.itemId ?? ""]?.defense ?? 0);
+  }
+
+  hasShieldEquipped(): boolean {
+    return this.slots.right !== null;
+  }
+
+  /** The shield's own DEF — 0 with no shield worn, regardless of what's in the weapon slot. */
+  shieldDefense(): number {
+    return ITEMS[this.slots.right?.itemId ?? ""]?.defense ?? 0;
+  }
+
+  /** A weapon's DEF only ever matters as a bonus on top of an equipped shield (see calculateShieldDefense) — it isn't a standalone parry system. */
+  weaponDefenseBonus(): number {
+    return ITEMS[this.slots.left?.itemId ?? ""]?.defense ?? 0;
   }
 
   /** Total armor across every worn piece. */

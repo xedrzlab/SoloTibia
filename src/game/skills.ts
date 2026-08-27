@@ -187,15 +187,77 @@ export function spellMaxPower(magicLevel: number, level: number, maxCoefficient:
   return Math.max(1, Math.floor(level * 0.2 + magicLevel * maxCoefficient));
 }
 
-/** Armor soaks a random slice of each hit, so heavy armor blunts chip damage. */
-export function armorReduction(armor: number): number {
-  if (armor <= 0) return 0;
-  const min = armor * 0.5;
-  return Math.floor(min + Math.random() * (armor - min + 1));
+// ---------------------------------------------------------------------------
+// Physical defense pipeline: ATK != DEF != Shielding != ARM != hit chance.
+// Each stage below is its own function so any one of them can be re-tuned
+// (or replaced with a truer-to-Tibia formula later) without touching the
+// others or duplicating logic between the player's and a monster's attacks.
+// ---------------------------------------------------------------------------
+
+export type CombatResult = "miss" | "block" | "hit";
+
+/**
+ * Combat stance also has a defensive side: Full Defense trades damage for a
+ * stronger shield-defense roll. Separate from COMBAT_FACTORS (the offensive
+ * multiplier) since the two move independently — Balanced keeps normal
+ * defense despite reduced offense.
+ */
+export const DEFENSE_FACTORS: Record<CombatStance, number> = {
+  attack: 1.0,
+  balanced: 1.0,
+  defense: 1.5,
+};
+
+/**
+ * Shield-specific defense — this is a first-pass GAME-DESIGN formula, not a
+ * claim of Tibia's actual block-chance math (which isn't publicly nailed
+ * down to this level of precision). Kept as one function specifically so
+ * it can be swapped out later without hunting down every call site.
+ *
+ * Requires an actual shield equipped: shielding skill and a weapon's own
+ * defense bonus never grant a block chance on their own. A shield's DEF and
+ * a weapon's DEF are meant to stay distinct stats (see equipment.ts), but a
+ * weapon can contribute a *bonus* while a shield is worn (weaponDefBonus).
+ */
+export function calculateShieldDefense(opts: {
+  hasShieldEquipped: boolean;
+  shieldDef: number;
+  shieldingSkill: number;
+  weaponDefBonus?: number;
+  defenseFactor: number;
+}): number {
+  if (!opts.hasShieldEquipped) return 0;
+  const effectiveShieldDef = opts.shieldDef + (opts.weaponDefBonus ?? 0);
+  const raw = (opts.shieldingSkill * 0.004 + effectiveShieldDef * 0.012) * opts.defenseFactor;
+  return Math.max(0, Math.min(0.5, raw));
 }
 
-/** Shield + shielding skill give a flat chance to fully block an incoming blow. */
-export function blockChance(shielding: number, defense: number): number {
-  if (defense <= 0) return 0;
-  return Math.min(0.5, (shielding * 0.004 + defense * 0.012));
+/**
+ * Armor mitigation — centralized so every attacker (player, monster, a
+ * future spell that deals physical damage) calls the same function rather
+ * than each re-implementing the formula. Armor soaks a random slice of the
+ * hit, so heavy armor blunts chip damage without making a defender
+ * unkillable.
+ */
+export function calculateArmorMitigation(rawDamage: number, armor: number): number {
+  if (armor <= 0) return Math.max(0, rawDamage);
+  const min = armor * 0.5;
+  const reduction = Math.floor(min + Math.random() * (armor - min + 1));
+  return Math.max(0, rawDamage - reduction);
+}
+
+/**
+ * Physical resistance — a percentage, deliberately kept separate from ARM's
+ * flat mitigation above (applied after it, per the spec's staged pipeline).
+ * No equipment grants this yet, so every current call passes 0; it exists
+ * as the hook for that rather than being wired into anything today.
+ */
+export function calculatePhysicalResistance(damage: number, resistancePct: number): number {
+  const clamped = Math.max(0, Math.min(1, resistancePct));
+  return Math.max(0, Math.floor(damage * (1 - clamped)));
+}
+
+/** A monster's own attack accuracy, entirely separate from its damage range — a miss must be possible before damage is ever rolled. */
+export function rollMonsterHit(hitChancePct: number): boolean {
+  return Math.random() * 100 < hitChancePct;
 }

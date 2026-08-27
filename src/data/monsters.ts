@@ -20,6 +20,10 @@ export interface MonsterDef {
   minDamage: number;
   maxDamage: number;
   attackIntervalMs: number;
+  /** Chance (0-100) an attack against the player actually connects — rolled before damage, never folded into the damage range. */
+  hitChance: number;
+  /** ARM: flat physical mitigation against the player's own attacks — same calculateArmorMitigation() the player's armor uses. */
+  armor: number;
   fleeAtHpPct: number; // 0 = never flees
   loot: LootEntry[];
 }
@@ -35,6 +39,8 @@ export const MONSTERS: Record<string, MonsterDef> = {
     minDamage: 0,
     maxDamage: 2,
     attackIntervalMs: 2000,
+    hitChance: 75,
+    armor: 0,
     fleeAtHpPct: 0.2,
     loot: [
       { itemId: "gold_coin", chance: 0.6, min: 1, max: 4 },
@@ -50,6 +56,8 @@ export const MONSTERS: Record<string, MonsterDef> = {
     minDamage: 1,
     maxDamage: 4,
     attackIntervalMs: 1800,
+    hitChance: 80,
+    armor: 1,
     fleeAtHpPct: 0.15,
     loot: [
       { itemId: "gold_coin", chance: 0.7, min: 2, max: 8 },
@@ -66,6 +74,8 @@ export const MONSTERS: Record<string, MonsterDef> = {
     minDamage: 0,
     maxDamage: 1,
     attackIntervalMs: 2200,
+    hitChance: 70,
+    armor: 0,
     fleeAtHpPct: 0.3,
     loot: [{ itemId: "gold_coin", chance: 0.4, min: 1, max: 2 }],
   },
@@ -80,6 +90,8 @@ export const MONSTERS: Record<string, MonsterDef> = {
     minDamage: 3,
     maxDamage: 8,
     attackIntervalMs: 1900,
+    hitChance: 90,
+    armor: 4,
     fleeAtHpPct: 0,
     loot: [
       { itemId: "gold_coin", chance: 0.85, min: 10, max: 30 },

@@ -45,6 +45,13 @@ export class Player {
   vocation: Vocation = "none";
   /** Full Attack/Balanced/Full Defense — scales only the skill x weapon-attack term of the damage formula. */
   combatStance: CombatStance = "attack";
+  /**
+   * Percentage (0-1) physical damage reduction, applied after ARM in the
+   * defense pipeline — kept as a distinct stat per the design doc, even
+   * though no equipment grants it yet (always 0 today). A hook for future
+   * items, not a currently-tuned stat.
+   */
+  physicalResistance = 0;
   level = 1;
   exp = 0;
   hp: number;

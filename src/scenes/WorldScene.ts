@@ -21,7 +21,7 @@ import {
   sewerLinkAtSewer,
   SewerLink,
 } from "../data/tilemap";
-import { MONSTERS } from "../data/monsters";
+import { MONSTERS, MonsterDef } from "../data/monsters";
 import { TREE_DETAILS, TREE_LAYERS, TreeSpecies } from "../data/assets";
 import { EquipSlot, ITEMS } from "../data/items";
 import { SHOPS } from "../data/shops";
@@ -40,10 +40,13 @@ import {
   SKILL_NAMES,
   SKILL_ORDER,
   SkillId,
-  armorReduction,
-  blockChance,
+  calculateArmorMitigation,
+  calculatePhysicalResistance,
+  calculateShieldDefense,
+  rollMonsterHit,
   COMBAT_FACTORS,
   COMBAT_STANCE_NAMES,
+  DEFENSE_FACTORS,
   distanceHitChance,
   distanceMaxDamage,
   distanceMinDamage,
@@ -162,6 +165,9 @@ export class WorldScene extends Phaser.Scene {
   /** The most recent distance attack's hit-chance roll, surfaced in the debug overlay (?debug=1). */
   private lastDistanceDebug: { distance: number; hitChance: number; roll: number; result: "HIT" | "MISS" } | null =
     null;
+
+  /** The most recent monster attack against the player, surfaced in the debug overlay. */
+  private lastMonsterAttackDebug: { name: string; hitChance: number; result: "HIT" | "MISS" | "BLOCK" } | null = null;
 
   constructor() {
     super("World");
@@ -590,7 +596,7 @@ export class WorldScene extends Phaser.Scene {
         this.player.tile,
         this.player.hp > 0,
         (x, y) => this.isWalkableForMover(x, y, { ignorePlayer: true, ignoreMonster: monster }),
-        (damage, attackerName) => this.damagePlayer(damage, attackerName),
+        (attacker) => this.resolveMonsterAttack(attacker),
       );
     }
 
@@ -627,6 +633,13 @@ export class WorldScene extends Phaser.Scene {
             "hit%  ": `${this.lastDistanceDebug.hitChance}%`,
             "roll  ": this.lastDistanceDebug.roll,
             "result": this.lastDistanceDebug.result,
+          }
+        : {}),
+      ...(this.lastMonsterAttackDebug
+        ? {
+            "mAtk  ": this.lastMonsterAttackDebug.name,
+            "mHit% ": `${this.lastMonsterAttackDebug.hitChance}%`,
+            "mResult": this.lastMonsterAttackDebug.result,
           }
         : {}),
     });
@@ -769,6 +782,13 @@ export class WorldScene extends Phaser.Scene {
         damage = rollDamage(meleeMinDamage(max), max);
         this.trainSkill(skill, 1);
       }
+    }
+
+    // Magic (wand) damage skips physical armor mitigation per the design
+    // doc — ARM/Shielding are a physical-combat concept and shouldn't
+    // automatically blunt a magical attack the way they would a sword blow.
+    if (mode !== "wand") {
+      damage = calculateArmorMitigation(damage, target.def.armor);
     }
 
     const died = target.takeDamage(damage);
@@ -1286,32 +1306,61 @@ export class WorldScene extends Phaser.Scene {
     return backpack ? backpack.contains(container) : false;
   }
 
-  private damagePlayer(amount: number, attackerName: string) {
+  /**
+   * The full "monster attacks player" pipeline, matching the design doc's
+   * staged architecture exactly: hit/miss roll (attacker's own accuracy,
+   * entirely separate from damage) -> shield block (only if a shield is
+   * actually equipped) -> armor mitigation -> physical resistance -> final
+   * damage. Each stage is its own centralized function in skills.ts so nothing
+   * here duplicates the armor/shield formulas a future spell or NPC attack
+   * would also need.
+   */
+  private resolveMonsterAttack(attacker: MonsterDef) {
     const equipment = this.player.equipment;
-    const defense = equipment.defenseValue();
+    const px = this.spriteCenterX(this.player.sprite);
+    const py = this.spriteTopY(this.player.sprite);
 
-    // Shielding trains on every blow aimed at you, blocked or not.
+    const hit = rollMonsterHit(attacker.hitChance);
+    this.lastMonsterAttackDebug = { name: attacker.name, hitChance: attacker.hitChance, result: hit ? "HIT" : "MISS" };
+    if (!hit) {
+      this.log("damage", `The ${attacker.name} misses you.`);
+      this.floatText(px, py, "miss", "#a0a0a0");
+      return;
+    }
+
+    // A landed attack is what shielding actually trains against — a whiffed
+    // attacker never gave the defender anything to defend.
     this.trainSkill("shielding", 1);
 
-    if (defense > 0 && Math.random() < blockChance(this.player.skills.level("shielding"), defense)) {
-      this.log("damage", `You block the ${attackerName}.`);
-      this.floatText(this.spriteCenterX(this.player.sprite), this.spriteTopY(this.player.sprite), "block", "#8fd0ff");
+    const blockChance = calculateShieldDefense({
+      hasShieldEquipped: equipment.hasShieldEquipped(),
+      shieldDef: equipment.shieldDefense(),
+      shieldingSkill: this.player.skills.level("shielding"),
+      weaponDefBonus: equipment.weaponDefenseBonus(),
+      defenseFactor: DEFENSE_FACTORS[this.player.combatStance],
+    });
+    if (Math.random() < blockChance) {
+      this.lastMonsterAttackDebug.result = "BLOCK";
+      this.log("damage", `You block the ${attacker.name}.`);
+      this.floatText(px, py, "block", "#8fd0ff");
       return;
     }
 
-    const reduced = Math.max(0, amount - armorReduction(equipment.armorValue()));
-    if (reduced <= 0) {
-      this.log("damage", `The ${attackerName} hits you, but your armor holds.`);
+    const rawDamage = rollDamage(attacker.minDamage, attacker.maxDamage);
+    const afterArmor = calculateArmorMitigation(rawDamage, equipment.armorValue());
+    const final = calculatePhysicalResistance(afterArmor, this.player.physicalResistance);
+
+    if (final <= 0) {
+      this.log("damage", `The ${attacker.name} hits you, but your armor holds.`);
       return;
     }
 
-    this.player.takeDamage(reduced);
-    this.log("damage", `The ${attackerName} hits you for ${reduced}.`);
-    const px = this.spriteCenterX(this.player.sprite);
-    const py = this.spriteTopY(this.player.sprite) + this.player.sprite.displayHeight / 2;
-    this.flash(px, py, "fx-hit", 0xff8080);
-    this.burst(px, py, "fx-blood", 3, 10);
-    this.floatText(this.spriteCenterX(this.player.sprite), this.spriteTopY(this.player.sprite), `-${reduced}`, "#ff5c5c");
+    this.player.takeDamage(final);
+    this.log("damage", `The ${attacker.name} hits you for ${final}.`);
+    const flashY = py + this.player.sprite.displayHeight / 2;
+    this.flash(px, flashY, "fx-hit", 0xff8080);
+    this.burst(px, flashY, "fx-blood", 3, 10);
+    this.floatText(px, py, `-${final}`, "#ff5c5c");
     this.emitPlayerStats();
   }
 
