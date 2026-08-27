@@ -587,7 +587,7 @@ function crateSprite() {
 // is a different colour.
 // ---------------------------------------------------------------------------
 
-/** Post-and-rail fence, for yards and paddocks. */
+/** Post-and-rail fence running east-west, for top/bottom edges. */
 function fenceSprite() {
   const s = new Sprite(16, 16);
   s.fillEllipse(3, 14, 1.6, 0.8, "#14110f");
@@ -600,6 +600,20 @@ function fenceSprite() {
   for (const y of [7, 11]) {
     s.fillRect(0, y, 16, 1, "#6b4a2a");
     s.fillRect(0, y + 1, 16, 1, P_BARK.dark);
+  }
+  return s;
+}
+
+/** Post-and-rail fence running north-south, for left/right edges. */
+function fenceVerticalSprite() {
+  const s = new Sprite(16, 16);
+  s.fillEllipse(8, 14, 1.6, 0.8, "#14110f");
+  s.fillRect(7, 0, 2, 14, P_BARK.mid);
+  s.fillRect(7, 0, 1, 14, P_BARK.light);
+  s.fillRect(7, 0, 2, 1, "#6b4a2a");
+  for (const x of [5, 10]) {
+    s.fillRect(x, 0, 1, 16, "#6b4a2a");
+    s.fillRect(x - 1, 0, 1, 16, P_BARK.dark);
   }
   return s;
 }
@@ -3236,6 +3250,7 @@ saveSprite(crateSprite(), SCALE, `${OUT}/props/crate_01.png`);
 saveSprite(wellSprite(), SCALE, `${OUT}/props/well_01.png`);
 saveSprite(signpostSprite(), SCALE, `${OUT}/props/sign_01.png`);
 saveSprite(fenceSprite(), SCALE, `${OUT}/props/fence_01.png`);
+saveSprite(fenceVerticalSprite(), SCALE, `${OUT}/props/fence_v_01.png`);
 saveSprite(benchSprite(), SCALE, `${OUT}/props/bench_01.png`);
 saveSprite(cartSprite(), SCALE, `${OUT}/props/cart_01.png`);
 saveSprite(campfireSprite(), SCALE, `${OUT}/props/campfire_01.png`);

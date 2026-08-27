@@ -66,6 +66,7 @@ export const IMAGE_ASSETS: ImageAsset[] = [
   { key: "well", path: "props/well_01.png" },
   { key: "signpost", path: "props/sign_01.png" },
   { key: "fence", path: "props/fence_01.png" },
+  { key: "fence-v", path: "props/fence_v_01.png" },
   { key: "bench", path: "props/bench_01.png" },
   { key: "cart", path: "props/cart_01.png" },
   { key: "campfire", path: "props/campfire_01.png" },

@@ -193,8 +193,8 @@ export const BUILDINGS: BuildingPlacement[] = [
   { textureKey: "building-log-cabin", footprintX: 40, footprintY: 33, footprintW: 3, footprintH: 3 },
   { textureKey: "building-house", footprintX: 47, footprintY: 33, footprintW: 3, footprintH: 3 },
 
-  // --- Farmer's cottage southwest of the south gate ---
-  { textureKey: "building-farmhouse", footprintX: 23, footprintY: 46, footprintW: 5, footprintH: 3 },
+  // --- Farmer's farmhouse southwest of the south gate ---
+  { textureKey: "building-farmhouse", footprintX: 22, footprintY: 43, footprintW: 5, footprintH: 3 },
 ];
 for (const building of BUILDINGS) {
   b.rect(building.footprintX, building.footprintY, building.footprintW, building.footprintH, "B");
@@ -247,8 +247,8 @@ b.rect(22, 45, 14, 1, "D");
 b.rect(22, 46, 1, 3, "D");
 
 // The farm compound sits in the expanded southern grassland.
-const PEN = { x: 18, y: 47, w: 8, h: 6 };
-const YARD = { x: 28, y: 48, w: 5, h: 4 };
+const PEN = { x: 20, y: 46, w: 7, h: 5 };
+const YARD = { x: 29, y: 47, w: 5, h: 4 };
 
 // ---------------------------------------------------------------------------
 // Vegetation
@@ -289,19 +289,20 @@ for (let xx = PEN.x; xx < PEN.x + PEN.w; xx++) {
   penFences.push({ textureKey: "fence", x: xx, y: PEN.y + PEN.h - 1, blocks: true });
 }
 for (let yy = PEN.y + 1; yy < PEN.y + PEN.h - 1; yy++) {
-  penFences.push({ textureKey: "fence", x: PEN.x, y: yy, blocks: true });
-  penFences.push({ textureKey: "fence", x: PEN.x + PEN.w - 1, y: yy, blocks: true });
+  penFences.push({ textureKey: "fence-v", x: PEN.x, y: yy, blocks: true });
+  penFences.push({ textureKey: "fence-v", x: PEN.x + PEN.w - 1, y: yy, blocks: true });
 }
 penFences.push({ textureKey: "fence-gate", x: PEN_GATE_X + 1, y: PEN.y });
 
 const yardFences: PropPlacement[] = [];
+const YARD_GATE_X = YARD.x + 2;
 for (let xx = YARD.x; xx < YARD.x + YARD.w; xx++) {
   yardFences.push({ textureKey: "fence", x: xx, y: YARD.y, blocks: true });
-  if (xx !== YARD.x + 2) yardFences.push({ textureKey: "fence", x: xx, y: YARD.y + YARD.h - 1, blocks: true });
+  if (xx !== YARD_GATE_X) yardFences.push({ textureKey: "fence", x: xx, y: YARD.y + YARD.h - 1, blocks: true });
 }
 for (let yy = YARD.y + 1; yy < YARD.y + YARD.h - 1; yy++) {
-  yardFences.push({ textureKey: "fence", x: YARD.x, y: yy, blocks: true });
-  yardFences.push({ textureKey: "fence", x: YARD.x + YARD.w - 1, y: yy, blocks: true });
+  yardFences.push({ textureKey: "fence-v", x: YARD.x, y: yy, blocks: true });
+  yardFences.push({ textureKey: "fence-v", x: YARD.x + YARD.w - 1, y: yy, blocks: true });
 }
 
 export const PROPS: PropPlacement[] = [
@@ -309,14 +310,14 @@ export const PROPS: PropPlacement[] = [
   ...yardFences,
 
   // Farm animals — sheep in the pen, chickens in the yard.
-  { textureKey: "sheep", x: 20, y: 49 },
-  { textureKey: "sheep", x: 23, y: 50 },
-  { textureKey: "sheep", x: 21, y: 51 },
-  { textureKey: "sheep", x: 24, y: 49 },
-  { textureKey: "chicken", x: 29, y: 49 },
-  { textureKey: "chicken", x: 31, y: 50 },
-  { textureKey: "chicken", x: 30, y: 51 },
+  { textureKey: "sheep", x: 22, y: 47 },
+  { textureKey: "sheep", x: 24, y: 48 },
+  { textureKey: "sheep", x: 21, y: 49 },
+  { textureKey: "sheep", x: 25, y: 47 },
+  { textureKey: "chicken", x: 30, y: 48 },
   { textureKey: "chicken", x: 32, y: 49 },
+  { textureKey: "chicken", x: 31, y: 48 },
+  { textureKey: "chicken", x: 30, y: 49 },
 
   // Town cats.
   { textureKey: "cat", x: 22, y: 20 },
@@ -352,11 +353,11 @@ export const PROPS: PropPlacement[] = [
   // so each corner of town has its own character. ---
 
   // Tower (x:16, y:10) — side yard to the west with barrels.
+  { textureKey: "fence-v", x: 14, y: 10, blocks: true },
+  { textureKey: "fence-v", x: 14, y: 11, blocks: true },
   { textureKey: "fence", x: 14, y: 9, blocks: true },
-  { textureKey: "fence", x: 14, y: 10, blocks: true },
-  { textureKey: "fence", x: 14, y: 11, blocks: true },
-  { textureKey: "fence", x: 14, y: 12, blocks: true },
   { textureKey: "fence", x: 15, y: 9, blocks: true },
+  { textureKey: "fence", x: 14, y: 12, blocks: true },
   { textureKey: "fence", x: 15, y: 12, blocks: true },
   { textureKey: "barrel", x: 15, y: 10, blocks: true },
   { textureKey: "crate", x: 15, y: 11, blocks: true },
@@ -365,11 +366,11 @@ export const PROPS: PropPlacement[] = [
   { textureKey: "fence", x: 41, y: 9, blocks: true },
   { textureKey: "fence", x: 42, y: 9, blocks: true },
   { textureKey: "fence", x: 43, y: 9, blocks: true },
-  { textureKey: "fence", x: 43, y: 10, blocks: true },
-  { textureKey: "fence", x: 43, y: 11, blocks: true },
-  { textureKey: "fence", x: 43, y: 12, blocks: true },
+  { textureKey: "fence-v", x: 43, y: 10, blocks: true },
+  { textureKey: "fence-v", x: 43, y: 11, blocks: true },
   { textureKey: "fence", x: 41, y: 12, blocks: true },
   { textureKey: "fence", x: 42, y: 12, blocks: true },
+  { textureKey: "fence", x: 43, y: 12, blocks: true },
   { textureKey: "planter", x: 41, y: 10, blocks: true },
   { textureKey: "planter", x: 42, y: 11, blocks: true },
 
@@ -379,8 +380,8 @@ export const PROPS: PropPlacement[] = [
   { textureKey: "fence", x: 17, y: 31, blocks: true },
   { textureKey: "fence", x: 18, y: 31, blocks: true },
   { textureKey: "fence", x: 19, y: 31, blocks: true },
-  { textureKey: "fence", x: 15, y: 32, blocks: true },
-  { textureKey: "fence", x: 19, y: 32, blocks: true },
+  { textureKey: "fence-v", x: 15, y: 32, blocks: true },
+  { textureKey: "fence-v", x: 19, y: 32, blocks: true },
   { textureKey: "barrel", x: 16, y: 32, blocks: true },
   { textureKey: "sack", x: 17, y: 32, blocks: true },
   { textureKey: "crate", x: 18, y: 32, blocks: true },
@@ -390,8 +391,8 @@ export const PROPS: PropPlacement[] = [
   { textureKey: "fence", x: 29, y: 31, blocks: true },
   { textureKey: "fence", x: 30, y: 31, blocks: true },
   { textureKey: "fence", x: 31, y: 31, blocks: true },
-  { textureKey: "fence", x: 31, y: 32, blocks: true },
-  { textureKey: "fence", x: 28, y: 32, blocks: true },
+  { textureKey: "fence-v", x: 31, y: 32, blocks: true },
+  { textureKey: "fence-v", x: 28, y: 32, blocks: true },
   { textureKey: "cart", x: 29, y: 32, blocks: true },
   { textureKey: "barrel", x: 30, y: 32, blocks: true },
 
@@ -400,17 +401,17 @@ export const PROPS: PropPlacement[] = [
   { textureKey: "fence", x: 41, y: 37, blocks: true },
   { textureKey: "fence", x: 42, y: 37, blocks: true },
   { textureKey: "fence", x: 43, y: 37, blocks: true },
-  { textureKey: "fence", x: 43, y: 38, blocks: true },
-  { textureKey: "fence", x: 40, y: 38, blocks: true },
+  { textureKey: "fence-v", x: 43, y: 38, blocks: true },
+  { textureKey: "fence-v", x: 40, y: 38, blocks: true },
   { textureKey: "barrel", x: 41, y: 38, blocks: true },
   { textureKey: "sack", x: 42, y: 38, blocks: true },
 
-  // Farm yard dressing around the farmhouse.
-  { textureKey: "sack", x: 23, y: 49, blocks: true },
-  { textureKey: "crate", x: 27, y: 49, blocks: true },
-  { textureKey: "barrel", x: 22, y: 46, blocks: true },
-  { textureKey: "cart", x: 20, y: 46, blocks: true },
-  { textureKey: "well", x: 34, y: 49, blocks: true },
+  // Farm yard dressing around the farmhouse (footprint 22,43 5x3).
+  { textureKey: "barrel", x: 21, y: 44, blocks: true },
+  { textureKey: "sack", x: 28, y: 44, blocks: true },
+  { textureKey: "crate", x: 28, y: 45, blocks: true },
+  { textureKey: "cart", x: 19, y: 45, blocks: true },
+  { textureKey: "well", x: 30, y: 45, blocks: true },
 ];
 
 const blockedCells = new Set<string>();
@@ -461,8 +462,8 @@ export const NPC_SPAWNS: NpcSpawn[] = [
     role: "ambient",
     greeting: "",
     about: "",
-    x: 26,
-    y: 48,
+    x: 24,
+    y: 45,
   },
   {
     id: "farmer_ana",
@@ -471,8 +472,8 @@ export const NPC_SPAWNS: NpcSpawn[] = [
     role: "ambient",
     greeting: "",
     about: "",
-    x: 30,
-    y: 48,
+    x: 27,
+    y: 47,
   },
 ];
 
