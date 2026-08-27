@@ -109,12 +109,10 @@ b.rect(45, 14, 1, 3, "D"); // east side mirror
 
 // The old flagstone plaza is gone — an empty stone rectangle reads as a
 // parade ground, not a working village. In its place: a tiny safe-zone
-// square at the crossroads (2x2, so a respawn always lands on safe ground)
-// and short branch streets that connect each shop's door back to the main
-// spine, so buildings hang off the road network rather than sitting alone
-// in the middle of grass. Grass rather than cobble, so the church doesn't
-// read as sitting on a stone slab.
-b.rect(34, 24, 2, 2, "S");
+// square at the crossroads (2x2, so a respawn always lands on safe ground),
+// textured as road rather than grass or cobble so it reads as part of the
+// street reaching the church door instead of a patch cut out of it.
+b.rect(34, 24, 2, 2, "P");
 export const TEMPLE_SPAWN = { x: 34, y: 26 }; // one tile south of the church door
 
 // Short spur north connecting the forge street to the upper road.
@@ -566,6 +564,7 @@ const LEGEND: Record<string, TileInfo> = {
   g: { walkable: true, textureKey: "rocky-ground", safe: false, groundFriction: 160 },
   M: { walkable: false, textureKey: "mountain", safe: false },
   R: { walkable: true, textureKey: "road", safe: false, groundFriction: 110 },
+  P: { walkable: true, textureKey: "road", safe: true, groundFriction: 110 },
   F: { walkable: true, textureKey: "wood-floor", safe: true, groundFriction: 100 },
 
   t: { walkable: false, textureKey: "grass", variants: ["grass", "grass-2"], tree: "oak", safe: false },
