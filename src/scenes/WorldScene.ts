@@ -158,6 +158,8 @@ export class WorldScene extends Phaser.Scene {
   /** Set by skill training; flushed once per frame instead of per hit. */
   private skillsDirty = false;
   private battleListTimer = 0;
+  /** Last emitted battle list, as a cheap comparison key — see emitBattleList(). */
+  private lastBattleListKey = "";
   private regenTimer = REGEN_INTERVAL_MS;
   private debug!: DebugOverlay;
   private dayNight!: DayNightCycle;
@@ -672,28 +674,34 @@ export class WorldScene extends Phaser.Scene {
     this.dayNight.update(delta, this.player.tile);
     this.updateLadderOcclusion();
 
-    this.debug.update(this.player.tile, {
-      mobs: this.monsters.filter((m) => m.alive).length,
-      corpse: this.corpses.length,
-      mode: this.resolveAttackMode().mode,
-      stance: COMBAT_STANCE_NAMES[this.player.combatStance],
-      time: this.dayNight.phaseName,
-      ...(this.lastDistanceDebug
-        ? {
-            "dist  ": `${this.lastDistanceDebug.distance} tiles`,
-            "hit%  ": `${this.lastDistanceDebug.hitChance}%`,
-            "roll  ": this.lastDistanceDebug.roll,
-            "result": this.lastDistanceDebug.result,
-          }
-        : {}),
-      ...(this.lastMonsterAttackDebug
-        ? {
-            "mAtk  ": this.lastMonsterAttackDebug.name,
-            "mHit% ": `${this.lastMonsterAttackDebug.hitChance}%`,
-            "mResult": this.lastMonsterAttackDebug.result,
-          }
-        : {}),
-    });
+    // Building the debug payload allocates several objects/arrays and calls
+    // resolveAttackMode() purely for a readout — skip all of that when the
+    // overlay isn't even showing (the overwhelmingly common case), rather
+    // than paying the cost every frame regardless of ?debug=1.
+    if (this.debug.isEnabled()) {
+      this.debug.update(this.player.tile, {
+        mobs: this.monsters.filter((m) => m.alive).length,
+        corpse: this.corpses.length,
+        mode: this.resolveAttackMode().mode,
+        stance: COMBAT_STANCE_NAMES[this.player.combatStance],
+        time: this.dayNight.phaseName,
+        ...(this.lastDistanceDebug
+          ? {
+              "dist  ": `${this.lastDistanceDebug.distance} tiles`,
+              "hit%  ": `${this.lastDistanceDebug.hitChance}%`,
+              "roll  ": this.lastDistanceDebug.roll,
+              "result": this.lastDistanceDebug.result,
+            }
+          : {}),
+        ...(this.lastMonsterAttackDebug
+          ? {
+              "mAtk  ": this.lastMonsterAttackDebug.name,
+              "mHit% ": `${this.lastMonsterAttackDebug.hitChance}%`,
+              "mResult": this.lastMonsterAttackDebug.result,
+            }
+          : {}),
+      });
+    }
   }
 
   private regenerate() {
@@ -738,6 +746,17 @@ export class WorldScene extends Phaser.Scene {
         maxHp: monster.def.hp,
         targeted: monster === this.target,
       }));
+
+    // This runs every BATTLE_LIST_INTERVAL_MS regardless of whether anything
+    // changed — while just walking around with no nearby monster in combat,
+    // that's the same (usually empty) list, over and over. Emitting it
+    // unconditionally used to force a full sidebar teardown-and-rebuild
+    // (every open panel, not just the battle list) 2.5x/sec continuously,
+    // which is real, felt stutter, not a one-off. Skip the emit entirely
+    // when the list is unchanged from last time.
+    const key = entries.map((e) => `${e.id}:${e.hp}:${e.targeted ? 1 : 0}`).join(",");
+    if (key === this.lastBattleListKey) return;
+    this.lastBattleListKey = key;
     bus.emit(EVENTS.BATTLE_LIST, { entries });
   }
 

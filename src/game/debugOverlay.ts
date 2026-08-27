@@ -28,6 +28,10 @@ export class DebugOverlay {
   private readout: Phaser.GameObjects.Text;
   private enabled: boolean;
 
+  isEnabled(): boolean {
+    return this.enabled;
+  }
+
   constructor(
     private scene: Phaser.Scene,
     private target: DebugTarget,
