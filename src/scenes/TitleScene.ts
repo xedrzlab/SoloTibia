@@ -54,7 +54,24 @@ export class TitleScene extends Phaser.Scene {
     // Banner sits in the upper third, over the sky area of the illustration.
     const banner = this.add.image(width / 2, height * 0.28, BANNER_KEY).setOrigin(0.5);
     const bannerTex = this.textures.get(BANNER_KEY).getSourceImage();
-    banner.setScale(Math.min(1, BANNER_TARGET_WIDTH / bannerTex.width, (width * 0.9) / bannerTex.width));
+    const bannerScale = Math.min(1, BANNER_TARGET_WIDTH / bannerTex.width, (width * 0.9) / bannerTex.width);
+    banner.setScale(bannerScale);
+
+    // The game's name, carved into the signboard — sized off the same scale
+    // factor as the banner art so it shrinks/grows with it instead of the
+    // two drifting apart on an unusual aspect ratio.
+    this.add
+      .text(banner.x, banner.y, "VAELORN", {
+        fontFamily: "monospace",
+        fontStyle: "bold",
+        fontSize: `${Math.round(46 * bannerScale)}px`,
+        color: "#f4e6c8",
+        stroke: "#2a1608",
+        strokeThickness: Math.max(2, Math.round(6 * bannerScale)),
+      })
+      .setOrigin(0.5)
+      .setShadow(0, 2, "#000000", 4, true, true)
+      .setLetterSpacing(Math.round(6 * bannerScale));
 
     const prompt = this.add
       .text(width / 2, height * 0.82, "Tap anywhere to begin", {
