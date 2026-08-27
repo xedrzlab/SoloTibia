@@ -527,10 +527,10 @@ export class UIScene extends Phaser.Scene {
     return WINDOW_TITLE_H + PAD + BAR_H * 2 + 2 + PAD + 12 + equip;
   }
 
-  /** Fixed to match the Character panel's height (with its own internal scroll), per the classic layout. */
+  /** 60% of the Character panel's height (reduced from a 1:1 match — it was taking up more space than a monster list needs) — its own internal scroll handles any overflow. */
   private battlePanelHeight(): number {
     if (this.collapsed.has("battle")) return WINDOW_TITLE_H;
-    return this.characterPanelHeight();
+    return Math.round(this.characterPanelHeight() * 0.6);
   }
 
   private skillsPanelHeight(): number {
