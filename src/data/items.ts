@@ -27,6 +27,8 @@ export interface ItemDef {
   armor?: number;
   /** Tiles a distance weapon can reach. */
   range?: number;
+  /** A two-handed weapon occupies the shield slot too — see Equipment.canEquip(). */
+  twoHanded?: boolean;
   /** Slot count when this item is a container. */
   containerCapacity?: number;
   /**
@@ -116,6 +118,20 @@ export const ITEMS: Record<string, ItemDef> = {
     weaponType: "melee",
     attack: 15,
     defense: 8,
+  },
+  two_handed_sword: {
+    id: "two_handed_sword",
+    name: "Two Handed Sword",
+    textureKey: "sword", // no dedicated art yet — shares the one-handed sword's sprite/paper-doll layer
+    kind: "equipment",
+    stackable: false,
+    weight: 75,
+    equipSlot: "left",
+    paperDoll: "weapon-blade",
+    weaponType: "melee",
+    twoHanded: true,
+    attack: 23,
+    defense: 0,
   },
 
   // --- Distance weapons & ammo -------------------------------------------

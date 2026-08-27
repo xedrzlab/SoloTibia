@@ -1333,7 +1333,7 @@ export class WorldScene extends Phaser.Scene {
     this.trainSkill("shielding", 1);
 
     const blockChance = calculateShieldDefense({
-      hasShieldEquipped: equipment.hasShieldEquipped(),
+      hasShieldEquipped: equipment.shieldBlockAvailable(),
       shieldDef: equipment.shieldDefense(),
       shieldingSkill: this.player.skills.level("shielding"),
       weaponDefBonus: equipment.weaponDefenseBonus(),

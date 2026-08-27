@@ -49,10 +49,17 @@ export class Equipment {
     return this.slots[slot];
   }
 
-  /** An item may only go in the slot its definition names. */
+  /**
+   * An item may only go in the slot its definition names, and a two-handed
+   * weapon and a shield can never both be worn — equipping either while the
+   * other is already in place is rejected.
+   */
   canEquip(slot: EquipSlot, stack: ItemStack | null): boolean {
     if (!stack) return true;
-    return ITEMS[stack.itemId]?.equipSlot === slot;
+    if (ITEMS[stack.itemId]?.equipSlot !== slot) return false;
+    if (slot === "left" && ITEMS[stack.itemId]?.twoHanded && this.slots.right) return false;
+    if (slot === "right" && ITEMS[this.slots.left?.itemId ?? ""]?.twoHanded) return false;
+    return true;
   }
 
   set(slot: EquipSlot, stack: ItemStack | null): boolean {
@@ -105,6 +112,15 @@ export class Equipment {
 
   hasShieldEquipped(): boolean {
     return this.slots.right !== null;
+  }
+
+  /**
+   * True only when a shield is worn AND the weapon slot isn't a two-hander —
+   * canEquip() already keeps that combination from existing, but combat code
+   * should ask this rather than re-deriving the two-handed check itself.
+   */
+  shieldBlockAvailable(): boolean {
+    return this.hasShieldEquipped() && !ITEMS[this.slots.left?.itemId ?? ""]?.twoHanded;
   }
 
   /** The shield's own DEF — 0 with no shield worn, regardless of what's in the weapon slot. */
