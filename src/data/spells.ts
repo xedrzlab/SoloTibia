@@ -9,10 +9,9 @@ export interface SpellDef {
   textureKey: string;
   manaCost: number;
   kind: "attack" | "heal";
-  /** Flat component of the effect, before magic level scales it. */
-  base: number;
-  /** How much each magic level adds. */
-  factor: number;
+  /** Coefficients applied to magic level for the roll's low/high end — power = level*0.2 + magicLevel*coefficient. */
+  minCoefficient: number;
+  maxCoefficient: number;
   /** Tiles the spell reaches (attack spells only). */
   range?: number;
 }
@@ -25,8 +24,8 @@ export const SPELLS: Record<string, SpellDef> = {
     textureKey: "spell-heal",
     manaCost: 20,
     kind: "heal",
-    base: 12,
-    factor: 3,
+    minCoefficient: 3,
+    maxCoefficient: 5,
   },
   flame_strike: {
     id: "flame_strike",
@@ -35,8 +34,8 @@ export const SPELLS: Record<string, SpellDef> = {
     textureKey: "spell-flame",
     manaCost: 20,
     kind: "attack",
-    base: 8,
-    factor: 2.5,
+    minCoefficient: 3,
+    maxCoefficient: 5,
     range: 4,
   },
 };

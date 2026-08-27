@@ -76,8 +76,3 @@ export function expIntoCurrentLevel(totalExp: number, level: number): number {
 export function expNeededForNextLevel(level: number): number {
   return cumulativeExpForLevel(level + 1) - cumulativeExpForLevel(level);
 }
-
-/** Use-based skill training: diminishing-returns curve, docs/GAME_DESIGN.md §2. */
-export function trainingHitsForSkillLevel(skillLevel: number): number {
-  return Math.round(50 * Math.pow(Math.max(skillLevel - 10, 1), 1.1));
-}

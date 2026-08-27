@@ -32,66 +32,52 @@ export const SKILL_LOG_NAMES: Record<SkillId, string> = {
 interface SkillCurve {
   /** Level the skill starts at for a fresh character. */
   start: number;
-  /** Tries needed for the very first step (start -> start + 1), before the vocation factor. */
+  /** The "A" reference constant — tries at step 0, before the vocation's own growth rate compounds it. */
   baseTries: number;
 }
 
-// Melee/distance/shielding: tries to advance from level N to N+1 follows
-// TibiaWiki's documented formula, Tries = 50 * (N - 10)^1.1 — a power-law
-// curve (not exponential-in-steps), with all three sharing the same base of
-// 50 and skills starting at level 10. Magic level counts mana spent rather
-// than hits and starts at 0; it uses a per-vocation formula instead (below).
-const POWER_EXPONENT = 1.1;
-
-const CURVES: Record<Exclude<SkillId, "magic">, SkillCurve> = {
+// Every skill (including magic level) shares ONE formula:
+//   Required = A * B^(level - offset)
+// where A and offset are per-skill constants and B is the vocation's own
+// per-level growth rate for that skill (the "B" reference constants below,
+// straight from Tibia's documented mechanic — magic level already worked
+// this way; melee/distance/shielding turn out to use the exact same shape,
+// just with a much smaller B, so this replaces the separate power-law
+// curve an earlier pass used for those three).
+const CURVES: Record<SkillId, SkillCurve> = {
   melee: { start: 10, baseTries: 50 },
-  distance: { start: 10, baseTries: 50 },
-  shielding: { start: 10, baseTries: 50 },
+  distance: { start: 10, baseTries: 30 },
+  shielding: { start: 10, baseTries: 100 },
+  // Magic level counts mana spent rather than hits, and starts at 0 (no offset).
+  magic: { start: 0, baseTries: 1600 },
 };
 
 /**
- * Per-vocation try multipliers for melee/distance/shielding — lower means
- * the skill trains faster. Shielding specifically: TibiaWiki documents
- * knights and paladins advancing at the *identical* speed (fastest), with
- * druids/sorcerers advancing "significantly" slower — rarely getting
- * shielding much past 25-30 — and druids a hair faster at it than
- * sorcerers. Melee/distance don't have that knight/paladin tie or
- * druid/sorcerer split documented, so those keep their existing spread.
+ * Per-vocation, per-skill growth rate (the exponential base "B") — this
+ * game trains sword/axe/club/fist as one combined "melee" skill, so it
+ * uses Tibia's "Melee" (sword/axe/club) reference rate rather than the
+ * separate (and for casters, slightly cheaper) "Fist" rate.
  */
-const VOCATION_FACTORS: Record<Vocation, Record<Exclude<SkillId, "magic">, number>> = {
-  none: { melee: 1.5, distance: 1.5, shielding: 1.5 },
-  knight: { melee: 1.0, distance: 1.4, shielding: 1.0 },
-  paladin: { melee: 1.2, distance: 1.0, shielding: 1.0 },
-  sorcerer: { melee: 2.0, distance: 2.0, shielding: 4.5 },
-  druid: { melee: 2.0, distance: 2.0, shielding: 4.0 },
-};
-
-// Magic level's own documented mechanic: each vocation spends mana at a
-// fixed multiple of the previous level's cost — sorcerers/druids ("mages")
-// only need 1.1x more per level, paladins 1.4x, knights a punishing 3x.
-// That per-level GROWTH RATE differs by vocation (unlike the other three
-// skills, which share one curve shape and differ only by a flat factor).
-const MAGIC_BASE_MANA = 160;
-const MAGIC_GROWTH: Record<Vocation, number> = {
-  none: 2.0,
-  knight: 3.0,
-  paladin: 1.4,
-  sorcerer: 1.1,
-  druid: 1.1,
+const SKILL_GROWTH: Record<Vocation, Record<SkillId, number>> = {
+  // Our own pre-vocation-choice state, not a real Tibia mechanic — flat
+  // and identical across all four skills, so no skill is favored before
+  // the player actually picks a vocation.
+  none: { melee: 1.5, distance: 1.5, magic: 1.5, shielding: 1.5 },
+  knight: { melee: 1.1, distance: 1.4, magic: 3.0, shielding: 1.1 },
+  paladin: { melee: 1.2, distance: 1.1, magic: 1.4, shielding: 1.1 },
+  sorcerer: { melee: 2.0, distance: 2.0, magic: 1.1, shielding: 1.5 },
+  druid: { melee: 1.8, distance: 1.8, magic: 1.1, shielding: 1.5 },
 };
 
 export function startingLevel(skill: SkillId): number {
-  return skill === "magic" ? 0 : CURVES[skill].start;
+  return CURVES[skill].start;
 }
 
 /** Tries needed to advance from `level` to `level + 1`. */
 export function triesForNextLevel(skill: SkillId, level: number, vocation: Vocation): number {
-  if (skill === "magic") {
-    return Math.max(1, Math.round(MAGIC_BASE_MANA * Math.pow(MAGIC_GROWTH[vocation], level)));
-  }
   const curve = CURVES[skill];
-  const step = Math.max(1, level - curve.start + 1);
-  return Math.max(1, Math.round(curve.baseTries * Math.pow(step, POWER_EXPONENT) * VOCATION_FACTORS[vocation][skill]));
+  const steps = Math.max(0, level - curve.start);
+  return Math.max(1, Math.round(curve.baseTries * Math.pow(SKILL_GROWTH[vocation][skill], steps)));
 }
 
 export class SkillSet {
@@ -136,22 +122,37 @@ export class SkillSet {
 // ---------------------------------------------------------------------------
 
 /**
- * Tibia's melee/distance damage curve:
- *   maxDamage = 0.085 * attack * (skill + 1) + level / 5
- * Damage then rolls uniformly between a floor and that maximum.
+ * Combat stance (Full Attack/Balanced/Full Defense) isn't implemented yet —
+ * every call site passes the default 1.0 (full attack) until that's added.
  */
-export function weaponMaxDamage(skill: number, attack: number, level: number): number {
-  return Math.max(1, Math.floor(0.085 * attack * (skill + 1) + level / 5));
+export const COMBAT_FACTOR_FULL_ATTACK = 1.0;
+
+/** Melee: maxDamage = 0.085 * combatFactor * attack * skill + level/5. */
+export function meleeMaxDamage(skill: number, attack: number, level: number, combatFactor = COMBAT_FACTOR_FULL_ATTACK): number {
+  return Math.max(1, Math.floor(0.085 * combatFactor * attack * skill + level / 5));
 }
 
-/** Attacks never whiff completely — they roll between ~20% and 100% of max. */
-export function weaponMinDamage(max: number): number {
+/** Melee never whiffs completely — rolls between ~20% and 100% of max (a deliberate house-rule floor, not from the reference formula). */
+export function meleeMinDamage(max: number): number {
   return Math.max(0, Math.floor(max * 0.2));
 }
 
-/** Spell power scales off magic level and character level, not weapons. */
-export function spellDamage(magicLevel: number, level: number, base: number, factor: number): number {
-  return Math.max(1, Math.floor(base + (magicLevel * factor + level / 5)));
+/** Distance: same shape as melee but its own coefficient (0.09) and floor (level/5, not 20% of max). */
+export function distanceMaxDamage(skill: number, attack: number, level: number, combatFactor = COMBAT_FACTOR_FULL_ATTACK): number {
+  return Math.max(1, Math.floor(0.09 * combatFactor * attack * skill + level / 5));
+}
+
+export function distanceMinDamage(level: number): number {
+  return Math.max(0, Math.floor(level / 5));
+}
+
+/** Spells (damage or healing): level*0.2 + magicLevel*coefficient, rolled between the spell's min and max coefficient. */
+export function spellMinPower(magicLevel: number, level: number, minCoefficient: number): number {
+  return Math.max(0, Math.floor(level * 0.2 + magicLevel * minCoefficient));
+}
+
+export function spellMaxPower(magicLevel: number, level: number, maxCoefficient: number): number {
+  return Math.max(1, Math.floor(level * 0.2 + magicLevel * maxCoefficient));
 }
 
 /** Armor soaks a random slice of each hit, so heavy armor blunts chip damage. */

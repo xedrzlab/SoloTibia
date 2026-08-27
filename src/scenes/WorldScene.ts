@@ -42,9 +42,12 @@ import {
   SkillId,
   armorReduction,
   blockChance,
-  spellDamage,
-  weaponMaxDamage,
-  weaponMinDamage,
+  distanceMaxDamage,
+  distanceMinDamage,
+  meleeMaxDamage,
+  meleeMinDamage,
+  spellMaxPower,
+  spellMinPower,
 } from "../game/skills";
 import {
   bus,
@@ -693,15 +696,29 @@ export class WorldScene extends Phaser.Scene {
     let damage: number;
     if (mode === "wand") {
       // Wands convert mana into magic damage, and that mana is what trains
-      // magic level — same rule as casting a spell.
+      // magic level — same rule as casting a spell. There's no wand entry in
+      // the spell table, so its min/max coefficients scale with the
+      // equipped wand's own attack value instead of a fixed spell design —
+      // a better wand still means more damage, same as melee/distance gear.
       player.spendMana(WAND_MANA_COST);
       this.trainSkill("magic", WAND_MANA_COST);
-      damage = spellDamage(player.skills.level("magic"), player.level, equipment.attackValue(), 1.5);
+      const wandScale = equipment.attackValue() / 50;
+      const magicLevel = player.skills.level("magic");
+      const min = spellMinPower(magicLevel, player.level, 3 * wandScale);
+      const max = spellMaxPower(magicLevel, player.level, 5 * wandScale);
+      damage = rollDamage(min, max);
       this.fireProjectile(target, "spell-flame");
     } else {
       const skill: SkillId = mode === "distance" ? "distance" : "melee";
-      const max = weaponMaxDamage(player.skills.level(skill), equipment.attackValue(), player.level);
-      damage = rollDamage(weaponMinDamage(max), max);
+      const attack = equipment.attackValue();
+      const skillLevel = player.skills.level(skill);
+      if (mode === "distance") {
+        const max = distanceMaxDamage(skillLevel, attack, player.level);
+        damage = rollDamage(distanceMinDamage(player.level), max);
+      } else {
+        const max = meleeMaxDamage(skillLevel, attack, player.level);
+        damage = rollDamage(meleeMinDamage(max), max);
+      }
       this.trainSkill(skill, 1);
       if (mode === "distance") {
         this.consumeAmmo();
@@ -802,7 +819,11 @@ export class WorldScene extends Phaser.Scene {
     this.trainSkill("magic", spell.manaCost);
     this.log("info", `You say: "${spell.words}".`);
 
-    const power = spellDamage(player.skills.level("magic"), player.level, spell.base, spell.factor);
+    const magicLevel = player.skills.level("magic");
+    const power = rollDamage(
+      spellMinPower(magicLevel, player.level, spell.minCoefficient),
+      spellMaxPower(magicLevel, player.level, spell.maxCoefficient),
+    );
     if (spell.kind === "heal") {
       player.heal(power);
       const px = this.spriteCenterX(player.sprite);
