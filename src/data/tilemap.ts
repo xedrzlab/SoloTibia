@@ -339,7 +339,7 @@ export const PROPS: PropPlacement[] = [
   // A planter tucked between the well and the church's north-west corner.
   { textureKey: "planter", x: 31, y: 22, blocks: true },
   // A bench on the south branch by the church, opposite the door.
-  { textureKey: "bench", x: 37, y: 27, blocks: true },
+  { textureKey: "bench", x: 37, y: 26, blocks: true },
   // Two torches on the grass strip immediately south of the church door,
   // one either side of the doorway. They light the safe zone at night
   // without blocking the E-W spine.
