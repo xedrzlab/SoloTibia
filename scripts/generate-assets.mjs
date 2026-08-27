@@ -2900,27 +2900,70 @@ function fenceGateSprite() {
 // Monsters
 // ---------------------------------------------------------------------------
 
-function ratFrame({ furBase = "#7a5c3e", furDark = "#6b4f34", eye = "#1a1a1a", scale = 1, step = 0 } = {}) {
+/**
+ * A rat, redrawn for a clean silhouette: dark back catching the upper-left
+ * light, a pale belly/feet/ear-interior family (the two-tone "dark back,
+ * light underside" read that makes a rodent instantly recognisable at this
+ * size), a properly pointed snout, one oversized ear, and a tail with a
+ * slight curl instead of one straight diagonal line.
+ *
+ * Still the game's top-down oblique perspective, not a side-view critter
+ * sprite — the belly shows as a crescent along the tile-facing front edge,
+ * the same way a building shows a band of wall below its roof.
+ */
+function ratFrame({
+  furBase = "#7a5c3e",
+  furDark = "#4a3626",
+  belly = "#c9a688",
+  earPink = "#d69a92",
+  eye = "#1a1a1a",
+  scale = 1,
+  step = 0,
+} = {}) {
   const s = new Sprite(16, 16);
   const bob = step === 0 ? 0 : 1;
   const rx = 5 * scale;
   const ry = 3 * scale;
   const cx = 7;
   const cy = 10 - bob;
-  s.fillEllipse(cx, cy, rx, ry, furBase);
-  // head
-  s.fillEllipse(cx + rx - 1, cy - 1, 2.6 * scale, 2.2 * scale, furDark);
-  // ears
-  s.fillCircle(cx + rx, cy - 3, 1.2 * scale, "#c98a8a");
-  s.fillCircle(cx + rx + 2, cy - 3, 1.2 * scale, "#c98a8a");
-  // eye + nose
-  s.setPixel(Math.round(cx + rx + 1), Math.round(cy - 1), eye);
-  s.setPixel(Math.round(cx + rx + 2), Math.round(cy), "#2a2a2a");
-  // tail
-  s.line(Math.round(cx - rx), Math.round(cy), Math.round(cx - rx - 3), Math.round(cy + 2), furDark);
-  // feet
-  s.fillRect(Math.round(cx - 2), Math.round(cy + ry - 1), 1, 2, furDark);
-  s.fillRect(Math.round(cx + 1), Math.round(cy + ry - 1), 1, 2, furDark);
+
+  // Ground contact shadow — tied to the same bob offset as the body and
+  // placed strictly below the feet, not overlapping them (overlapping was
+  // an earlier bug: the feet are only 1px wide each, so a wider shadow
+  // showed through as black between them). A soft warm dark rather than
+  // pure black, matching the other creatures' contact shadows.
+  s.fillEllipse(cx, cy + ry + 0.7, rx * 0.75, 0.5, "#160f09");
+
+  // Body: dark back dominates (this is what reads as "rat" at a glance);
+  // the lit patch and belly crescent are accents, not half the body each.
+  s.fillEllipse(cx, cy, rx, ry, furDark);
+  s.fillEllipse(cx - rx * 0.2, cy - ry * 0.4, rx * 0.5, ry * 0.35, furBase);
+  s.fillEllipse(cx + rx * 0.1, cy + ry * 0.68, rx * 0.45, ry * 0.24, belly);
+
+  // Head, ahead of the body, tapering to a snout tip.
+  const hx = cx + rx - 0.6;
+  const hy = cy - 1.3 * scale;
+  s.fillEllipse(hx, hy, 2.6 * scale, 2.1 * scale, furDark);
+  s.fillEllipse(hx - 0.5, hy - 0.5, 1.3 * scale, 1 * scale, furBase);
+  s.setPixel(Math.round(hx + 2.4 * scale), Math.round(hy + 0.6), furDark);
+  s.setPixel(Math.round(hx + 2.8 * scale), Math.round(hy + 0.7), "#241a12"); // nose tip
+
+  // One big rounded ear (the oblique angle hides the far one), pink interior.
+  s.fillCircle(hx + 0.2, hy - 1.9 * scale, 1.5 * scale, furDark);
+  s.fillCircle(hx + 0.2, hy - 1.9 * scale, 0.9 * scale, earPink);
+
+  s.setPixel(Math.round(hx + 1.1 * scale), Math.round(hy - 0.3), eye);
+
+  // Tail: bare and pink like the real thing, not fur-coloured, with a slight
+  // curl (two segments) instead of one stiff diagonal line.
+  const tx = Math.round(cx - rx);
+  const ty = Math.round(cy + 0.5);
+  s.line(tx, ty, tx - 3, ty + 1, belly);
+  s.line(tx - 3, ty + 1, tx - 4, ty - 1, belly);
+
+  // Feet, matching the belly family.
+  s.fillRect(Math.round(cx - 2), Math.round(cy + ry - 1), 1, 2, belly);
+  s.fillRect(Math.round(cx + 1), Math.round(cy + ry - 1), 1, 2, belly);
   return s;
 }
 
@@ -3382,7 +3425,7 @@ const trollMeta = saveSpriteSheet(directionalFrames(trollFrame), SCALE, `${OUT}/
 const ratFrames = [ratFrame({ step: 0 }), ratFrame({ step: 1 })];
 const ratMeta = saveSpriteSheet(ratFrames, SCALE, `${OUT}/creatures/rat_sheet.png`);
 // Darker fur and red eyes mark the cave variant apart from the field rat.
-const CAVE_RAT = { furBase: "#4a3626", furDark: "#3a2a1c", eye: "#a83232", scale: 1.15 };
+const CAVE_RAT = { furBase: "#4a3626", furDark: "#2a2018", belly: "#8a7060", earPink: "#a85a52", eye: "#a83232", scale: 1.15 };
 const caveRatFrames = [ratFrame({ ...CAVE_RAT, step: 0 }), ratFrame({ ...CAVE_RAT, step: 1 })];
 const caveRatMeta = saveSpriteSheet(caveRatFrames, SCALE, `${OUT}/creatures/cave_rat_sheet.png`);
 const slimeFrames = [slimeFrame({ squish: false }), slimeFrame({ squish: true })];
