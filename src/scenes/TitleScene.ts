@@ -25,6 +25,10 @@ const BG_NATIVE_HEIGHT = 720;
 const DRAGON_CLEAR_Y = 106; // just below the dragon's lowest wingtip/tail
 const HOOD_CLEAR_Y = 225; // just above the top of the girl's hood
 
+// Explicit +30% over the dragon/hood gap's own limit, by request — this
+// overlaps the artwork slightly rather than staying strictly clear of it.
+const BANNER_SIZE_BOOST = 1.3;
+
 /**
  * Front door of the game: banner over the forest illustration, tap to enter
  * the character-select screen. The banner is the whole moment — the tap can
@@ -82,7 +86,7 @@ export class TitleScene extends Phaser.Scene {
       1,
       BANNER_TARGET_WIDTH / bannerTex.width,
       (width * 0.9) / bannerTex.width,
-      bandHeight / bannerTex.height, // never taller than the dragon-to-hood gap allows
+      (bandHeight / bannerTex.height) * BANNER_SIZE_BOOST, // 30% past the dragon-to-hood gap, by request
     );
     banner.setScale(bannerScale);
 
