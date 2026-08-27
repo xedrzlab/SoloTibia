@@ -122,15 +122,22 @@ export class Monster {
   /**
    * Directional sheets (framesPerDirection set) index by facing + idle/step;
    * simple 2-frame sheets just toggle frame 0/1, flipped horizontally for
-   * movement direction. The walk toggle wants frames 1/2 to alternate, but a
-   * creature with only 2 poses per direction (idle, move — no separate
-   * step-alternation art) doesn't have a frame 2, so it's clamped to the
-   * last real frame instead of indexing past the sheet.
+   * movement direction. A 4-pose sheet (troll: idle/stepA/stepB/attack)
+   * alternates between the two dedicated step frames (1/2) while moving. A
+   * 2-pose sheet (idle/move only, no separate step-alternation art — e.g.
+   * cave_rat) has no frame 2 to alternate into; clamping to a single frame
+   * there froze the walk on one static pose every step, which reads as
+   * gliding rather than walking. Alternating between idle(0) and move(1)
+   * instead gives it a real two-beat cycle across consecutive steps.
    */
   private applyFrame(idle: boolean) {
     const perDir = this.def.framesPerDirection;
     if (perDir) {
-      const frameInDirection = idle ? 0 : Math.min(this.stepToggle ? 1 : 2, perDir - 1);
+      let frameInDirection = 0;
+      if (!idle) {
+        const [a, b] = perDir >= 3 ? [1, 2] : [0, perDir - 1];
+        frameInDirection = this.stepToggle ? a : b;
+      }
       this.sprite.setFrame(directionalFrameIndex(this.facing, frameInDirection, perDir));
     } else {
       this.sprite.setFrame(idle ? 0 : 1 % this.def.frameCount);
