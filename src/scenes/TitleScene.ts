@@ -10,6 +10,17 @@ const BANNER_KEY = "title-banner";
 // This is the on-screen width we want it to sit at, before responsive fit.
 const BANNER_TARGET_WIDTH = 560;
 
+// Where the dragon and the girl's hood sit in title_background.png's own
+// 1280x720 pixel grid (measured directly against the source art), with a
+// small clearance margin already baked in on each side. The banner is
+// placed and height-capped from these two numbers rather than a fixed
+// fraction of the viewport, so it lands in the gap between them — and
+// shrinks if that gap is too tight — on any screen size/aspect, not just
+// the one it was eyeballed against.
+const BG_NATIVE_HEIGHT = 720;
+const DRAGON_CLEAR_Y = 110; // just below the dragon's lowest wingtip/tail
+const HOOD_CLEAR_Y = 215; // just above the top of the girl's hood
+
 /**
  * Front door of the game: banner over the forest illustration, tap to enter
  * the character-select screen. The banner is the whole moment — the tap can
@@ -49,12 +60,26 @@ export class TitleScene extends Phaser.Scene {
     // enough headroom that a portrait crop still shows the girl.
     const bg = this.add.image(width / 2, height / 2, BG_KEY).setOrigin(0.5);
     const bgTex = this.textures.get(BG_KEY).getSourceImage();
-    bg.setScale(Math.max(width / bgTex.width, height / bgTex.height));
+    const bgScale = Math.max(width / bgTex.width, height / bgTex.height);
+    bg.setScale(bgScale);
 
-    // Banner sits in the upper third, over the sky area of the illustration.
-    const banner = this.add.image(width / 2, height * 0.28, BANNER_KEY).setOrigin(0.5);
+    // Map the dragon/hood clearance band from the background art's own pixel
+    // grid to screen space through that same cover-fit transform, so the gap
+    // tracks the artwork wherever cropping/scaling puts it on this screen.
+    const toScreenY = (sourceY: number) => height / 2 + (sourceY - BG_NATIVE_HEIGHT / 2) * bgScale;
+    const bandTop = toScreenY(DRAGON_CLEAR_Y);
+    const bandBottom = toScreenY(HOOD_CLEAR_Y);
+    const bandHeight = bandBottom - bandTop;
+    const bandCenterY = (bandTop + bandBottom) / 2;
+
+    const banner = this.add.image(width / 2, bandCenterY, BANNER_KEY).setOrigin(0.5);
     const bannerTex = this.textures.get(BANNER_KEY).getSourceImage();
-    const bannerScale = Math.min(1, BANNER_TARGET_WIDTH / bannerTex.width, (width * 0.9) / bannerTex.width);
+    const bannerScale = Math.min(
+      1,
+      BANNER_TARGET_WIDTH / bannerTex.width,
+      (width * 0.9) / bannerTex.width,
+      bandHeight / bannerTex.height, // never taller than the dragon-to-hood gap allows
+    );
     banner.setScale(bannerScale);
 
     // The game's name, carved into the signboard — sized off the same scale
