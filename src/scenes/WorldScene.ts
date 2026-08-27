@@ -183,6 +183,9 @@ export class WorldScene extends Phaser.Scene {
   private pendingPickupPile: GroundPile | null = null;
   private pickupHoldTimer: Phaser.Time.TimerEvent | null = null;
   private pickupHoldCleanup: (() => void) | null = null;
+  /** Set when a hold-to-pick-up fired out of melee range — the player walks over before the menu opens. */
+  private pendingWalkToPile: GroundPile | null = null;
+  private pickupChaseTimer = 0;
 
   private activeLevelUpBanners: Phaser.GameObjects.Text[] = [];
 
@@ -500,6 +503,12 @@ export class WorldScene extends Phaser.Scene {
     // Taps on the sidebar belong to the UI, even though this scene also sees them.
     if (this.uiReservedWidth > 0 && pointer.x >= this.scale.width - this.uiReservedWidth) return;
 
+    // Any new tap-driven action supersedes an in-progress "walk over to a
+    // pile so it can be picked up" — otherwise the periodic re-chase in
+    // updatePickupWalk would keep overriding wherever the player just told
+    // themselves to go instead.
+    this.pendingWalkToPile = null;
+
     const wx = pointer.worldX;
     const wy = pointer.worldY;
     const tx = Math.floor(wx / TILE_SIZE);
@@ -596,6 +605,7 @@ export class WorldScene extends Phaser.Scene {
   private clearTarget() {
     this.target = null;
     bus.emit(EVENTS.TARGET, null);
+    this.pendingWalkToPile = null;
   }
 
   /**
@@ -639,6 +649,7 @@ export class WorldScene extends Phaser.Scene {
     }
 
     this.updateCombat(delta);
+    this.updatePickupWalk(delta);
     this.updatePlayerMovement(delta);
 
     // Skill training fires many times a second; push one refresh per frame.
@@ -772,6 +783,34 @@ export class WorldScene extends Phaser.Scene {
         this.player.tile,
         target.tile,
       );
+    }
+  }
+
+  /** Mirrors updateCombat's chase-then-act loop: walk toward a distant pile, then open the pick-up menu once in melee range. */
+  private updatePickupWalk(delta: number) {
+    const pile = this.pendingWalkToPile;
+    if (!pile) return;
+    if (!this.groundPiles.includes(pile)) {
+      this.pendingWalkToPile = null; // decayed while the player was still walking over
+      return;
+    }
+
+    if (chebyshevDistance(this.player.tile, { x: pile.tileX, y: pile.tileY }) <= MELEE_RANGE) {
+      this.pendingWalkToPile = null;
+      this.playerPath = [];
+      this.openPickupMenuOrWalkOver(pile);
+      return;
+    }
+
+    this.pickupChaseTimer -= delta;
+    if (this.pickupChaseTimer <= 0 && !this.player.moving) {
+      this.pickupChaseTimer = RECHASE_INTERVAL_MS;
+      const path = findPath((x, y) => this.isWalkableForMover(x, y), this.player.tile, { x: pile.tileX, y: pile.tileY });
+      if (path.length === 0) {
+        this.pendingWalkToPile = null; // unreachable — give up quietly rather than polling forever
+        return;
+      }
+      this.playerPath = path;
     }
   }
 
@@ -1132,9 +1171,19 @@ export class WorldScene extends Phaser.Scene {
       this.pickupHoldCleanup?.();
       this.pickupHoldCleanup = null;
       this.pickupHoldTimer = null;
+      this.openPickupMenuOrWalkOver(pile);
+    });
+  }
+
+  /** Picking up only works in melee range — from further away the character walks over first, same as real Tibia's click-to-pick-up-at-range. */
+  private openPickupMenuOrWalkOver(pile: GroundPile) {
+    if (chebyshevDistance(this.player.tile, { x: pile.tileX, y: pile.tileY }) <= MELEE_RANGE) {
       this.pendingPickupPile = pile;
       bus.emit(EVENTS.OPEN_PICKUP_PROMPT, { entries: this.pickupEntriesFor(pile) });
-    });
+      return;
+    }
+    this.pendingWalkToPile = pile;
+    this.pickupChaseTimer = 0; // path toward it on the very next update tick
   }
 
   private cancelPickupHold() {
