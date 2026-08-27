@@ -597,6 +597,7 @@ export class WorldScene extends Phaser.Scene {
         this.player.hp > 0,
         (x, y) => this.isWalkableForMover(x, y, { ignorePlayer: true, ignoreMonster: monster }),
         (attacker) => this.resolveMonsterAttack(attacker),
+        frictionAt,
       );
     }
 

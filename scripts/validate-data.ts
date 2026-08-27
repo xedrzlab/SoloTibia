@@ -58,6 +58,7 @@ for (const [id, monster] of Object.entries(MONSTERS)) {
   if (monster.attackIntervalMs <= 0) fail(`${tag}: attackIntervalMs must be positive`);
   if (monster.hitChance < 0 || monster.hitChance > 100) fail(`${tag}: hitChance must be 0-100`);
   if (monster.armor < 0) fail(`${tag}: negative armor`);
+  if (monster.speed <= 0) fail(`${tag}: speed must be positive`);
   if (monster.fleeAtHpPct < 0 || monster.fleeAtHpPct > 1) fail(`${tag}: fleeAtHpPct must be 0-1`);
   if (!sheetKeys.has(monster.textureKey)) {
     fail(`${tag}: textureKey "${monster.textureKey}" is not registered in SHEET_ASSETS`);

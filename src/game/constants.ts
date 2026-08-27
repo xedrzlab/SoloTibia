@@ -28,6 +28,20 @@ export const DIAGONAL_STEP_MULT = 2;
  */
 export const BASE_STEP_MS = 500;
 
+/**
+ * Old-Tibia step-time formula, shared by Player and Monster so neither
+ * duplicates it:
+ *   duration_ms = ceil( 1000 * F / speed , STEP_QUANTUM_MS ) * (diag ? 2 : 1)
+ * The ceiling to STEP_QUANTUM_MS is the "breakpoint" behaviour — adding a
+ * little speed does nothing until the next quantum tier is reached.
+ */
+export function stepDurationMs(speed: number, friction: number, diagonal: boolean): number {
+  const raw = (1000 * friction) / Math.max(1, speed);
+  const quantised = Math.ceil(raw / STEP_QUANTUM_MS) * STEP_QUANTUM_MS;
+  const withDiagonal = quantised * (diagonal ? DIAGONAL_STEP_MULT : 1);
+  return Math.max(MIN_STEP_MS, withDiagonal);
+}
+
 // How close (in tiles, Chebyshev distance) a melee target must be to land hits.
 export const MELEE_RANGE = 1;
 

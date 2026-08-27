@@ -1,12 +1,5 @@
 import Phaser from "phaser";
-import {
-  BASE_SPEED,
-  BASE_STEP_MS,
-  DIAGONAL_STEP_MULT,
-  MIN_STEP_MS,
-  SPEED_PER_LEVEL,
-  STEP_QUANTUM_MS,
-} from "../constants";
+import { BASE_SPEED, BASE_STEP_MS, SPEED_PER_LEVEL, stepDurationMs as sharedStepDurationMs } from "../constants";
 import { tileAnchorX, tileAnchorY, depthForTileY } from "../tileAnchor";
 import {
   Vocation,
@@ -218,17 +211,8 @@ export class Player {
     return BASE_SPEED + SPEED_PER_LEVEL * (this.level - 1);
   }
 
-  /**
-   * Old-Tibia step-time formula:
-   *   duration_ms = ceil( 1000 * F / speed , STEP_QUANTUM_MS ) * (diag ? 2 : 1)
-   * The ceiling to STEP_QUANTUM_MS is the "breakpoint" behaviour — adding a
-   * little speed does nothing until the next quantum tier is reached.
-   */
   stepDurationMs(friction: number, diagonal: boolean): number {
-    const raw = (1000 * friction) / Math.max(1, this.totalSpeed());
-    const quantised = Math.ceil(raw / STEP_QUANTUM_MS) * STEP_QUANTUM_MS;
-    const withDiagonal = quantised * (diagonal ? DIAGONAL_STEP_MULT : 1);
-    return Math.max(MIN_STEP_MS, withDiagonal);
+    return sharedStepDurationMs(this.totalSpeed(), friction, diagonal);
   }
 
   /**

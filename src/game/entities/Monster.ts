@@ -1,10 +1,10 @@
 import Phaser from "phaser";
 import {
-  BASE_STEP_MS,
   MELEE_RANGE,
   MONSTER_AGGRO_RANGE,
   MONSTER_RESPAWN_MS,
   RESPAWN_SAFE_DISTANCE,
+  stepDurationMs,
 } from "../constants";
 import { MonsterDef } from "../../data/monsters";
 import { findPath, chebyshevDistance, TileCoord } from "../pathfinding";
@@ -157,9 +157,17 @@ export class Monster {
     });
   }
 
-  private stepTo(x: number, y: number): Promise<void> {
+  /**
+   * `friction` is the ground-friction value of the destination tile (see
+   * Player.stepTo) — every monster runs the same step-duration formula, just
+   * fed its own def.speed instead of the player's totalSpeed(), so a rat and
+   * a troll cover the same tile at their own genuinely different pace.
+   */
+  private stepTo(x: number, y: number, friction: number): Promise<void> {
     const dx = x - this.tileX;
     const dy = y - this.tileY;
+    const diagonal = dx !== 0 && dy !== 0;
+    const duration = stepDurationMs(this.def.speed, friction, diagonal);
     return new Promise((resolve) => {
       if (this.def.framesPerDirection) {
         this.facing = directionFromDelta(dx, dy, this.facing);
@@ -176,7 +184,7 @@ export class Monster {
         targets: this.sprite,
         x: tileAnchorX(x),
         y: tileAnchorY(y),
-        duration: BASE_STEP_MS,
+        duration,
         onUpdate: () => this.syncBarPosition(),
         onComplete: () => {
           this.moving = false;
@@ -232,6 +240,7 @@ export class Monster {
     playerAlive: boolean,
     isWalkable: (x: number, y: number) => boolean,
     onAttackPlayer: (attacker: MonsterDef) => void,
+    frictionAt: (x: number, y: number) => number,
   ) {
     if (!this.alive) {
       this.respawnTimer -= dtMs;
@@ -272,10 +281,10 @@ export class Monster {
 
     if (dist <= MONSTER_AGGRO_RANGE) {
       const path = findPath(isWalkable, this.tile, playerTile);
-      if (path.length > 0) void this.stepTo(path[0].x, path[0].y);
+      if (path.length > 0) void this.stepTo(path[0].x, path[0].y, frictionAt(path[0].x, path[0].y));
     } else if (this.tileX !== this.spawnX || this.tileY !== this.spawnY) {
       const path = findPath(isWalkable, this.tile, { x: this.spawnX, y: this.spawnY });
-      if (path.length > 0) void this.stepTo(path[0].x, path[0].y);
+      if (path.length > 0) void this.stepTo(path[0].x, path[0].y, frictionAt(path[0].x, path[0].y));
     }
   }
 

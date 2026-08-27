@@ -24,6 +24,8 @@ export interface MonsterDef {
   hitChance: number;
   /** ARM: flat physical mitigation against the player's own attacks — same calculateArmorMitigation() the player's armor uses. */
   armor: number;
+  /** Ground speed, same stat and step-duration formula (constants.ts stepDurationMs) as the player's — every monster moves at its own pace, not a shared constant. */
+  speed: number;
   fleeAtHpPct: number; // 0 = never flees
   loot: LootEntry[];
 }
@@ -41,6 +43,7 @@ export const MONSTERS: Record<string, MonsterDef> = {
     attackIntervalMs: 2000,
     hitChance: 75,
     armor: 1,
+    speed: 67,
     fleeAtHpPct: 0.25,
     loot: [
       { itemId: "gold_coin", chance: 0.9, min: 1, max: 4 },
@@ -59,6 +62,7 @@ export const MONSTERS: Record<string, MonsterDef> = {
     attackIntervalMs: 1800,
     hitChance: 80,
     armor: 1,
+    speed: 75,
     fleeAtHpPct: 0.15,
     loot: [
       { itemId: "gold_coin", chance: 0.7, min: 2, max: 8 },
@@ -77,6 +81,10 @@ export const MONSTERS: Record<string, MonsterDef> = {
     attackIntervalMs: 2200,
     hitChance: 70,
     armor: 0,
+    // TibiaWiki's "Slime" is a much stronger creature (150 HP/160 exp) than
+    // this starter-zone one, so its speed 60 isn't a like-for-like match —
+    // this is a placeholder distinct from the other three, not a verified figure.
+    speed: 50,
     fleeAtHpPct: 0.3,
     loot: [{ itemId: "gold_coin", chance: 0.4, min: 1, max: 2 }],
   },
@@ -93,6 +101,7 @@ export const MONSTERS: Record<string, MonsterDef> = {
     attackIntervalMs: 1900,
     hitChance: 90,
     armor: 4,
+    speed: 68,
     fleeAtHpPct: 0,
     loot: [
       { itemId: "gold_coin", chance: 0.85, min: 10, max: 30 },
