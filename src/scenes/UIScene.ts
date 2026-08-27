@@ -35,6 +35,21 @@ const SLOT = 32;
 const SLOT_GAP = 2;
 const WINDOW_TITLE_H = 20;
 const TOGGLE_W = 18;
+const BATTLE_ROW_H = 24;
+
+/** How close a dragged panel's edge has to land near another panel's edge to snap flush against it. */
+const SNAP_THRESHOLD = 14;
+const PANEL_POS_STORAGE_KEY = "solotibia:ui:panelPositions";
+
+interface PanelPos {
+  x: number;
+  y: number;
+}
+
+interface PanelRect extends PanelPos {
+  w: number;
+  h: number;
+}
 
 const COLORS = {
   panelBg: 0x151515,
@@ -112,12 +127,23 @@ export class UIScene extends Phaser.Scene {
    */
   private equipmentOpen = true;
   // (interior state is only used to drive action-bar visibility inside onInteriorState)
-  private scrollY = 0;
-  private contentHeight = 0;
   private collapsed = new Set<string>();
   private dropTargets: DropTarget[] = [];
   private sidebarDirty = true;
-  private scrollDragAnchor = 0;
+
+  // --- Panel positions --------------------------------------------------------
+  // Every window (Character, Battle, Skills, each open backpack) is an
+  // independently draggable panel. Position is keyed by a stable panel id
+  // ("character" | "battle" | "skills" | `c:${container.id}`), assigned a
+  // default the first time the panel appears and persisted to localStorage
+  // once the player drags it, so a custom layout survives a reload.
+  private panelPos = new Map<string, PanelPos>();
+  /** Last-rendered bounding box per panel id — used for hit-testing and snap targets. */
+  private panelRects = new Map<string, PanelRect>();
+  private draggingPanelId: string | null = null;
+  private panelDragAnchor = { x: 0, y: 0 };
+  private battleScrollY = 0;
+  private battleScrollDragAnchor = 0;
 
   // --- Item drag ------------------------------------------------------------
   private dragGhost: Phaser.GameObjects.Image | null = null;
@@ -153,6 +179,7 @@ export class UIScene extends Phaser.Scene {
 
   create() {
     this.sidebarLayer = this.add.layer().setDepth(120);
+    this.loadPanelPositions();
 
     this.buildTargetPanel();
     this.buildActionBar();
@@ -189,7 +216,12 @@ export class UIScene extends Phaser.Scene {
     bus.on(EVENTS.OPEN_DIALOGUE, (p: OpenDialoguePayload) => this.openDialogue(p));
     bus.on(EVENTS.INTERIOR_STATE, (p: InteriorStatePayload) => this.onInteriorState(p.active));
 
-    this.input.on("wheel", (_p: unknown, _o: unknown, _dx: number, dy: number) => this.scrollBy(dy * 0.5));
+    this.input.on("wheel", (pointer: Phaser.Input.Pointer, _o: unknown, _dx: number, dy: number) => {
+      const rect = this.panelRects.get("battle");
+      if (!rect || !this.pointInRect(pointer.x, pointer.y, rect)) return;
+      this.battleScrollY = Phaser.Math.Clamp(this.battleScrollY + dy * 0.5, 0, this.battleScrollBounds());
+      this.sidebarDirty = true;
+    });
 
     this.scale.on("resize", () => {
       SIDEBAR_WIDTH = computeSidebarWidth();
@@ -280,75 +312,263 @@ export class UIScene extends Phaser.Scene {
     });
   }
 
-  private scrollBy(delta: number) {
-    const viewH = this.scale.height - this.headerHeight();
-    const max = Math.max(0, this.contentHeight - viewH);
-    const next = Phaser.Math.Clamp(this.scrollY + delta, 0, max);
-    if (next === this.scrollY) return;
-    this.scrollY = next;
-    this.sidebarDirty = true;
+  // -------------------------------------------------------------------------
+  // Panel positions — every window is independently draggable. A panel gets a
+  // default slot the first time it appears; once the player drags it, its
+  // position is remembered (and persisted) under its own id.
+  // -------------------------------------------------------------------------
+
+  private loadPanelPositions() {
+    try {
+      const raw = localStorage.getItem(PANEL_POS_STORAGE_KEY);
+      if (!raw) return;
+      const data = JSON.parse(raw) as Record<string, PanelPos>;
+      for (const [id, pos] of Object.entries(data)) {
+        if (typeof pos?.x === "number" && typeof pos?.y === "number") this.panelPos.set(id, pos);
+      }
+    } catch {
+      // Corrupt or outdated save data — fall back to default positions.
+    }
   }
 
-  private headerHeight(): number {
+  private savePanelPositions() {
+    try {
+      const data: Record<string, PanelPos> = {};
+      for (const [id, pos] of this.panelPos) data[id] = pos;
+      localStorage.setItem(PANEL_POS_STORAGE_KEY, JSON.stringify(data));
+    } catch {
+      // Storage unavailable/full — the layout just won't survive a reload.
+    }
+  }
+
+  private ensurePanelPos(id: string, fallback: () => PanelPos): PanelPos {
+    let pos = this.panelPos.get(id);
+    if (!pos) {
+      pos = fallback();
+      this.panelPos.set(id, pos);
+    }
+    return pos;
+  }
+
+  /** A panel's current on-screen height, used both to render it and to lay out defaults. */
+  private panelHeightFor(id: string): number {
+    if (id === "character") return this.characterPanelHeight();
+    if (id === "battle") return this.battlePanelHeight();
+    if (id === "skills") return this.skillsPanelHeight();
+    if (id.startsWith("c:")) {
+      const container = this.openContainers.find((c) => `c:${c.id}` === id);
+      return container ? this.containerPanelHeight(container) : WINDOW_TITLE_H;
+    }
+    return WINDOW_TITLE_H;
+  }
+
+  /** Where a panel lands the first time it appears — stacked under whatever else already defaulted into this column. */
+  private nextDefaultY(columnX: number): number {
+    let bottom = 0;
+    for (const [id, pos] of this.panelPos) {
+      if (Math.abs(pos.x - columnX) > 1) continue;
+      bottom = Math.max(bottom, pos.y + this.panelHeightFor(id));
+    }
+    return bottom;
+  }
+
+  /** Keeps every panel within the reserved two-column UI strip and on-screen after a resize. */
+  private clampAllPanels() {
+    const minX = this.scale.width - SIDEBAR_WIDTH * 2;
+    const maxX = this.scale.width - SIDEBAR_WIDTH;
+    for (const [id, pos] of this.panelPos) {
+      const h = this.panelHeightFor(id);
+      pos.x = Phaser.Math.Clamp(pos.x, minX, maxX);
+      pos.y = Phaser.Math.Clamp(pos.y, 0, Math.max(0, this.scale.height - h));
+    }
+  }
+
+  private pointInRect(x: number, y: number, r: PanelRect): boolean {
+    return x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
+  }
+
+  /**
+   * On drop, pull the panel flush against the nearest edge of any other panel
+   * within SNAP_THRESHOLD — aligning left/right/top/bottom, or butting up
+   * against an adjacent side — so two panels dragged near each other line up
+   * perfectly instead of sitting a few stray pixels apart.
+   */
+  private snapPanel(id: string) {
+    const pos = this.panelPos.get(id);
+    const rect = this.panelRects.get(id);
+    if (!pos || !rect) return;
+    const { w, h } = rect;
+
+    let bestX: number | null = null;
+    let bestXDist = SNAP_THRESHOLD;
+    let bestY: number | null = null;
+    let bestYDist = SNAP_THRESHOLD;
+
+    for (const [otherId, other] of this.panelRects) {
+      if (otherId === id) continue;
+      const verticalNear = pos.y < other.y + other.h + SNAP_THRESHOLD * 4 && pos.y + h > other.y - SNAP_THRESHOLD * 4;
+      const horizontalNear = pos.x < other.x + other.w + SNAP_THRESHOLD * 4 && pos.x + w > other.x - SNAP_THRESHOLD * 4;
+
+      if (verticalNear) {
+        for (const cx of [other.x, other.x + other.w - w, other.x + other.w, other.x - w]) {
+          const d = Math.abs(cx - pos.x);
+          if (d < bestXDist) {
+            bestXDist = d;
+            bestX = cx;
+          }
+        }
+      }
+      if (horizontalNear) {
+        for (const cy of [other.y, other.y + other.h - h, other.y + other.h, other.y - h]) {
+          const d = Math.abs(cy - pos.y);
+          if (d < bestYDist) {
+            bestYDist = d;
+            bestY = cy;
+          }
+        }
+      }
+    }
+
+    if (bestX !== null) pos.x = bestX;
+    if (bestY !== null) pos.y = bestY;
+
+    const minX = this.scale.width - SIDEBAR_WIDTH * 2;
+    const maxX = this.scale.width - SIDEBAR_WIDTH;
+    pos.x = Phaser.Math.Clamp(pos.x, minX, maxX);
+    pos.y = Phaser.Math.Clamp(pos.y, 0, Math.max(0, this.scale.height - h));
+  }
+
+  private battleScrollBounds(): number {
+    const contentH = this.battlePanelHeight() - WINDOW_TITLE_H;
+    const natural = Math.max(BATTLE_ROW_H, this.battleEntries.length * BATTLE_ROW_H) + 4;
+    return Math.max(0, natural - contentH);
+  }
+
+  private characterPanelHeight(): number {
+    if (this.collapsed.has("character")) return WINDOW_TITLE_H;
     // 12px is the "▾ Equipment" toggle strip, always drawn even when the
     // paperdoll below it is collapsed.
     const equip = this.equipmentOpen ? EQUIP_GRID_H + PAD : 0;
-    return PAD + BAR_H * 2 + 2 + PAD + 12 + equip;
+    return WINDOW_TITLE_H + PAD + BAR_H * 2 + 2 + PAD + 12 + equip;
+  }
+
+  /** Fixed to match the Character panel's height (with its own internal scroll), per the classic layout. */
+  private battlePanelHeight(): number {
+    if (this.collapsed.has("battle")) return WINDOW_TITLE_H;
+    return this.characterPanelHeight();
+  }
+
+  private skillsPanelHeight(): number {
+    if (this.collapsed.has("skills")) return WINDOW_TITLE_H;
+    const skills = this.skills;
+    if (!skills) return WINDOW_TITLE_H;
+    const rowH = 14;
+    const barH = 4;
+    return WINDOW_TITLE_H + rowH * 3 + barH + 6 + skills.skills.length * (rowH + barH + 2) + 4;
+  }
+
+  private containerPanelHeight(container: Container): number {
+    if (this.collapsed.has(`c:${container.id}`)) return WINDOW_TITLE_H;
+    const perRow = 4;
+    const rows = Math.ceil(container.capacity / perRow);
+    return WINDOW_TITLE_H + rows * (SLOT + SLOT_GAP) + 4;
   }
 
   private renderSidebar() {
     this.sidebarDirty = false;
     this.sidebarLayer.removeAll(true);
     this.dropTargets = [];
+    this.panelRects.clear();
     if (!this.sidebarOpen) return;
 
-    const left = this.scale.width - SIDEBAR_WIDTH;
-    const h = this.scale.height;
+    this.clampAllPanels();
 
-    this.addToLayer(
-      this.add.rectangle(left, 0, SIDEBAR_WIDTH, h, COLORS.sidebarBg, 0.97).setOrigin(0, 0).setScrollFactor(0),
-    );
-
-    this.renderHeader(left);
-
-    // Scroll surface behind the windows, so dragging empty space pans the list.
-    const bodyTop = this.headerHeight();
-    const catcher = this.add
-      .rectangle(left, bodyTop, SIDEBAR_WIDTH, h - bodyTop, 0x000000, 0.001)
-      .setOrigin(0, 0)
-      .setScrollFactor(0)
-      .setInteractive({ draggable: true });
-    catcher.setData("kind", "scroll");
-    this.addToLayer(catcher);
-
-    this.renderBody(left, bodyTop, h - bodyTop);
-
-    this.renderBattlePanel();
+    // Normal draw order back-to-front; whichever panel is actively being
+    // dragged renders last so it visually sits on top while it's moving.
+    const renderers: { id: string; run: () => void }[] = [
+      { id: "character", run: () => this.renderCharacterPanel() },
+      { id: "battle", run: () => this.renderBattlePanel() },
+      { id: "skills", run: () => this.renderSkillsPanel() },
+      ...this.openContainers.map((c) => ({ id: `c:${c.id}`, run: () => this.renderContainerPanel(c) })),
+    ];
+    renderers.sort((a, b) => Number(a.id === this.draggingPanelId) - Number(b.id === this.draggingPanelId));
+    for (const r of renderers) r.run();
   }
 
-  /** The Battle window, standalone in its own panel left of the main sidebar. */
-  private renderBattlePanel() {
-    const left = this.scale.width - this.sidebarWidth;
-    const h = this.scale.height;
+  /** Shared window chrome: background, draggable/collapsible title bar. Returns the content origin. */
+  private renderPanelChrome(
+    id: string,
+    title: string,
+    pos: PanelPos,
+    height: number,
+    extras?: { onClose?: () => void; onLootAll?: () => void },
+  ): { x: number; y: number; w: number } {
+    const w = SIDEBAR_WIDTH;
+    this.panelRects.set(id, { x: pos.x, y: pos.y, w, h: height });
 
     this.addToLayer(
       this.add
-        .rectangle(left, 0, this.battlePanelWidth, h, COLORS.sidebarBg, 0.97)
+        .rectangle(pos.x, pos.y, w, height, COLORS.sidebarBg, 0.97)
         .setOrigin(0, 0)
+        .setStrokeStyle(1, COLORS.border)
         .setScrollFactor(0),
     );
 
-    this.renderBattleWindow(left, PAD, PAD, h);
+    const bar = this.add
+      .rectangle(pos.x, pos.y, w, WINDOW_TITLE_H, COLORS.titleBg, 1)
+      .setOrigin(0, 0)
+      .setStrokeStyle(1, COLORS.border)
+      .setScrollFactor(0)
+      .setInteractive({ draggable: true, useHandCursor: true });
+    bar.setData("kind", "panel");
+    bar.setData("panelId", id);
+    bar.on("pointerup", (pointer: Phaser.Input.Pointer) => {
+      // A real drag never lands here as a tap; guard on distance anyway for slow, twitchy touches.
+      if (pointer.getDistance() > 8) return;
+      if (this.collapsed.has(id)) this.collapsed.delete(id);
+      else this.collapsed.add(id);
+      this.sidebarDirty = true;
+    });
+    this.addToLayer(bar);
+
+    const isCollapsed = this.collapsed.has(id);
+    this.addToLayer(
+      this.add
+        .text(pos.x + 8, pos.y + WINDOW_TITLE_H / 2, `${isCollapsed ? "▸" : "▾"} ${title}`, {
+          ...TEXT,
+          fontSize: "10px",
+          color: "#e6c34a",
+        })
+        .setOrigin(0, 0.5)
+        .setScrollFactor(0),
+    );
+
+    let btnX = pos.x + w - 10;
+    if (extras?.onClose) {
+      this.addToLayer(this.drawTinyButton(btnX, pos.y + WINDOW_TITLE_H / 2, "×", extras.onClose));
+      btnX -= 16;
+    }
+    if (extras?.onLootAll) {
+      this.addToLayer(this.drawTinyButton(btnX, pos.y + WINDOW_TITLE_H / 2, "⤓", extras.onLootAll));
+    }
+
+    return { x: pos.x, y: pos.y + WINDOW_TITLE_H, w };
   }
 
-  private renderHeader(left: number) {
+  /** HP/mana bars + the equipment paperdoll — its own panel, draggable like every other window. */
+  private renderCharacterPanel() {
+    const height = this.characterPanelHeight();
+    const pos = this.ensurePanelPos("character", () => ({ x: this.scale.width - SIDEBAR_WIDTH, y: 0 }));
+    const { x: left, y: top, w } = this.renderPanelChrome("character", "Character", pos, height);
+    if (this.collapsed.has("character")) return;
+
     const stats = this.stats;
-    let y = PAD;
+    let y = top + PAD;
 
     this.drawBar(
       left + PAD,
       y,
-      SIDEBAR_WIDTH - PAD * 2,
+      w - PAD * 2,
       BAR_H,
       stats ? stats.hp / Math.max(1, stats.maxHp) : 0,
       COLORS.hp,
@@ -358,7 +578,7 @@ export class UIScene extends Phaser.Scene {
     this.drawBar(
       left + PAD,
       y,
-      SIDEBAR_WIDTH - PAD * 2,
+      w - PAD * 2,
       BAR_H,
       stats && stats.maxMana > 0 ? stats.mana / stats.maxMana : 0,
       COLORS.mana,
@@ -368,11 +588,11 @@ export class UIScene extends Phaser.Scene {
 
     // Small ▾/▸ toggle in the top-right of the equipment area, so a player
     // who wants the map view can hide the paperdoll without collapsing the
-    // whole sidebar. Sits over the top-left cell rather than on its own row —
+    // whole panel. Sits over the top-left cell rather than on its own row —
     // a dedicated title bar would eat back the space we're trying to save.
     const toggleLabel = this.equipmentOpen ? "▾" : "▸";
     const toggle = this.add
-      .text(left + SIDEBAR_WIDTH - PAD, y, `${toggleLabel} Equipment`, {
+      .text(left + w - PAD, y, `${toggleLabel} Equipment`, {
         ...TEXT,
         fontSize: "10px",
         color: "#e6c34a",
@@ -389,7 +609,6 @@ export class UIScene extends Phaser.Scene {
 
     if (this.equipmentOpen) {
       this.renderEquipmentGrid(left, y);
-      y += EQUIP_GRID_H + PAD;
     }
   }
 
@@ -433,72 +652,6 @@ export class UIScene extends Phaser.Scene {
     );
   }
 
-  /**
-   * Windows are laid out top-to-bottom in one scrolling column. Anything that
-   * falls outside the visible band is skipped rather than drawn-and-clipped,
-   * so off-screen slots can't swallow taps meant for the game world.
-   */
-  private renderBody(left: number, bodyTop: number, bodyHeight: number) {
-    const bodyBottom = bodyTop + bodyHeight;
-    let y = bodyTop - this.scrollY;
-
-    y = this.renderSkillsWindow(left, y, bodyTop, bodyBottom);
-
-    for (const container of this.openContainers) {
-      y = this.renderContainerWindow(container, left, y, bodyTop, bodyBottom);
-    }
-
-    this.contentHeight = y - (bodyTop - this.scrollY);
-  }
-
-  /** Shared window chrome; returns the y where the window's content starts. */
-  private drawWindowTitle(
-    left: number,
-    y: number,
-    title: string,
-    key: string,
-    bodyTop: number,
-    bodyBottom: number,
-    extras?: { onClose?: () => void; onLootAll?: () => void },
-  ): number {
-    if (y + WINDOW_TITLE_H > bodyTop && y < bodyBottom) {
-      const bar = this.add
-        .rectangle(left + 2, y, SIDEBAR_WIDTH - 4, WINDOW_TITLE_H, COLORS.titleBg, 1)
-        .setOrigin(0, 0)
-        .setStrokeStyle(1, COLORS.border)
-        .setScrollFactor(0)
-        .setInteractive({ useHandCursor: true });
-      bar.on("pointerdown", () => {
-        if (this.collapsed.has(key)) this.collapsed.delete(key);
-        else this.collapsed.add(key);
-        this.sidebarDirty = true;
-      });
-      this.addToLayer(bar);
-
-      const isCollapsed = this.collapsed.has(key);
-      this.addToLayer(
-        this.add
-          .text(left + 8, y + WINDOW_TITLE_H / 2, `${isCollapsed ? "▸" : "▾"} ${title}`, {
-            ...TEXT,
-            fontSize: "10px",
-            color: "#e6c34a",
-          })
-          .setOrigin(0, 0.5)
-          .setScrollFactor(0),
-      );
-
-      let btnX = left + SIDEBAR_WIDTH - 10;
-      if (extras?.onClose) {
-        this.addToLayer(this.drawTinyButton(btnX, y + WINDOW_TITLE_H / 2, "×", extras.onClose));
-        btnX -= 16;
-      }
-      if (extras?.onLootAll) {
-        this.addToLayer(this.drawTinyButton(btnX, y + WINDOW_TITLE_H / 2, "⤓", extras.onLootAll));
-      }
-    }
-    return y + WINDOW_TITLE_H;
-  }
-
   private drawTinyButton(x: number, y: number, glyph: string, onTap: () => void): Phaser.GameObjects.Text {
     const t = this.add
       .text(x, y, glyph, { ...TEXT, fontSize: "13px", color: "#e2e2e2" })
@@ -512,17 +665,23 @@ export class UIScene extends Phaser.Scene {
     return t;
   }
 
-  private renderSkillsWindow(left: number, y: number, bodyTop: number, bodyBottom: number): number {
-    y = this.drawWindowTitle(left, y, "Skills", "skills", bodyTop, bodyBottom);
-    if (this.collapsed.has("skills")) return y + 2;
+  private renderSkillsPanel() {
+    const height = this.skillsPanelHeight();
+    const pos = this.ensurePanelPos("skills", () => ({
+      x: this.scale.width - SIDEBAR_WIDTH,
+      y: this.nextDefaultY(this.scale.width - SIDEBAR_WIDTH),
+    }));
+    const { x: left, y: top, w } = this.renderPanelChrome("skills", "Skills", pos, height);
+    if (this.collapsed.has("skills")) return;
 
     const skills = this.skills;
-    if (!skills) return y + 2;
+    if (!skills) return;
 
     const rowH = 14;
     const barH = 4;
     const contentLeft = left + PAD;
-    const contentW = SIDEBAR_WIDTH - PAD * 2;
+    const contentW = w - PAD * 2;
+    let y = top;
 
     const lines: [string, string][] = [
       ["Vocation", skills.vocationName],
@@ -530,125 +689,151 @@ export class UIScene extends Phaser.Scene {
       ["Level", String(skills.level)],
     ];
     for (const [label, value] of lines) {
-      if (y + rowH > bodyTop && y < bodyBottom) {
-        this.addToLayer(
-          this.add
-            .text(contentLeft, y + 1, label, { ...TEXT, fontSize: "10px", color: "#b0b0b0" })
-            .setOrigin(0, 0)
-            .setScrollFactor(0),
-        );
-        this.addToLayer(
-          this.add
-            .text(contentLeft + contentW, y + 1, value, { ...TEXT, fontSize: "10px", color: "#f0f0f0" })
-            .setOrigin(1, 0)
-            .setScrollFactor(0),
-        );
-      }
+      this.addToLayer(
+        this.add
+          .text(contentLeft, y + 1, label, { ...TEXT, fontSize: "10px", color: "#b0b0b0" })
+          .setOrigin(0, 0)
+          .setScrollFactor(0),
+      );
+      this.addToLayer(
+        this.add
+          .text(contentLeft + contentW, y + 1, value, { ...TEXT, fontSize: "10px", color: "#f0f0f0" })
+          .setOrigin(1, 0)
+          .setScrollFactor(0),
+      );
       y += rowH;
     }
 
     // Progress toward the next character level.
-    if (y + barH > bodyTop && y < bodyBottom) {
-      this.drawBar(
-        contentLeft,
-        y,
-        contentW,
-        barH,
-        skills.expForLevel > 0 ? skills.expIntoLevel / skills.expForLevel : 0,
-        COLORS.xp,
-        "",
-      );
-    }
+    this.drawBar(
+      contentLeft,
+      y,
+      contentW,
+      barH,
+      skills.expForLevel > 0 ? skills.expIntoLevel / skills.expForLevel : 0,
+      COLORS.xp,
+      "",
+    );
     y += barH + 6;
 
     for (const skill of skills.skills) {
-      if (y + rowH + barH > bodyTop && y < bodyBottom) {
-        this.addToLayer(
-          this.add
-            .text(contentLeft, y, skill.name, { ...TEXT, fontSize: "10px", color: "#b0b0b0" })
-            .setOrigin(0, 0)
-            .setScrollFactor(0),
-        );
-        this.addToLayer(
-          this.add
-            .text(contentLeft + contentW, y, String(skill.level), { ...TEXT, fontSize: "10px", color: "#f0f0f0" })
-            .setOrigin(1, 0)
-            .setScrollFactor(0),
-        );
-        this.drawBar(contentLeft, y + rowH - 2, contentW, barH, skill.progress, COLORS.accent, "");
-      }
+      this.addToLayer(
+        this.add
+          .text(contentLeft, y, skill.name, { ...TEXT, fontSize: "10px", color: "#b0b0b0" })
+          .setOrigin(0, 0)
+          .setScrollFactor(0),
+      );
+      this.addToLayer(
+        this.add
+          .text(contentLeft + contentW, y, String(skill.level), { ...TEXT, fontSize: "10px", color: "#f0f0f0" })
+          .setOrigin(1, 0)
+          .setScrollFactor(0),
+      );
+      this.drawBar(contentLeft, y + rowH - 2, contentW, barH, skill.progress, COLORS.accent, "");
       y += rowH + barH + 2;
     }
-
-    return y + 4;
   }
 
-  private renderBattleWindow(left: number, y: number, bodyTop: number, bodyBottom: number): number {
-    y = this.drawWindowTitle(left, y, "Battle", "battle", bodyTop, bodyBottom);
-    if (this.collapsed.has("battle")) return y + 2;
+  /**
+   * The Battle window: a standalone panel fixed to the Character panel's
+   * height, with its own scrollable, masked entry list so an overflowing
+   * monster count scrolls instead of spilling past the panel.
+   */
+  private renderBattlePanel() {
+    const height = this.battlePanelHeight();
+    const pos = this.ensurePanelPos("battle", () => ({ x: this.scale.width - SIDEBAR_WIDTH * 2, y: 0 }));
+    const { x: left, y: top, w } = this.renderPanelChrome("battle", "Battle", pos, height);
+    if (this.collapsed.has("battle")) return;
 
-    const rowH = 24;
+    const contentH = height - WINDOW_TITLE_H;
+    this.battleScrollY = Phaser.Math.Clamp(this.battleScrollY, 0, this.battleScrollBounds());
+
+    // Clip the entry list to the fixed panel height so overflow scrolls
+    // instead of spilling out past the bottom edge.
+    const maskShape = this.add.graphics().fillStyle(0xffffff).fillRect(left, top, w, contentH).setVisible(false);
+    this.addToLayer(maskShape);
+    const mask = maskShape.createGeometryMask();
+
+    const catcher = this.add
+      .rectangle(left, top, w, contentH, 0x000000, 0.001)
+      .setOrigin(0, 0)
+      .setScrollFactor(0)
+      .setInteractive({ draggable: true });
+    catcher.setData("kind", "battleScroll");
+    this.addToLayer(catcher);
+
     const contentLeft = left + PAD;
-    const contentW = SIDEBAR_WIDTH - PAD * 2;
+    const rowW = w - PAD * 2;
+    let y = top - this.battleScrollY;
 
     if (this.battleEntries.length === 0) {
-      if (y + rowH > bodyTop && y < bodyBottom) {
-        this.addToLayer(
-          this.add
-            .text(contentLeft, y + 4, "(nothing nearby)", { ...TEXT, fontSize: "10px", color: "#777777" })
-            .setOrigin(0, 0)
-            .setScrollFactor(0),
-        );
-      }
-      return y + rowH;
+      this.addToLayer(
+        this.add
+          .text(contentLeft, y + 4, "(nothing nearby)", { ...TEXT, fontSize: "10px", color: "#777777" })
+          .setOrigin(0, 0)
+          .setScrollFactor(0)
+          .setMask(mask),
+      );
+      return;
     }
 
     for (const entry of this.battleEntries) {
-      if (y + rowH > bodyTop && y < bodyBottom) {
+      if (y + BATTLE_ROW_H > top && y < top + contentH) {
         const row = this.add
-          .rectangle(contentLeft, y, contentW, rowH - 2, entry.targeted ? 0x3a2a12 : 0x000000, entry.targeted ? 1 : 0.3)
+          .rectangle(
+            contentLeft,
+            y,
+            rowW,
+            BATTLE_ROW_H - 2,
+            entry.targeted ? 0x3a2a12 : 0x000000,
+            entry.targeted ? 1 : 0.3,
+          )
           .setOrigin(0, 0)
           .setStrokeStyle(1, entry.targeted ? COLORS.accent : COLORS.border)
           .setScrollFactor(0)
-          .setInteractive({ useHandCursor: true });
-        row.on("pointerdown", () => bus.emit(EVENTS.SELECT_TARGET, { id: entry.id }));
+          // Draggable (as a scroll surface) so a swipe that starts on a row still
+          // scrolls the list; pointerup with a distance check tells a tap from a drag.
+          .setInteractive({ useHandCursor: true, draggable: true })
+          .setMask(mask);
+        row.setData("kind", "battleScroll");
+        row.on("pointerup", (pointer: Phaser.Input.Pointer) => {
+          if (pointer.getDistance() > 8) return;
+          bus.emit(EVENTS.SELECT_TARGET, { id: entry.id });
+        });
         this.addToLayer(row);
         this.addToLayer(
           this.add
             .text(contentLeft + 4, y + 3, entry.name, { ...TEXT, fontSize: "10px", color: "#f0f0f0" })
             .setOrigin(0, 0)
-            .setScrollFactor(0),
+            .setScrollFactor(0)
+            .setMask(mask),
         );
-        this.drawBar(contentLeft + 4, y + 15, contentW - 8, 4, entry.hp / Math.max(1, entry.maxHp), COLORS.hp, "");
+        this.drawBar(contentLeft + 4, y + 15, rowW - 8, 4, entry.hp / Math.max(1, entry.maxHp), COLORS.hp, "", mask);
       }
-      y += rowH;
+      y += BATTLE_ROW_H;
     }
-
-    return y + 4;
   }
 
-  private renderContainerWindow(
-    container: Container,
-    left: number,
-    y: number,
-    bodyTop: number,
-    bodyBottom: number,
-  ): number {
+  private renderContainerPanel(container: Container) {
     const key = `c:${container.id}`;
-    y = this.drawWindowTitle(left, y, container.name, key, bodyTop, bodyBottom, {
+    const height = this.containerPanelHeight(container);
+    const pos = this.ensurePanelPos(key, () => ({
+      x: this.scale.width - SIDEBAR_WIDTH,
+      y: this.nextDefaultY(this.scale.width - SIDEBAR_WIDTH),
+    }));
+    const { x: left, y: top, w } = this.renderPanelChrome(key, container.name, pos, height, {
       onClose: () => bus.emit(EVENTS.CLOSE_CONTAINER, { container }),
       onLootAll: () => bus.emit(EVENTS.LOOT_ALL, { container }),
     });
-    if (this.collapsed.has(key)) return y + 2;
+    if (this.collapsed.has(key)) return;
 
     const perRow = 4;
     const gridW = perRow * SLOT + (perRow - 1) * SLOT_GAP;
-    const gridLeft = left + (SIDEBAR_WIDTH - gridW) / 2;
+    const gridLeft = left + (w - gridW) / 2;
     const rows = Math.ceil(container.capacity / perRow);
 
     for (let row = 0; row < rows; row++) {
-      const rowY = y + row * (SLOT + SLOT_GAP);
-      if (rowY + SLOT <= bodyTop || rowY >= bodyBottom) continue;
+      const rowY = top + row * (SLOT + SLOT_GAP);
       for (let col = 0; col < perRow; col++) {
         const index = row * perRow + col;
         if (index >= container.capacity) break;
@@ -659,8 +844,6 @@ export class UIScene extends Phaser.Scene {
         });
       }
     }
-
-    return y + rows * (SLOT + SLOT_GAP) + 4;
   }
 
   // =========================================================================
@@ -734,11 +917,21 @@ export class UIScene extends Phaser.Scene {
     this.input.dragDistanceThreshold = 8;
 
     this.input.on("dragstart", (pointer: Phaser.Input.Pointer, obj: Phaser.GameObjects.GameObject) => {
-      if (obj.getData("kind") === "scroll") {
-        this.scrollDragAnchor = this.scrollY + pointer.y;
+      const kind = obj.getData("kind");
+      if (kind === "battleScroll") {
+        this.battleScrollDragAnchor = this.battleScrollY + pointer.y;
         return;
       }
-      if (obj.getData("kind") !== "item") return;
+      if (kind === "panel") {
+        const id = obj.getData("panelId") as string;
+        const pos = this.panelPos.get(id);
+        if (pos) {
+          this.panelDragAnchor = { x: pointer.x - pos.x, y: pointer.y - pos.y };
+          this.draggingPanelId = id;
+        }
+        return;
+      }
+      if (kind !== "item") return;
       this.dragFrom = obj.getData("ref") as SlotRef;
       const image = obj as Phaser.GameObjects.Image;
       image.setAlpha(0.35);
@@ -750,15 +943,41 @@ export class UIScene extends Phaser.Scene {
     });
 
     this.input.on("drag", (pointer: Phaser.Input.Pointer, obj: Phaser.GameObjects.GameObject) => {
-      if (obj.getData("kind") === "scroll") {
-        this.scrollBy(this.scrollDragAnchor - pointer.y - this.scrollY);
+      const kind = obj.getData("kind");
+      if (kind === "battleScroll") {
+        this.battleScrollY = Phaser.Math.Clamp(this.battleScrollDragAnchor - pointer.y, 0, this.battleScrollBounds());
+        this.sidebarDirty = true;
+        return;
+      }
+      if (kind === "panel") {
+        const id = obj.getData("panelId") as string;
+        const pos = this.panelPos.get(id);
+        if (pos) {
+          const rect = this.panelRects.get(id);
+          const w = rect?.w ?? SIDEBAR_WIDTH;
+          const h = rect?.h ?? WINDOW_TITLE_H;
+          const minX = this.scale.width - SIDEBAR_WIDTH * 2;
+          const maxX = this.scale.width - w;
+          pos.x = Phaser.Math.Clamp(pointer.x - this.panelDragAnchor.x, minX, maxX);
+          pos.y = Phaser.Math.Clamp(pointer.y - this.panelDragAnchor.y, 0, Math.max(0, this.scale.height - h));
+          this.sidebarDirty = true;
+        }
         return;
       }
       this.dragGhost?.setPosition(pointer.x, pointer.y);
     });
 
     this.input.on("dragend", (pointer: Phaser.Input.Pointer, obj: Phaser.GameObjects.GameObject) => {
-      if (obj.getData("kind") === "scroll") return;
+      const kind = obj.getData("kind");
+      if (kind === "battleScroll") return;
+      if (kind === "panel") {
+        const id = obj.getData("panelId") as string;
+        this.snapPanel(id);
+        this.savePanelPositions();
+        this.draggingPanelId = null;
+        this.sidebarDirty = true;
+        return;
+      }
       this.dragGhost?.destroy();
       this.dragGhost = null;
 
@@ -773,29 +992,38 @@ export class UIScene extends Phaser.Scene {
     });
   }
 
-  private drawBar(x: number, y: number, width: number, height: number, pct: number, color: number, label: string) {
-    this.addToLayer(
-      this.add.rectangle(x, y, width, height, COLORS.barBg, 0.7).setOrigin(0, 0).setScrollFactor(0),
-    );
+  private drawBar(
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    pct: number,
+    color: number,
+    label: string,
+    mask?: Phaser.Display.Masks.GeometryMask,
+  ) {
+    const bg = this.add.rectangle(x, y, width, height, COLORS.barBg, 0.7).setOrigin(0, 0).setScrollFactor(0);
+    if (mask) bg.setMask(mask);
+    this.addToLayer(bg);
     const filled = Math.max(0, Math.min(1, pct)) * (width - 2);
     if (filled > 0) {
-      this.addToLayer(
-        this.add.rectangle(x + 1, y + 1, filled, height - 2, color, 1).setOrigin(0, 0).setScrollFactor(0),
-      );
+      const fill = this.add.rectangle(x + 1, y + 1, filled, height - 2, color, 1).setOrigin(0, 0).setScrollFactor(0);
+      if (mask) fill.setMask(mask);
+      this.addToLayer(fill);
     }
     if (label) {
-      this.addToLayer(
-        this.add
-          .text(x + width / 2, y + height / 2, label, {
-            ...TEXT,
-            fontSize: "10px",
-            color: "#f0f0f0",
-            stroke: "#000000",
-            strokeThickness: 2,
-          })
-          .setOrigin(0.5)
-          .setScrollFactor(0),
-      );
+      const text = this.add
+        .text(x + width / 2, y + height / 2, label, {
+          ...TEXT,
+          fontSize: "10px",
+          color: "#f0f0f0",
+          stroke: "#000000",
+          strokeThickness: 2,
+        })
+        .setOrigin(0.5)
+        .setScrollFactor(0);
+      if (mask) text.setMask(mask);
+      this.addToLayer(text);
     }
   }
 

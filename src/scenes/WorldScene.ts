@@ -537,16 +537,17 @@ export class WorldScene extends Phaser.Scene {
     this.emitPlayerStats();
   }
 
-  /** Nearby monsters, for the Battle tab — far easier to target than tapping a 32px sprite. */
+  /** Nearby monsters, for the Battle window — far easier to target than tapping a 32px sprite. */
   private emitBattleList() {
     const entries = this.monsters
       .map((monster, id) => ({ monster, id }))
       .filter(({ monster }) => monster.alive && chebyshevDistance(this.player.tile, monster.tile) <= BATTLE_LIST_RANGE)
-      .sort(
-        (a, b) =>
-          chebyshevDistance(this.player.tile, a.monster.tile) - chebyshevDistance(this.player.tile, b.monster.tile),
-      )
-      .slice(0, 8)
+      .sort((a, b) => {
+        const distDiff =
+          chebyshevDistance(this.player.tile, a.monster.tile) - chebyshevDistance(this.player.tile, b.monster.tile);
+        return distDiff !== 0 ? distDiff : a.monster.hp - b.monster.hp;
+      })
+      .slice(0, 24)
       .map(({ monster, id }) => ({
         id,
         name: monster.def.name,
