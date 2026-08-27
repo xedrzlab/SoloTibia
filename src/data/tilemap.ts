@@ -4,14 +4,22 @@
 // stepping onto the door tile in front of a shop zones the player into an
 // interior scene (see src/data/interiors.ts + src/scenes/InteriorScene.ts).
 //
-// Monsters are intentionally absent while the tutorial area is being built
-// out; see MONSTER_SPAWNS below.
+// Underneath the town is a sewer network (see the "Sewers" section below),
+// reached by stepping on one of three surface hatches and teleported back
+// out the same way via a ladder. The surface itself stays monster-free
+// while the tutorial area is under construction; the sewers are where the
+// starter rats live.
 
 import { MapBuilder } from "../game/mapBuilder";
 import type { TreeSpecies } from "./assets";
 
 export const MAP_WIDTH = 70;
-export const MAP_HEIGHT = 58;
+// The island/town occupy rows 0-57. Rows 58+ are a separate underground
+// band — the sewers — reached by teleporting the player's tile position
+// there (see SEWER_LINKS below), not by walking. Same scene, same camera,
+// same combat: a sewer rat is exactly as real as a surface one.
+export const SURFACE_HEIGHT = 58;
+export const MAP_HEIGHT = 108;
 
 const b = new MapBuilder(MAP_WIDTH, MAP_HEIGHT, "~"); // start as ocean
 
@@ -250,6 +258,86 @@ const PEN = { x: 20, y: 46, w: 7, h: 5 };
 const YARD = { x: 29, y: 47, w: 5, h: 4 };
 
 // ---------------------------------------------------------------------------
+// Sewers — an underground band, teleported into rather than walked into.
+//
+// The band lives at y=58-107, well below the island/town above. Its base
+// fill is sewer wall ("V"), and rooms/corridors are carved out of it as
+// walkable sewer floor ("K"). Nothing about the surface map changes size
+// visually — this is simply more of the same tilemap, off camera until the
+// player is teleported there.
+//
+// Three entrances on the surface pair 1:1 with three points underground
+// (SEWER_LINKS). Stepping on a surface entrance teleports down to its
+// paired sewer tile; stepping on the lader-up tile at that same sewer point
+// teleports back to the paired surface tile — "exit and entrance are the
+// same place" per the design: one coordinate pair, walked both directions.
+// ---------------------------------------------------------------------------
+
+b.rect(0, SURFACE_HEIGHT, MAP_WIDTH, MAP_HEIGHT - SURFACE_HEIGHT, "V"); // solid sewer rock, base fill
+
+const SEWER_ROOM_A = { x: 16, y: 64, w: 8, h: 8 }; // NW arrival chamber
+const SEWER_ROOM_B = { x: 46, y: 64, w: 8, h: 8 }; // NE arrival chamber
+const SEWER_ROOM_C = { x: 30, y: 88, w: 10, h: 8 }; // central chamber (south entrance)
+const SEWER_ROOM_D = { x: 9, y: 66, w: 5, h: 5 }; // dead-end side chamber, west of A
+
+b.rect(SEWER_ROOM_A.x, SEWER_ROOM_A.y, SEWER_ROOM_A.w, SEWER_ROOM_A.h, "K");
+b.rect(SEWER_ROOM_B.x, SEWER_ROOM_B.y, SEWER_ROOM_B.w, SEWER_ROOM_B.h, "K");
+b.rect(SEWER_ROOM_C.x, SEWER_ROOM_C.y, SEWER_ROOM_C.w, SEWER_ROOM_C.h, "K");
+b.rect(SEWER_ROOM_D.x, SEWER_ROOM_D.y, SEWER_ROOM_D.w, SEWER_ROOM_D.h, "K");
+
+// A straight corridor linking room A to room B.
+b.path([{ x: 20, y: 68 }, { x: 50, y: 68 }], "K", 2);
+// Both north rooms drop down to the central chamber, jogging to meet its
+// left/right edges flush rather than leaving a one-tile gap.
+b.path(
+  [
+    { x: 20, y: 71 },
+    { x: 20, y: 82 },
+    { x: 35, y: 82 },
+    { x: 35, y: 88 },
+  ],
+  "K",
+  2,
+);
+b.path(
+  [
+    { x: 50, y: 71 },
+    { x: 50, y: 82 },
+    { x: 39, y: 82 },
+    { x: 39, y: 88 },
+  ],
+  "K",
+  2,
+);
+// A narrow dead-end spur west from room A into the small side chamber.
+b.path([{ x: 16, y: 68 }, { x: 13, y: 68 }], "K");
+// A short dead-end stub south of the A-B corridor — a gap in the network
+// rather than every passage leading somewhere.
+b.path([{ x: 35, y: 69 }, { x: 35, y: 72 }], "K");
+
+export interface SewerLink {
+  surface: { x: number; y: number };
+  sewer: { x: number; y: number };
+}
+
+// Each pair is one coordinate on the surface and one below — the same
+// tile serves as both the down-entrance (from the surface side) and the
+// up-ladder (from the sewer side).
+export const SEWER_LINKS: SewerLink[] = [
+  { surface: { x: 18, y: 16 }, sewer: { x: 19, y: 67 } }, // NW, near the guardpost
+  { surface: { x: 52, y: 16 }, sewer: { x: 49, y: 67 } }, // NE, near Fenn's block
+  { surface: { x: 34, y: 34 }, sewer: { x: 35, y: 91 } }, // a grate in the middle of the south road
+];
+
+export function sewerLinkAtSurface(x: number, y: number): SewerLink | null {
+  return SEWER_LINKS.find((l) => l.surface.x === x && l.surface.y === y) ?? null;
+}
+
+export function sewerLinkAtSewer(x: number, y: number): SewerLink | null {
+  return SEWER_LINKS.find((l) => l.sewer.x === x && l.sewer.y === y) ?? null;
+}
+
+// ---------------------------------------------------------------------------
 // Vegetation
 // ---------------------------------------------------------------------------
 
@@ -411,6 +499,25 @@ export const PROPS: PropPlacement[] = [
   { textureKey: "crate", x: 28, y: 45, blocks: true },
   { textureKey: "cart", x: 19, y: 45, blocks: true },
   { textureKey: "well", x: 30, y: 45, blocks: true },
+
+  // --- Sewer entrances on the surface — one per SEWER_LINKS pair. Each
+  // --- hatch draws right on top of its (walkable) tile; stepping on it is
+  // --- what actually triggers the teleport (see WorldScene.checkForSewerTransition).
+  { textureKey: "sewer-entrance", x: 18, y: 16 },
+  { textureKey: "sewer-entrance", x: 52, y: 16 },
+  { textureKey: "sewer-entrance", x: 34, y: 34 },
+
+  // --- Sewer interior dressing: the paired ladder-up tile in each chamber,
+  // --- plus torches for the day/night system to pick up automatically, and
+  // --- a reward chest tucked in the dead-end side room.
+  { textureKey: "ladder-up", x: 19, y: 67 },
+  { textureKey: "ladder-up", x: 49, y: 67 },
+  { textureKey: "ladder-up", x: 35, y: 91 },
+  { textureKey: "torch", x: 19, y: 65, blocks: true },
+  { textureKey: "torch", x: 49, y: 65, blocks: true },
+  { textureKey: "torch", x: 33, y: 89, blocks: true },
+  { textureKey: "torch", x: 37, y: 89, blocks: true },
+  { textureKey: "chest", x: 11, y: 68, blocks: true },
 ];
 
 const blockedCells = new Set<string>();
@@ -477,7 +584,8 @@ export const NPC_SPAWNS: NpcSpawn[] = [
 ];
 
 // ---------------------------------------------------------------------------
-// Monsters — disabled during the tutorial rebuild.
+// Monsters — the surface stays peaceful (tutorial area); rats live in the
+// sewers underneath, which is the only combat the game has right now.
 // ---------------------------------------------------------------------------
 
 export interface MonsterSpawn {
@@ -486,11 +594,18 @@ export interface MonsterSpawn {
   y: number;
 }
 
-export const MONSTER_SPAWNS: MonsterSpawn[] = [];
+export const MONSTER_SPAWNS: MonsterSpawn[] = [
+  { monsterId: "rat", x: 21, y: 66 }, // room A
+  { monsterId: "rat", x: 48, y: 66 }, // room B
+  { monsterId: "rat", x: 11, y: 67 }, // dead-end side chamber
+  { monsterId: "rat", x: 25, y: 68 }, // A-B corridor
+  { monsterId: "cave_rat", x: 44, y: 68 }, // A-B corridor, east end
+  { monsterId: "cave_rat", x: 33, y: 90 }, // central chamber
+  { monsterId: "cave_rat", x: 37, y: 92 }, // central chamber
+];
 
 const DISABLED_MONSTER_SPAWNS: MonsterSpawn[] = [
   { monsterId: "troll", x: 12, y: 8 },
-  { monsterId: "rat", x: 45, y: 40 },
   { monsterId: "slime", x: 50, y: 38 },
 ];
 void DISABLED_MONSTER_SPAWNS;
@@ -574,6 +689,8 @@ const LEGEND: Record<string, TileInfo> = {
   R: { walkable: true, textureKey: "road", safe: false, groundFriction: 110 },
   P: { walkable: true, textureKey: "road", safe: true, groundFriction: 110 },
   F: { walkable: true, textureKey: "wood-floor", safe: true, groundFriction: 100 },
+  K: { walkable: true, textureKey: "sewer-floor", safe: false, groundFriction: 145 },
+  V: { walkable: false, textureKey: "wall-sewer", safe: false },
 
   t: { walkable: false, textureKey: "grass", variants: ["grass", "grass-2"], tree: "oak", safe: false },
   p: { walkable: false, textureKey: "grass", variants: ["grass", "grass-2"], tree: "pine", safe: false },

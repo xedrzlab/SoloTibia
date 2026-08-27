@@ -473,6 +473,127 @@ function rockyGroundTile() {
   return s;
 }
 
+// Sewer palette: dark, mossy, wetter than the surface cave — a distinct
+// underground identity rather than a re-tint of cave-floor/stone-wall.
+const P_SEWER_FLOOR = { deep: "#241d14", dark: "#332818", mid: "#493823", light: "#5e4a2e", hi: "#726055" };
+const P_SEWER_WALL = { deep: "#141a14", dark: "#1e2a1e", mid: "#2c3d2a", light: "#3d523a", hi: "#527052" };
+
+/** Sewer floor: packed wet earth, darker and grimier than the surface cave. */
+function sewerFloorTile() {
+  const s = new Sprite(16, 16);
+  s.fillRect(0, 0, 16, 16, P_SEWER_FLOOR.mid);
+
+  clusters(s, [[0, 1, 4, 2], [7, 0, 4, 2], [11, 5, 4, 2], [2, 6, 4, 2], [9, 9, 4, 2], [0, 12, 4, 2], [12, 12, 3, 2]], P_SEWER_FLOOR.dark);
+  clusters(s, [[4, 3, 3, 1], [10, 2, 3, 1], [5, 9, 3, 1], [1, 10, 3, 1]], P_SEWER_FLOOR.light);
+
+  // A couple of shallow puddles — flat dark patches with a thin lit rim
+  // catching whatever light reaches down here.
+  for (const [x, y, w, h] of [[3, 8, 3, 2], [11, 3, 3, 2]]) {
+    s.fillEllipse(x + w / 2, y + h / 2, w / 2, h / 2, P_SEWER_FLOOR.deep);
+    s.setPixel(x, y, "#3d5a63");
+    s.setPixel(x + w - 1, y + h - 1, "#2a4550");
+  }
+  return s;
+}
+
+/** Sewer wall: mossy stone blocks, darker and cooler than the town's stone-wall. */
+function sewerWallTile() {
+  const s = new Sprite(16, 16);
+  s.fillRect(0, 0, 16, 16, P_SEWER_WALL.deep);
+
+  const courses = [
+    { y: 0, h: 8, offset: 0 },
+    { y: 8, h: 8, offset: 4 },
+  ];
+  for (const course of courses) {
+    for (let x = -course.offset; x < 16; x += 8) {
+      const bx = Math.max(0, x);
+      const bw = Math.min(16, x + 8) - bx - 1;
+      if (bw <= 0) continue;
+      s.fillRect(bx, course.y, bw, course.h - 1, P_SEWER_WALL.mid);
+      s.fillRect(bx, course.y, bw, 1, P_SEWER_WALL.hi);
+      s.fillRect(bx, course.y, 1, course.h - 1, P_SEWER_WALL.light);
+      s.fillRect(bx + bw - 1, course.y, 1, course.h - 1, P_SEWER_WALL.dark);
+      s.fillRect(bx, course.y + course.h - 2, bw, 1, P_SEWER_WALL.dark);
+    }
+  }
+  // Moss streaks running down from the seams — the thing that says "sewer"
+  // rather than "cellar".
+  clusters(s, [[2, 0, 2, 4], [9, 8, 2, 5], [13, 2, 2, 3]], "#3f5c34");
+  clusters(s, [[3, 1, 1, 2], [10, 10, 1, 2]], "#5a7a4a");
+  return s;
+}
+
+/**
+ * Wooden ladder rising out of a dark pit — the "up" exit from a sewer room.
+ * Drawn top-down: two side rails, a run of rungs, and a shadowed hole
+ * beneath. Standing on this tile climbs the player back to the street.
+ */
+function ladderUpSprite() {
+  const s = new Sprite(16, 16);
+  const rail = "#6b4a2a";
+  const railHi = "#8a6a3d";
+  const rung = "#5a3d22";
+  const pit = "#0a0a0c";
+
+  // Dark pit the ladder rises from.
+  s.fillEllipse(8, 9, 6, 5, pit);
+  s.fillEllipse(8, 9, 5, 4, "#141210");
+
+  // Side rails.
+  s.fillRect(4, 2, 2, 12, rail);
+  s.fillRect(10, 2, 2, 12, rail);
+  s.fillRect(4, 2, 1, 12, railHi);
+  s.fillRect(10, 2, 1, 12, railHi);
+
+  // Rungs.
+  for (let y = 3; y < 14; y += 3) {
+    s.fillRect(5, y, 6, 1, rung);
+  }
+  return s;
+}
+
+/**
+ * Sewer entrance: a square hatch cut into the street/ground, stone-rimmed,
+ * with a wooden grate cover pulled half aside over a dark drop. Standing on
+ * this tile climbs the player down into the sewers.
+ */
+function sewerEntranceSprite() {
+  const s = new Sprite(16, 16);
+  const rim = P_STONE.mid;
+  const rimHi = P_STONE.light;
+  const rimLo = P_STONE.deep;
+  const wood = "#5a3d22";
+  const woodHi = "#82603a";
+  const pit = "#0a0a0c";
+
+  // Stone rim.
+  s.fillRect(1, 1, 14, 14, rim);
+  s.fillRect(1, 1, 14, 1, rimHi);
+  s.fillRect(1, 1, 1, 14, rimHi);
+  s.fillRect(13, 1, 1, 14, rimLo);
+  s.fillRect(1, 13, 14, 1, rimLo);
+
+  // Dark drop.
+  s.fillRect(3, 3, 10, 10, pit);
+  s.fillEllipse(8, 8, 4, 3.4, "#14120f");
+
+  // A ladder top peeking out of the hole, so the down-tile visually pairs
+  // with the up-tile below.
+  s.fillRect(6, 4, 1, 6, wood);
+  s.fillRect(9, 4, 1, 6, wood);
+  s.setPixel(6, 4, woodHi);
+  s.setPixel(9, 4, woodHi);
+  s.fillRect(6, 6, 4, 1, wood);
+  s.fillRect(6, 9, 4, 1, wood);
+
+  // Wooden grate cover, dragged half aside.
+  s.fillRect(1, 1, 5, 4, wood);
+  s.fillRect(1, 1, 5, 1, woodHi);
+  s.setPixel(2, 2, woodHi);
+  return s;
+}
+
 function voidWallTile() {
   const s = new Sprite(16, 16);
   s.fillRect(0, 0, 16, 16, "#1c1c20");
@@ -3145,6 +3266,8 @@ saveSprite(grassTile(2), SCALE, `${OUT}/terrain/grass_03.png`);
 saveSprite(dirtTile(0), SCALE, `${OUT}/terrain/dirt_01.png`);
 saveSprite(dirtTile(1), SCALE, `${OUT}/terrain/dirt_02.png`);
 saveSprite(caveFloorTile(), SCALE, `${OUT}/terrain/cave_floor_01.png`);
+saveSprite(sewerFloorTile(), SCALE, `${OUT}/terrain/sewer_floor_01.png`);
+saveSprite(sewerWallTile(), SCALE, `${OUT}/terrain/wall_sewer_01.png`);
 saveSprite(cobbleTile(), SCALE, `${OUT}/terrain/cobble_01.png`);
 saveSprite(stoneWallTile(), SCALE, `${OUT}/terrain/wall_stone_01.png`);
 saveSprite(rockyGroundTile(), SCALE, `${OUT}/terrain/ground_rocky_01.png`);
@@ -3194,6 +3317,8 @@ saveSprite(campfireSprite(), SCALE, `${OUT}/props/campfire_01.png`);
 saveSprite(torchSprite(), SCALE, `${OUT}/props/torch_01.png`);
 saveSprite(gravestoneSprite(), SCALE, `${OUT}/props/gravestone_01.png`);
 saveSprite(chestSprite(), SCALE, `${OUT}/props/chest_01.png`);
+saveSprite(ladderUpSprite(), SCALE, `${OUT}/props/ladder_up_01.png`);
+saveSprite(sewerEntranceSprite(), SCALE, `${OUT}/props/sewer_entrance_01.png`);
 saveSprite(sackSprite(), SCALE, `${OUT}/props/sack_01.png`);
 saveSprite(weaponRackSprite(), SCALE, `${OUT}/props/weapon_rack_01.png`);
 saveSprite(fenceGateSprite(), SCALE, `${OUT}/props/fence_gate_01.png`);

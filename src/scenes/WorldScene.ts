@@ -17,6 +17,8 @@ import {
   variantForCell,
   overlayForCell,
   entryPointAt,
+  sewerLinkAtSurface,
+  sewerLinkAtSewer,
 } from "../data/tilemap";
 import { MONSTERS } from "../data/monsters";
 import { TREE_DETAILS, TREE_LAYERS, TreeSpecies } from "../data/assets";
@@ -759,6 +761,7 @@ export class WorldScene extends Phaser.Scene {
     void this.player.stepTo(next.x, next.y, frictionAt(next.x, next.y)).then(() => {
       this.emitPlayerStats();
       this.checkForZoneIn();
+      this.checkForSewerTransition();
     });
   }
 
@@ -791,6 +794,32 @@ export class WorldScene extends Phaser.Scene {
         this.emitPlayerStats();
       },
     });
+  }
+
+  /**
+   * Sewer entrances/ladders are a same-scene teleport, not a scene change —
+   * unlike shop doors, there's no interior room to launch: the sewer is just
+   * more of this same tilemap, off camera until now. A step onto either the
+   * surface hatch or the paired underground ladder just moves the player's
+   * tile position; camera, monsters and rendering carry on exactly as they
+   * would for a normal step.
+   */
+  private checkForSewerTransition() {
+    const down = sewerLinkAtSurface(this.player.tileX, this.player.tileY);
+    if (down) {
+      this.playerPath = [];
+      this.clearTarget();
+      this.player.teleportTo(down.sewer.x, down.sewer.y);
+      this.log("info", "You climb down into the sewers.");
+      return;
+    }
+    const up = sewerLinkAtSewer(this.player.tileX, this.player.tileY);
+    if (up) {
+      this.playerPath = [];
+      this.clearTarget();
+      this.player.teleportTo(up.surface.x, up.surface.y);
+      this.log("info", "You climb back up to the street.");
+    }
   }
 
   /**
