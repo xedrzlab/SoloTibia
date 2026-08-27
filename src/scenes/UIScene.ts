@@ -1077,7 +1077,15 @@ export class UIScene extends Phaser.Scene {
     label: string,
     mask?: Phaser.Display.Masks.GeometryMask,
   ) {
-    const bg = this.add.rectangle(x, y, width, height, COLORS.barBg, 0.7).setOrigin(0, 0).setScrollFactor(0);
+    // A stroke on the empty track, not just the fill — the track's own fill
+    // color is near-black like the panel behind it, so without an outline a
+    // low (or zero) percentage reads as "no bar here" rather than "a bar
+    // that's mostly empty".
+    const bg = this.add
+      .rectangle(x, y, width, height, COLORS.barBg, 0.7)
+      .setOrigin(0, 0)
+      .setStrokeStyle(1, COLORS.border, 0.9)
+      .setScrollFactor(0);
     if (mask) bg.setMask(mask);
     this.addToLayer(bg);
     const filled = Math.max(0, Math.min(1, pct)) * (width - 2);

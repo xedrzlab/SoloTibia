@@ -19,38 +19,58 @@ export const SKILL_NAMES: Record<SkillId, string> = {
 interface SkillCurve {
   /** Level the skill starts at for a fresh character. */
   start: number;
-  /** Tries needed to advance from `start` to `start + 1`. */
+  /** Tries needed for the very first step (start -> start + 1), before the vocation factor. */
   baseTries: number;
-  /** How much more expensive each subsequent level is. */
-  growth: number;
 }
 
-const CURVES: Record<SkillId, SkillCurve> = {
-  melee: { start: 10, baseTries: 50, growth: 1.1 },
-  distance: { start: 10, baseTries: 30, growth: 1.1 },
-  // Magic counts mana spent rather than hits, so its base is much larger.
-  magic: { start: 0, baseTries: 160, growth: 1.15 },
-  shielding: { start: 10, baseTries: 90, growth: 1.1 },
+// Melee/distance/shielding: tries to advance from level N to N+1 follows
+// TibiaWiki's documented formula, Tries = 50 * (N - 10)^1.1 — a power-law
+// curve (not exponential-in-steps), with all three sharing the same base of
+// 50 and skills starting at level 10. Magic level counts mana spent rather
+// than hits and starts at 0; it uses a per-vocation formula instead (below).
+const POWER_EXPONENT = 1.1;
+
+const CURVES: Record<Exclude<SkillId, "magic">, SkillCurve> = {
+  melee: { start: 10, baseTries: 50 },
+  distance: { start: 10, baseTries: 50 },
+  shielding: { start: 10, baseTries: 50 },
 };
 
-/** Per-vocation try multipliers — lower means the skill trains faster. */
-const VOCATION_FACTORS: Record<Vocation, Record<SkillId, number>> = {
-  none: { melee: 1.5, distance: 1.5, magic: 2.0, shielding: 1.5 },
-  knight: { melee: 1.0, distance: 1.4, magic: 3.0, shielding: 1.0 },
-  paladin: { melee: 1.2, distance: 1.0, magic: 1.8, shielding: 1.1 },
-  sorcerer: { melee: 2.0, distance: 2.0, magic: 1.0, shielding: 1.5 },
-  druid: { melee: 2.0, distance: 2.0, magic: 1.0, shielding: 1.5 },
+/** Per-vocation try multipliers for melee/distance/shielding — lower means the skill trains faster. */
+const VOCATION_FACTORS: Record<Vocation, Record<Exclude<SkillId, "magic">, number>> = {
+  none: { melee: 1.5, distance: 1.5, shielding: 1.5 },
+  knight: { melee: 1.0, distance: 1.4, shielding: 1.0 },
+  paladin: { melee: 1.2, distance: 1.0, shielding: 1.1 },
+  sorcerer: { melee: 2.0, distance: 2.0, shielding: 1.5 },
+  druid: { melee: 2.0, distance: 2.0, shielding: 1.5 },
+};
+
+// Magic level's own documented mechanic: each vocation spends mana at a
+// fixed multiple of the previous level's cost — sorcerers/druids ("mages")
+// only need 1.1x more per level, paladins 1.4x, knights a punishing 3x.
+// That per-level GROWTH RATE differs by vocation (unlike the other three
+// skills, which share one curve shape and differ only by a flat factor).
+const MAGIC_BASE_MANA = 160;
+const MAGIC_GROWTH: Record<Vocation, number> = {
+  none: 2.0,
+  knight: 3.0,
+  paladin: 1.4,
+  sorcerer: 1.1,
+  druid: 1.1,
 };
 
 export function startingLevel(skill: SkillId): number {
-  return CURVES[skill].start;
+  return skill === "magic" ? 0 : CURVES[skill].start;
 }
 
 /** Tries needed to advance from `level` to `level + 1`. */
 export function triesForNextLevel(skill: SkillId, level: number, vocation: Vocation): number {
+  if (skill === "magic") {
+    return Math.max(1, Math.round(MAGIC_BASE_MANA * Math.pow(MAGIC_GROWTH[vocation], level)));
+  }
   const curve = CURVES[skill];
-  const steps = Math.max(0, level - curve.start);
-  return Math.max(1, Math.round(curve.baseTries * Math.pow(curve.growth, steps) * VOCATION_FACTORS[vocation][skill]));
+  const step = Math.max(1, level - curve.start + 1);
+  return Math.max(1, Math.round(curve.baseTries * Math.pow(step, POWER_EXPONENT) * VOCATION_FACTORS[vocation][skill]));
 }
 
 export class SkillSet {
@@ -60,7 +80,7 @@ export class SkillSet {
   constructor() {
     this.levels = { melee: 0, distance: 0, magic: 0, shielding: 0 };
     this.tries = { melee: 0, distance: 0, magic: 0, shielding: 0 };
-    for (const skill of SKILL_ORDER) this.levels[skill] = CURVES[skill].start;
+    for (const skill of SKILL_ORDER) this.levels[skill] = startingLevel(skill);
   }
 
   level(skill: SkillId): number {
