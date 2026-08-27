@@ -380,8 +380,16 @@ export class UIScene extends Phaser.Scene {
     try {
       const raw = localStorage.getItem(PANEL_POS_STORAGE_KEY);
       if (!raw) return;
-      const data = JSON.parse(raw) as Record<string, PanelPos>;
-      for (const [id, pos] of Object.entries(data)) {
+      const parsed = JSON.parse(raw) as { sidebarWidth?: number; positions?: Record<string, PanelPos> };
+      // Positions are saved as absolute pixel coordinates within the two-column
+      // strip, so they're only meaningful for the SIDEBAR_WIDTH they were
+      // saved under. If the sizing formula (or the viewport) has changed
+      // since, stale coordinates can clamp into nonsensical spots — e.g. the
+      // Battle panel landing on top of/under Character instead of in its own
+      // column. Discarding on a mismatch is cheap: panels just fall back to
+      // their normal default positions and re-lay-out cleanly.
+      if (parsed.sidebarWidth !== SIDEBAR_WIDTH || !parsed.positions) return;
+      for (const [id, pos] of Object.entries(parsed.positions)) {
         if (typeof pos?.x === "number" && typeof pos?.y === "number") this.panelPos.set(id, pos);
       }
     } catch {
@@ -391,9 +399,9 @@ export class UIScene extends Phaser.Scene {
 
   private savePanelPositions() {
     try {
-      const data: Record<string, PanelPos> = {};
-      for (const [id, pos] of this.panelPos) data[id] = pos;
-      localStorage.setItem(PANEL_POS_STORAGE_KEY, JSON.stringify(data));
+      const positions: Record<string, PanelPos> = {};
+      for (const [id, pos] of this.panelPos) positions[id] = pos;
+      localStorage.setItem(PANEL_POS_STORAGE_KEY, JSON.stringify({ sidebarWidth: SIDEBAR_WIDTH, positions }));
     } catch {
       // Storage unavailable/full — the layout just won't survive a reload.
     }
