@@ -11,7 +11,7 @@ import { MapBuilder } from "../game/mapBuilder";
 import type { TreeSpecies } from "./assets";
 
 export const MAP_WIDTH = 70;
-export const MAP_HEIGHT = 50;
+export const MAP_HEIGHT = 58;
 
 const b = new MapBuilder(MAP_WIDTH, MAP_HEIGHT, "~"); // start as ocean
 
@@ -20,9 +20,9 @@ const b = new MapBuilder(MAP_WIDTH, MAP_HEIGHT, "~"); // start as ocean
 // ---------------------------------------------------------------------------
 
 const ISLAND_CX = 35;
-const ISLAND_CY = 25;
+const ISLAND_CY = 27;
 const ISLAND_RX = 30;
-const ISLAND_RY = 21;
+const ISLAND_RY = 26;
 
 function ellipseValue(x: number, y: number, rx: number, ry: number): number {
   const nx = (x - ISLAND_CX) / rx;
@@ -193,8 +193,8 @@ export const BUILDINGS: BuildingPlacement[] = [
   { textureKey: "building-log-cabin", footprintX: 40, footprintY: 33, footprintW: 3, footprintH: 3 },
   { textureKey: "building-house", footprintX: 47, footprintY: 33, footprintW: 3, footprintH: 3 },
 
-  // --- Farmer's cottage outside the wall on the south road ---
-  { textureKey: "building-cottage", footprintX: 32, footprintY: 43, footprintW: 3, footprintH: 3 },
+  // --- Farmer's cottage southwest of the south gate ---
+  { textureKey: "building-farmhouse", footprintX: 23, footprintY: 46, footprintW: 5, footprintH: 3 },
 ];
 for (const building of BUILDINGS) {
   b.rect(building.footprintX, building.footprintY, building.footprintW, building.footprintH, "B");
@@ -238,16 +238,17 @@ for (const entry of ENTRY_POINTS) {
 }
 
 // ---------------------------------------------------------------------------
-// Farm areas
+// Farm areas — southwest of the south gate
 // ---------------------------------------------------------------------------
 
-b.rect(34, TOWN.y + TOWN.h, 2, 8, "R");
+// Road from the south gate heads south, then a dirt path forks west to the farm.
+b.rect(34, TOWN.y + TOWN.h, 2, 6, "R");
+b.rect(22, 45, 14, 1, "D");
+b.rect(22, 46, 1, 3, "D");
 
-const PEN = { x: 39, y: 40, w: 8, h: 6 };
-const YARD = { x: 24, y: 41, w: 5, h: 4 };
-b.rect(37, 42, 2, 1, "D");
-b.rect(37, 42, 1, 1, "D");
-b.rect(35, 47, 1, 2, "D");
+// The farm compound sits in the expanded southern grassland.
+const PEN = { x: 18, y: 47, w: 8, h: 6 };
+const YARD = { x: 28, y: 48, w: 5, h: 4 };
 
 // ---------------------------------------------------------------------------
 // Vegetation
@@ -264,8 +265,9 @@ b.scatter(50, 4, 18, 20, "f", ["."], 0.03, 722);
 b.scatter(TOWN.x - 3, TOWN.y - 3, TOWN.w + 6, TOWN.h + 6, "f", ["."], 0.03, 730);
 b.scatter(TOWN.x - 3, TOWN.y - 3, TOWN.w + 6, TOWN.h + 6, "n", ["."], 0.02, 731);
 
-b.scatter(2, 32, MAP_WIDTH - 4, 15, "t", ["."], 0.03, 740);
-b.scatter(2, 32, MAP_WIDTH - 4, 15, "f", ["."], 0.05, 741);
+b.scatter(2, 32, MAP_WIDTH - 4, 24, "t", ["."], 0.05, 740);
+b.scatter(2, 32, MAP_WIDTH - 4, 24, "b", ["."], 0.02, 741);
+b.scatter(2, 32, MAP_WIDTH - 4, 24, "f", ["."], 0.04, 742);
 
 // ---------------------------------------------------------------------------
 // Props
@@ -306,15 +308,15 @@ export const PROPS: PropPlacement[] = [
   ...penFences,
   ...yardFences,
 
-  // Farm animals.
-  { textureKey: "sheep", x: 41, y: 42 },
-  { textureKey: "sheep", x: 44, y: 43 },
-  { textureKey: "sheep", x: 42, y: 44 },
-  { textureKey: "sheep", x: 45, y: 42 },
-  { textureKey: "chicken", x: 25, y: 42 },
-  { textureKey: "chicken", x: 27, y: 43 },
-  { textureKey: "chicken", x: 26, y: 44 },
-  { textureKey: "chicken", x: 28, y: 42 },
+  // Farm animals — sheep in the pen, chickens in the yard.
+  { textureKey: "sheep", x: 20, y: 49 },
+  { textureKey: "sheep", x: 23, y: 50 },
+  { textureKey: "sheep", x: 21, y: 51 },
+  { textureKey: "sheep", x: 24, y: 49 },
+  { textureKey: "chicken", x: 29, y: 49 },
+  { textureKey: "chicken", x: 31, y: 50 },
+  { textureKey: "chicken", x: 30, y: 51 },
+  { textureKey: "chicken", x: 32, y: 49 },
 
   // Town cats.
   { textureKey: "cat", x: 22, y: 20 },
@@ -403,9 +405,12 @@ export const PROPS: PropPlacement[] = [
   { textureKey: "barrel", x: 41, y: 38, blocks: true },
   { textureKey: "sack", x: 42, y: 38, blocks: true },
 
-  // Farm yard dressing.
-  { textureKey: "sack", x: 32, y: 44, blocks: true },
-  { textureKey: "crate", x: 34, y: 44, blocks: true },
+  // Farm yard dressing around the farmhouse.
+  { textureKey: "sack", x: 23, y: 49, blocks: true },
+  { textureKey: "crate", x: 27, y: 49, blocks: true },
+  { textureKey: "barrel", x: 22, y: 46, blocks: true },
+  { textureKey: "cart", x: 20, y: 46, blocks: true },
+  { textureKey: "well", x: 34, y: 49, blocks: true },
 ];
 
 const blockedCells = new Set<string>();
@@ -456,8 +461,8 @@ export const NPC_SPAWNS: NpcSpawn[] = [
     role: "ambient",
     greeting: "",
     about: "",
-    x: 32,
-    y: 45,
+    x: 26,
+    y: 48,
   },
   {
     id: "farmer_ana",
@@ -466,8 +471,8 @@ export const NPC_SPAWNS: NpcSpawn[] = [
     role: "ambient",
     greeting: "",
     about: "",
-    x: 44,
-    y: 45,
+    x: 30,
+    y: 48,
   },
 ];
 
