@@ -67,6 +67,11 @@ export class Monster {
       })
       .setOrigin(0.5, 1)
       .setDepth(6);
+
+    // Show full and green from the start, not just once damaged — a
+    // player should be able to read a monster's health at a glance the
+    // moment they see it, the same way the name tag already works.
+    this.updateHpBar();
   }
 
   get tile(): TileCoord {
@@ -88,10 +93,19 @@ export class Monster {
     return this.barY() - 8;
   }
 
+  /** Green full health down through yellow/red/deep-red at lower thresholds — a glance should tell how much danger the fight still has left. */
+  private static hpBarColor(pct: number): number {
+    if (pct <= 0.1) return 0x6b0f0f; // deep red
+    if (pct <= 0.25) return 0xc9302f; // red
+    if (pct <= 0.5) return 0xe0b93a; // yellow
+    return 0x3fae4a; // green
+  }
+
   private updateHpBar() {
     const pct = Phaser.Math.Clamp(this.hp / this.def.hp, 0, 1);
     this.hpBarFill.width = 24 * pct;
-    const visible = this.alive && pct < 1;
+    this.hpBarFill.setFillStyle(Monster.hpBarColor(pct));
+    const visible = this.alive;
     this.hpBarBg.setVisible(visible);
     this.hpBarFill.setVisible(visible);
     this.syncBarPosition();
