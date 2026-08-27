@@ -5,10 +5,11 @@
 // interior scene (see src/data/interiors.ts + src/scenes/InteriorScene.ts).
 //
 // Underneath the town is a sewer network (see the "Sewers" section below),
-// reached by stepping on one of three surface hatches and teleported back
-// out the same way via a ladder. The surface itself stays monster-free
-// while the tutorial area is under construction; the sewers are where the
-// starter rats live.
+// reached via one of three surface hatches and exited the same way via a
+// ladder — both require holding a press on the tile to confirm (see
+// WorldScene.startClimbHold), not just walking onto it. The surface itself
+// stays monster-free while the tutorial area is under construction; the
+// sewers are where the starter rats live.
 
 import { MapBuilder } from "../game/mapBuilder";
 import type { TreeSpecies } from "./assets";
@@ -267,10 +268,13 @@ const YARD = { x: 29, y: 47, w: 5, h: 4 };
 // player is teleported there.
 //
 // Three entrances on the surface pair 1:1 with three points underground
-// (SEWER_LINKS). Stepping on a surface entrance teleports down to its
-// paired sewer tile; stepping on the lader-up tile at that same sewer point
-// teleports back to the paired surface tile — "exit and entrance are the
-// same place" per the design: one coordinate pair, walked both directions.
+// (SEWER_LINKS) — "exit and entrance are the same place" per the design:
+// one coordinate pair, used both directions. Reaching one of these tiles
+// doesn't teleport by itself (walking through — or a path that merely
+// passes over one on the way elsewhere — used to yank the player through
+// instantly, which read as a bug); the player must hold a press on the
+// tile to bring up a Climb Down/Climb Up confirmation. See
+// WorldScene.startClimbHold/performClimb.
 // ---------------------------------------------------------------------------
 
 b.rect(0, SURFACE_HEIGHT, MAP_WIDTH, MAP_HEIGHT - SURFACE_HEIGHT, "V"); // solid sewer rock, base fill

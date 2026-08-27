@@ -35,6 +35,10 @@ export const EVENTS = {
   INTERIOR_STATE: "interior-state",
   /** Ask the world to open the player's depot container in the sidebar. */
   OPEN_DEPOT: "open-depot",
+  /** A ladder/hatch hold-press completed — show the confirm panel. */
+  OPEN_CLIMB_PROMPT: "open-climb-prompt",
+  /** Player confirmed the climb prompt — WorldScene performs the actual teleport. */
+  CLIMB_CONFIRM: "climb-confirm",
 } as const;
 
 export interface InteriorStatePayload {
@@ -182,4 +186,8 @@ export interface BattleListPayload {
 
 export interface SelectTargetPayload {
   id: number;
+}
+
+export interface OpenClimbPromptPayload {
+  direction: "down" | "up";
 }

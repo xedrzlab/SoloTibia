@@ -19,6 +19,7 @@ import {
   entryPointAt,
   sewerLinkAtSurface,
   sewerLinkAtSewer,
+  SewerLink,
 } from "../data/tilemap";
 import { MONSTERS } from "../data/monsters";
 import { TREE_DETAILS, TREE_LAYERS, TreeSpecies } from "../data/assets";
@@ -142,6 +143,12 @@ export class WorldScene extends Phaser.Scene {
   private ladders: { sprite: Phaser.GameObjects.Image; tileX: number; tileY: number }[] = [];
   private static readonly LADDER_OCCLUDED_ALPHA = 0.35;
 
+  // --- Climb (sewer ladder/hatch) hold-to-confirm ---------------------------
+  private pendingClimb: { surface: { x: number; y: number }; sewer: { x: number; y: number }; direction: "down" | "up" } | null = null;
+  private climbHoldTimer: Phaser.Time.TimerEvent | null = null;
+  private climbHoldCleanup: (() => void) | null = null;
+  private static readonly CLIMB_HOLD_MS = 450;
+
   constructor() {
     super("World");
   }
@@ -205,6 +212,7 @@ export class WorldScene extends Phaser.Scene {
     bus.on(EVENTS.MODAL_STATE, (payload: ModalStatePayload) => {
       this.modalOpen = payload.open;
     });
+    bus.on(EVENTS.CLIMB_CONFIRM, () => this.performClimb());
     bus.on(EVENTS.REQUEST_VOCATION_TALK, (payload: RequestVocationTalkPayload) =>
       this.requestVocationTalk(payload.npcId),
     );
@@ -459,6 +467,17 @@ export class WorldScene extends Phaser.Scene {
     const tx = Math.floor(wx / TILE_SIZE);
     const ty = Math.floor(wy / TILE_SIZE);
     if (!isWalkable(tx, ty)) return;
+
+    // A ladder/hatch only starts the hold-to-climb interaction once the
+    // player is already on or right next to it — tapping one from across
+    // the map is just a normal walk-there tap, same as any other tile.
+    const down = sewerLinkAtSurface(tx, ty);
+    const up = down ? null : sewerLinkAtSewer(tx, ty);
+    const climbLink = down ?? up;
+    if (climbLink && chebyshevDistance(this.player.tile, { x: tx, y: ty }) <= 1) {
+      this.startClimbHold(pointer, climbLink, down ? "down" : "up", tx, ty);
+      return;
+    }
 
     const path = findPath(isWalkable, this.player.tile, { x: tx, y: ty });
     this.playerPath = path;
@@ -788,7 +807,6 @@ export class WorldScene extends Phaser.Scene {
     void this.player.stepTo(next.x, next.y, frictionAt(next.x, next.y)).then(() => {
       this.emitPlayerStats();
       this.checkForZoneIn();
-      this.checkForSewerTransition();
     });
   }
 
@@ -842,27 +860,74 @@ export class WorldScene extends Phaser.Scene {
   /**
    * Sewer entrances/ladders are a same-scene teleport, not a scene change —
    * unlike shop doors, there's no interior room to launch: the sewer is just
-   * more of this same tilemap, off camera until now. A step onto either the
-   * surface hatch or the paired underground ladder just moves the player's
-   * tile position; camera, monsters and rendering carry on exactly as they
-   * would for a normal step.
+   * more of this same tilemap, off camera until now. Teleporting the player
+   * is a one-liner; performClimb() below does exactly that once the player
+   * has actually confirmed it via the hold-prompt in handleTap/startClimbHold.
    */
-  private checkForSewerTransition() {
-    const down = sewerLinkAtSurface(this.player.tileX, this.player.tileY);
-    if (down) {
-      this.playerPath = [];
-      this.clearTarget();
-      this.player.teleportTo(down.sewer.x, down.sewer.y);
+  private performClimb() {
+    const climb = this.pendingClimb;
+    this.pendingClimb = null;
+    if (!climb) return;
+    this.playerPath = [];
+    this.clearTarget();
+    if (climb.direction === "down") {
+      this.player.teleportTo(climb.sewer.x, climb.sewer.y);
       this.log("info", "You climb down into the sewers.");
-      return;
-    }
-    const up = sewerLinkAtSewer(this.player.tileX, this.player.tileY);
-    if (up) {
-      this.playerPath = [];
-      this.clearTarget();
-      this.player.teleportTo(up.surface.x, up.surface.y);
+    } else {
+      this.player.teleportTo(climb.surface.x, climb.surface.y);
       this.log("info", "You climb back up to the street.");
     }
+  }
+
+  /**
+   * Ladders/hatches don't teleport on a mere step anymore — walking through
+   * one, or a path that just happened to cross it on the way somewhere else,
+   * used to yank the player through instantly, which read as a bug rather
+   * than a deliberate action. Instead, a tap that lands on one of these
+   * tiles (and the player is already on/next to it) starts a hold timer; if
+   * the press is held long enough it opens the Climb Down/Climb Up confirm
+   * panel, and releasing early just falls back to a normal walk-there tap.
+   */
+  private startClimbHold(
+    pointer: Phaser.Input.Pointer,
+    link: SewerLink,
+    direction: "down" | "up",
+    tx: number,
+    ty: number,
+  ) {
+    this.cancelClimbHold();
+    const startX = pointer.x;
+    const startY = pointer.y;
+
+    const releaseAsWalk = () => {
+      this.cancelClimbHold();
+      this.playerPath = findPath(isWalkable, this.player.tile, { x: tx, y: ty });
+    };
+    const onMove = (p: Phaser.Input.Pointer) => {
+      if (Phaser.Math.Distance.Between(p.x, p.y, startX, startY) > 12) releaseAsWalk();
+    };
+
+    this.input.on("pointerup", releaseAsWalk);
+    this.input.on("pointermove", onMove);
+    this.climbHoldCleanup = () => {
+      this.input.off("pointerup", releaseAsWalk);
+      this.input.off("pointermove", onMove);
+    };
+
+    this.climbHoldTimer = this.time.delayedCall(WorldScene.CLIMB_HOLD_MS, () => {
+      this.climbHoldCleanup?.();
+      this.climbHoldCleanup = null;
+      this.climbHoldTimer = null;
+      this.pendingClimb = { surface: link.surface, sewer: link.sewer, direction };
+      bus.emit(EVENTS.OPEN_CLIMB_PROMPT, { direction });
+    });
+  }
+
+  private cancelClimbHold() {
+    this.climbHoldTimer?.remove();
+    this.climbHoldTimer = null;
+    this.climbHoldCleanup?.();
+    this.climbHoldCleanup = null;
   }
 
   /**

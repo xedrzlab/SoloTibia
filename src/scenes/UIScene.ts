@@ -7,6 +7,7 @@ import {
   InventoryPayload,
   InventoryStatePayload,
   LogPayload,
+  OpenClimbPromptPayload,
   OpenDialoguePayload,
   PlayerStatsPayload,
   SkillsPayload,
@@ -224,9 +225,14 @@ export class UIScene extends Phaser.Scene {
   private dialoguePanel!: Phaser.GameObjects.Container;
   private dialogueOpen = false;
   private currentDialogue: OpenDialoguePayload | null = null;
+  private climbPanel!: Phaser.GameObjects.Container;
+  private climbOpen = false;
+  private climbDirection: "down" | "up" | null = null;
 
   private readonly DIALOGUE_WIDTH = 280;
   private readonly DIALOGUE_HEIGHT = 190;
+  private readonly CLIMB_WIDTH = 220;
+  private readonly CLIMB_HEIGHT = 100;
 
   constructor() {
     super({ key: "UI", active: false });
@@ -247,6 +253,7 @@ export class UIScene extends Phaser.Scene {
     this.buildShopPanel();
     this.buildVocationPanel();
     this.buildDialoguePanel();
+    this.buildClimbPanel();
     this.setupDragAndDrop();
 
     bus.on(EVENTS.PLAYER_STATS, (p: PlayerStatsPayload) => {
@@ -273,6 +280,7 @@ export class UIScene extends Phaser.Scene {
     bus.on(EVENTS.INVENTORY, (inv: InventoryPayload) => this.onInventory(inv));
     bus.on(EVENTS.OPEN_VOCATION_CHOICE, () => this.openVocationPanel());
     bus.on(EVENTS.OPEN_DIALOGUE, (p: OpenDialoguePayload) => this.openDialogue(p));
+    bus.on(EVENTS.OPEN_CLIMB_PROMPT, (p: OpenClimbPromptPayload) => this.openClimbPrompt(p.direction));
     bus.on(EVENTS.INTERIOR_STATE, (p: InteriorStatePayload) => this.onInteriorState(p.active));
 
     this.input.on("wheel", (pointer: Phaser.Input.Pointer, _o: unknown, _dx: number, dy: number) => {
@@ -338,6 +346,7 @@ export class UIScene extends Phaser.Scene {
     this.shopPanel.setPosition(gw / 2 - 120, h / 2 - 150);
     this.vocationPanel.setPosition(gw / 2 - 130, h / 2 - 150);
     this.dialoguePanel.setPosition(gw / 2 - this.DIALOGUE_WIDTH / 2, h / 2 - this.DIALOGUE_HEIGHT / 2 - 20);
+    this.climbPanel.setPosition(gw / 2 - this.CLIMB_WIDTH / 2, h / 2 - this.CLIMB_HEIGHT / 2);
 
     // The collapse tab sits outside the sidebar proper: the world view may
     // extend under it, but taps there must not also walk the player.
@@ -1214,7 +1223,7 @@ export class UIScene extends Phaser.Scene {
   // =========================================================================
 
   private syncModalState() {
-    bus.emit(EVENTS.MODAL_STATE, { open: this.shopOpen || this.vocationOpen || this.dialogueOpen });
+    bus.emit(EVENTS.MODAL_STATE, { open: this.shopOpen || this.vocationOpen || this.dialogueOpen || this.climbOpen });
   }
 
   private buildShopPanel() {
@@ -1361,6 +1370,84 @@ export class UIScene extends Phaser.Scene {
     this.vocationOpen = false;
     this.vocationPanel.setVisible(false);
     this.syncModalState();
+  }
+
+  /**
+   * Ladder/hatch confirm: a single action button (which one depends on
+   * direction — there's nothing to climb up from a surface hatch, or down
+   * from an underground ladder) plus Cancel. WorldScene already knows which
+   * link is pending; this only needs to tell it yes or no.
+   */
+  private buildClimbPanel() {
+    this.climbPanel = this.add.container(0, 0).setScrollFactor(0).setDepth(150).setVisible(false);
+  }
+
+  private openClimbPrompt(direction: "down" | "up") {
+    this.climbDirection = direction;
+    this.climbOpen = true;
+    this.climbPanel.setVisible(true);
+    this.renderClimbPanel();
+    this.syncModalState();
+  }
+
+  private closeClimbPanel(confirmed: boolean) {
+    this.climbOpen = false;
+    this.climbPanel.setVisible(false);
+    this.climbDirection = null;
+    this.syncModalState();
+    if (confirmed) bus.emit(EVENTS.CLIMB_CONFIRM);
+  }
+
+  private renderClimbPanel() {
+    this.climbPanel.removeAll(true);
+    const direction = this.climbDirection;
+    if (!direction) return;
+
+    const width = this.CLIMB_WIDTH;
+    const height = this.CLIMB_HEIGHT;
+    const title = direction === "down" ? "Climb down into the sewers?" : "Climb back up to the street?";
+    const actionLabel = direction === "down" ? "Climb Down" : "Climb Up";
+
+    const bg = this.add
+      .rectangle(0, 0, width, height, COLORS.panelBg, 0.96)
+      .setOrigin(0, 0)
+      .setStrokeStyle(1, COLORS.border);
+    const label = this.add
+      .text(width / 2, 18, title, {
+        ...TEXT,
+        fontSize: fs(11),
+        color: "#f0f0f0",
+        align: "center",
+        wordWrap: { width: width - 20 },
+      })
+      .setOrigin(0.5, 0);
+    this.climbPanel.add([bg, label]);
+
+    const btnW = (width - 24) / 2;
+    const btnY = height - 36;
+
+    const confirmBtn = this.add
+      .rectangle(10, btnY, btnW, 26, 0x000000, 0.35)
+      .setOrigin(0, 0)
+      .setStrokeStyle(1, COLORS.accent)
+      .setInteractive({ useHandCursor: true });
+    const confirmLabel = this.add
+      .text(10 + btnW / 2, btnY + 13, actionLabel, { ...TEXT, fontSize: fs(11), color: "#e6c34a" })
+      .setOrigin(0.5);
+    confirmBtn.on("pointerdown", () => this.closeClimbPanel(true));
+
+    const cancelBtn = this.add
+      .rectangle(14 + btnW, btnY, btnW, 26, 0x000000, 0.35)
+      .setOrigin(0, 0)
+      .setStrokeStyle(1, COLORS.border)
+      .setInteractive({ useHandCursor: true });
+    const cancelLabel = this.add
+      .text(14 + btnW + btnW / 2, btnY + 13, "Cancel", { ...TEXT, fontSize: fs(11), color: "#e2e2e2" })
+      .setOrigin(0.5);
+    cancelBtn.on("pointerdown", () => this.closeClimbPanel(false));
+
+    this.climbPanel.add([confirmBtn, confirmLabel, cancelBtn, cancelLabel]);
+    this.climbPanel.setSize(width, height);
   }
 
   private buildDialoguePanel() {
