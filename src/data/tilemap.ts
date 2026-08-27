@@ -123,6 +123,11 @@ b.rect(45, 14, 1, 3, "D"); // east side mirror
 b.rect(34, 24, 2, 2, "P");
 export const TEMPLE_SPAWN = { x: 34, y: 26 }; // one tile south of the church door
 
+// TEMP: a tree just outside the church door, for verifying the PWA
+// auto-update actually lands a visible change on next load. Remove once
+// that's confirmed.
+b.set(39, 26, "t");
+
 // Short spur north connecting the forge street to the upper road.
 b.rect(30, 18, 5, 1, "R");
 
