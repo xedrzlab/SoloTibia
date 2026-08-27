@@ -197,7 +197,7 @@ export const BUILDINGS: BuildingPlacement[] = [
   { textureKey: "building-cottage", footprintX: 32, footprintY: 43, footprintW: 3, footprintH: 3 },
 ];
 for (const building of BUILDINGS) {
-  b.rect(building.footprintX, building.footprintY, building.footprintW, building.footprintH, "W");
+  b.rect(building.footprintX, building.footprintY, building.footprintW, building.footprintH, "B");
 }
 
 // ---------------------------------------------------------------------------
@@ -553,6 +553,7 @@ const LEGEND: Record<string, TileInfo> = {
   D: { walkable: true, textureKey: "dirt", variants: ["dirt", "dirt-2"], safe: false, groundFriction: 130 },
   C: { walkable: true, textureKey: "cave-floor", safe: false, groundFriction: 140 },
   W: { walkable: false, textureKey: "stone-wall", safe: false },
+  B: { walkable: false, textureKey: "grass", variants: ["grass", "grass-2", "grass-3"], safe: false },
   "~": { walkable: false, textureKey: "water", animated: true, safe: false, groundFriction: 250 },
   g: { walkable: true, textureKey: "rocky-ground", safe: false, groundFriction: 160 },
   M: { walkable: false, textureKey: "mountain", safe: false },
