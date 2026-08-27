@@ -183,8 +183,9 @@ export class WorldScene extends Phaser.Scene {
   private pendingPickupPile: GroundPile | null = null;
   private pickupHoldTimer: Phaser.Time.TimerEvent | null = null;
   private pickupHoldCleanup: (() => void) | null = null;
-  /** Set when a hold-to-pick-up fired out of melee range — the player walks over before the menu opens. */
+  /** Set when the player tapped a pick-up row while out of melee range — the character walks over, then that same item is taken automatically. */
   private pendingWalkToPile: GroundPile | null = null;
+  private pendingPickupIndex: number | null = null;
   private pickupChaseTimer = 0;
 
   private activeLevelUpBanners: Phaser.GameObjects.Text[] = [];
@@ -606,6 +607,7 @@ export class WorldScene extends Phaser.Scene {
     this.target = null;
     bus.emit(EVENTS.TARGET, null);
     this.pendingWalkToPile = null;
+    this.pendingPickupIndex = null;
   }
 
   /**
@@ -786,19 +788,22 @@ export class WorldScene extends Phaser.Scene {
     }
   }
 
-  /** Mirrors updateCombat's chase-then-act loop: walk toward a distant pile, then open the pick-up menu once in melee range. */
+  /** Mirrors updateCombat's chase-then-act loop: walk toward a distant pile, then complete the pick-up the player already asked for once in melee range. */
   private updatePickupWalk(delta: number) {
     const pile = this.pendingWalkToPile;
     if (!pile) return;
     if (!this.groundPiles.includes(pile)) {
       this.pendingWalkToPile = null; // decayed while the player was still walking over
+      this.pendingPickupIndex = null;
       return;
     }
 
     if (chebyshevDistance(this.player.tile, { x: pile.tileX, y: pile.tileY }) <= MELEE_RANGE) {
       this.pendingWalkToPile = null;
       this.playerPath = [];
-      this.openPickupMenuOrWalkOver(pile);
+      const index = this.pendingPickupIndex;
+      this.pendingPickupIndex = null;
+      if (index !== null) this.executePickup(pile, index);
       return;
     }
 
@@ -1167,23 +1172,16 @@ export class WorldScene extends Phaser.Scene {
       this.input.off("pointermove", onMove);
     };
 
+    // The menu itself opens from anywhere the pile is visible on screen —
+    // same as a drop's screen range — only actually taking an item (see
+    // pickupItem) is gated to melee range.
     this.pickupHoldTimer = this.time.delayedCall(WorldScene.CLIMB_HOLD_MS, () => {
       this.pickupHoldCleanup?.();
       this.pickupHoldCleanup = null;
       this.pickupHoldTimer = null;
-      this.openPickupMenuOrWalkOver(pile);
-    });
-  }
-
-  /** Picking up only works in melee range — from further away the character walks over first, same as real Tibia's click-to-pick-up-at-range. */
-  private openPickupMenuOrWalkOver(pile: GroundPile) {
-    if (chebyshevDistance(this.player.tile, { x: pile.tileX, y: pile.tileY }) <= MELEE_RANGE) {
       this.pendingPickupPile = pile;
       bus.emit(EVENTS.OPEN_PICKUP_PROMPT, { entries: this.pickupEntriesFor(pile) });
-      return;
-    }
-    this.pendingWalkToPile = pile;
-    this.pickupChaseTimer = 0; // path toward it on the very next update tick
+    });
   }
 
   private cancelPickupHold() {
@@ -1439,9 +1437,27 @@ export class WorldScene extends Phaser.Scene {
     this.log("info", `You drop the ${ITEMS[stack.itemId]?.name ?? stack.itemId} on the ground.`);
   }
 
+  /**
+   * The menu itself opens from anywhere on screen (same as a drop), but
+   * actually taking an item still requires melee range — tapping a row from
+   * further away walks the character over first, then completes the same
+   * pick-up automatically once they arrive, rather than requiring a second tap.
+   */
   private pickupItem(index: number) {
     const pile = this.pendingPickupPile;
     if (!pile) return;
+
+    if (chebyshevDistance(this.player.tile, { x: pile.tileX, y: pile.tileY }) <= MELEE_RANGE) {
+      this.executePickup(pile, index);
+      return;
+    }
+
+    this.pendingWalkToPile = pile;
+    this.pendingPickupIndex = index;
+    this.pickupChaseTimer = 0; // path toward it on the very next update tick
+  }
+
+  private executePickup(pile: GroundPile, index: number) {
     const stack = pile.container.slots[index];
     if (!stack) return;
     const backpack = this.player.backpack;
@@ -1466,7 +1482,7 @@ export class WorldScene extends Phaser.Scene {
 
     if (pile.container.usedSlots === 0) {
       this.removeGroundPile(pile); // also clears pendingPickupPile and closes the menu
-    } else {
+    } else if (this.pendingPickupPile === pile) {
       bus.emit(EVENTS.OPEN_PICKUP_PROMPT, { entries: this.pickupEntriesFor(pile) });
     }
   }
