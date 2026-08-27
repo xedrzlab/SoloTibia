@@ -526,28 +526,36 @@ function sewerWallTile() {
 
 /**
  * Wooden ladder rising out of a dark pit — the "up" exit from a sewer room.
- * Drawn top-down: two side rails, a run of rungs, and a shadowed hole
- * beneath. Standing on this tile climbs the player back to the street.
+ * Drawn two tiles tall (16x32 source, i.e. one tile wide, two tall) so it
+ * reads as a real ladder climbing out of sight rather than a floor
+ * decal: the pit and the first few rungs sit in the bottom tile (the tile
+ * the player actually stands on to climb), and the rails keep going for a
+ * full tile above that.
+ *
+ * Anchored bottom-right like everything else (WorldScene.buildEnvironmentDecoration),
+ * so the extra height extends straight up over the tile behind it — which is
+ * exactly the tile WorldScene fades this sprite for for when the player
+ * walks onto it, so they're never hidden behind their own ladder.
  */
 function ladderUpSprite() {
-  const s = new Sprite(16, 16);
+  const s = new Sprite(16, 32);
   const rail = "#6b4a2a";
   const railHi = "#8a6a3d";
   const rung = "#5a3d22";
   const pit = "#0a0a0c";
 
-  // Dark pit the ladder rises from.
-  s.fillEllipse(8, 9, 6, 5, pit);
-  s.fillEllipse(8, 9, 5, 4, "#141210");
+  // Dark pit the ladder rises from, in the bottom (base) tile.
+  s.fillEllipse(8, 25, 6, 5, pit);
+  s.fillEllipse(8, 25, 5, 4, "#141210");
 
-  // Side rails.
-  s.fillRect(4, 2, 2, 12, rail);
-  s.fillRect(10, 2, 2, 12, rail);
-  s.fillRect(4, 2, 1, 12, railHi);
-  s.fillRect(10, 2, 1, 12, railHi);
+  // Side rails, running the full two-tile height.
+  s.fillRect(4, 1, 2, 27, rail);
+  s.fillRect(10, 1, 2, 27, rail);
+  s.fillRect(4, 1, 1, 27, railHi);
+  s.fillRect(10, 1, 1, 27, railHi);
 
-  // Rungs.
-  for (let y = 3; y < 14; y += 3) {
+  // Rungs, evenly spaced up both tiles.
+  for (let y = 3; y < 26; y += 3) {
     s.fillRect(5, y, 6, 1, rung);
   }
   return s;

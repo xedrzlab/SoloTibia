@@ -130,6 +130,17 @@ export class WorldScene extends Phaser.Scene {
   private regenTimer = REGEN_INTERVAL_MS;
   private debug!: DebugOverlay;
   private dayNight!: DayNightCycle;
+  /**
+   * Ladders are taller than one tile (see ladderUpSprite in generate-assets.mjs)
+   * and, anchored at their base like any tall prop, visually cover the tile
+   * directly behind/above them. Tracked here so that tile can fade the
+   * ladder's alpha instead of hiding the player standing on it — a tree's
+   * canopy is allowed to hide the player behind it (see art direction on
+   * layered trees); a ladder is not, since its footprint is only one tile
+   * wide and there's nowhere else to route around it.
+   */
+  private ladders: { sprite: Phaser.GameObjects.Image; tileX: number; tileY: number }[] = [];
+  private static readonly LADDER_OCCLUDED_ALPHA = 0.35;
 
   constructor() {
     super("World");
@@ -340,10 +351,16 @@ export class WorldScene extends Phaser.Scene {
     // Props are anchored like everything else, so tall ones (torches, carts)
     // lean up-left and sort correctly against the player walking past them.
     for (const prop of PROPS) {
-      this.add
+      const sprite = this.add
         .image(tileAnchorX(prop.x), tileAnchorY(prop.y), prop.textureKey)
         .setOrigin(1, 1)
         .setDepth(depthForTileY(prop.y));
+      // Ladders are two tiles tall and only one tile wide — there's no way
+      // to walk "around" one the way you can skirt a tree's canopy, so it
+      // fades instead of hiding the player standing behind it.
+      if (prop.textureKey === "ladder-up") {
+        this.ladders.push({ sprite, tileX: prop.x, tileY: prop.y });
+      }
     }
 
     for (const sign of SIGNS) {
@@ -519,6 +536,7 @@ export class WorldScene extends Phaser.Scene {
     }
 
     this.dayNight.update(delta, this.player.tile);
+    this.updateLadderOcclusion();
 
     this.debug.update(this.player.tile, {
       mobs: this.monsters.filter((m) => m.alive).length,
@@ -794,6 +812,22 @@ export class WorldScene extends Phaser.Scene {
         this.emitPlayerStats();
       },
     });
+  }
+
+  /**
+   * A ladder is anchored at its base tile and stands two tiles tall, so it
+   * visually covers the tile directly north of that base. Checked every
+   * frame (cheap — there are only ever a handful of ladders) rather than
+   * only after a step, so it also catches the player arriving there by
+   * teleport (climbing up lands the player one tile from a different
+   * ladder's covered tile in general, but nothing guarantees that never
+   * coincides).
+   */
+  private updateLadderOcclusion() {
+    for (const ladder of this.ladders) {
+      const behind = this.player.tileX === ladder.tileX && this.player.tileY === ladder.tileY - 1;
+      ladder.sprite.setAlpha(behind ? WorldScene.LADDER_OCCLUDED_ALPHA : 1);
+    }
   }
 
   /**
