@@ -123,11 +123,6 @@ b.rect(45, 14, 1, 3, "D"); // east side mirror
 b.rect(34, 24, 2, 2, "P");
 export const TEMPLE_SPAWN = { x: 34, y: 26 }; // one tile south of the church door
 
-// TEMP: a tree just outside the church door, for verifying the PWA
-// auto-update actually lands a visible change on next load. Remove once
-// that's confirmed.
-b.set(39, 26, "t");
-
 // Short spur north connecting the forge street to the upper road.
 b.rect(30, 18, 5, 1, "R");
 
@@ -433,8 +428,13 @@ export const PROPS: PropPlacement[] = [
   { textureKey: "well", x: 30, y: 22, blocks: true },
   // A planter tucked between the well and the church's north-west corner.
   { textureKey: "planter", x: 31, y: 22, blocks: true },
-  // A bench on the south branch by the church, opposite the door.
-  { textureKey: "bench", x: 37, y: 26, blocks: true },
+  // A bench on the grass verge north of the E-W road, east of the church —
+  // off the open square in front of the door (where it used to block the
+  // direct line between the spawn point and the shops) and onto the road's
+  // own shoulder instead. The sprite is drawn back-north/seat-south, so
+  // sitting just above the road means it already faces the right way
+  // without needing a rotated variant.
+  { textureKey: "bench", x: 37, y: 23, blocks: true },
   // Two torches on the grass strip immediately south of the church door,
   // one either side of the doorway. They light the safe zone at night
   // without blocking the E-W spine.
