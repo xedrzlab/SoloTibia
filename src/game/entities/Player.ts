@@ -68,6 +68,10 @@ export class Player {
   attackIntervalMs = BASE_ATTACK_INTERVAL_MS;
   attackCooldown = 0;
 
+  /** Heal-over-time owed from eaten food (cheese etc.) — see addFoodRegen(). */
+  foodRegenAmountRemaining = 0;
+  foodRegenMsRemaining = 0;
+
   constructor(
     private scene: Phaser.Scene,
     tileX: number,
@@ -288,6 +292,12 @@ export class Player {
 
   heal(amount: number) {
     this.hp = Math.min(this.maxHp, this.hp + amount);
+  }
+
+  /** Queue food's heal-over-time: stacks with whatever's already owed rather than replacing it. */
+  addFoodRegen(totalHeal: number, durationMs: number) {
+    this.foodRegenAmountRemaining += totalHeal;
+    this.foodRegenMsRemaining += durationMs;
   }
 
   restoreMana(amount: number) {

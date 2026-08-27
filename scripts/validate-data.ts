@@ -35,6 +35,16 @@ for (const [id, item] of Object.entries(ITEMS)) {
   if (item.twoHanded && item.equipSlot !== "left") {
     fail(`${tag}: twoHanded set but equipSlot is "${item.equipSlot}", not "left"`);
   }
+  if (item.regenSeconds !== undefined && item.regenSeconds <= 0) fail(`${tag}: regenSeconds must be positive`);
+  if (item.regenPercentOfMaxHp !== undefined && (item.regenPercentOfMaxHp <= 0 || item.regenPercentOfMaxHp > 1)) {
+    fail(`${tag}: regenPercentOfMaxHp must be in (0, 1]`);
+  }
+  if ((item.regenSeconds !== undefined) !== (item.regenPercentOfMaxHp !== undefined)) {
+    fail(`${tag}: regenSeconds and regenPercentOfMaxHp must be set together`);
+  }
+  if ((item.regenSeconds !== undefined || item.healAmount !== undefined) && item.kind !== "consumable") {
+    fail(`${tag}: heals but kind is "${item.kind}", not "consumable"`);
+  }
   if (item.kind === "equipment" && !item.equipSlot) {
     fail(`${tag}: kind is "equipment" but has no equipSlot`);
   }

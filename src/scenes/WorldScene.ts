@@ -650,10 +650,23 @@ export class WorldScene extends Phaser.Scene {
     const player = this.player;
     const healedHp = player.hp < player.maxHp;
     const healedMana = player.mana < player.maxMana;
-    if (!healedHp && !healedMana) return;
+    const hasFoodRegen = player.foodRegenMsRemaining > 0;
+    if (!healedHp && !healedMana && !hasFoodRegen) return;
 
     player.heal(Math.max(1, Math.floor(player.maxHp * HP_REGEN_FRACTION)));
     player.restoreMana(Math.max(1, Math.floor(player.maxMana * MANA_REGEN_FRACTION)));
+
+    if (hasFoodRegen) {
+      // Spread whatever's still owed evenly over the ticks left, so it lands
+      // on exactly 0 remaining at exactly 0 ms remaining regardless of how
+      // many times more food gets eaten in between.
+      const ticksLeft = Math.ceil(player.foodRegenMsRemaining / REGEN_INTERVAL_MS);
+      const thisTick = Math.ceil(player.foodRegenAmountRemaining / ticksLeft);
+      player.heal(thisTick);
+      player.foodRegenAmountRemaining = Math.max(0, player.foodRegenAmountRemaining - thisTick);
+      player.foodRegenMsRemaining = Math.max(0, player.foodRegenMsRemaining - REGEN_INTERVAL_MS);
+    }
+
     this.emitPlayerStats();
   }
 
@@ -1386,6 +1399,10 @@ export class WorldScene extends Phaser.Scene {
     if (item.manaAmount) {
       this.player.restoreMana(item.manaAmount);
       this.floatText(this.spriteCenterX(this.player.sprite), this.spriteTopY(this.player.sprite) - 14, `+${item.manaAmount} mp`, "#7cc8ff");
+    }
+    if (item.regenSeconds && item.regenPercentOfMaxHp) {
+      const totalHeal = Math.round(this.player.maxHp * item.regenPercentOfMaxHp);
+      this.player.addFoodRegen(totalHeal, item.regenSeconds * 1000);
     }
 
     this.log("info", `You use a ${item.name}.`);

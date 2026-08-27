@@ -3,7 +3,7 @@
 // attack/defense/armor, how much they weigh against carry capacity, and (for
 // bags and backpacks) how many slots they hold.
 
-export type ItemKind = "consumable" | "currency" | "equipment" | "container" | "ammo" | "misc";
+export type ItemKind = "consumable" | "currency" | "equipment" | "container" | "ammo";
 
 /** The ten Tibia paper-doll slots, laid out 3-wide in the sidebar. */
 export type EquipSlot = "head" | "neck" | "back" | "armor" | "left" | "right" | "legs" | "feet" | "ring" | "ammo";
@@ -20,6 +20,14 @@ export interface ItemDef {
   weight: number;
   healAmount?: number;
   manaAmount?: number;
+  /**
+   * Heal-over-time food, distinct from healAmount's instant potion heal:
+   * eating restores regenPercentOfMaxHp of max HP spread evenly across
+   * regenSeconds (see Player.addFoodRegen / WorldScene.regenerate). Always
+   * set together.
+   */
+  regenSeconds?: number;
+  regenPercentOfMaxHp?: number;
   equipSlot?: EquipSlot;
   weaponType?: WeaponType;
   attack?: number;
@@ -53,9 +61,11 @@ export const ITEMS: Record<string, ItemDef> = {
     id: "cheese",
     name: "Cheese",
     textureKey: "cheese",
-    kind: "misc",
+    kind: "consumable",
     stackable: true,
-    weight: 6,
+    weight: 4,
+    regenSeconds: 108,
+    regenPercentOfMaxHp: 0.09,
   },
   health_potion: {
     id: "health_potion",
