@@ -1849,257 +1849,474 @@ function buildingGuardPost() {
 }
 
 // ---------------------------------------------------------------------------
-// Unique house variants — each has its own wall material, roof style, window
-// shape, and detailing so the town doesn't look copy-pasted.
+// Unique house variants — each is a different SIZE and SHAPE, not just a
+// repaint. Varying footprints (2-wide, 3-wide, 4-wide, 5-wide), roof
+// pitches (steep A-frame, shallow, flat, asymmetric), wall construction
+// (horizontal logs, stacked stone, brick coursing, timber-frame, plaster),
+// and window types.
 // ---------------------------------------------------------------------------
 
-// Additional palette families for the new buildings.
-const ROOF_MOSS = { dark: "#2a4020", mid: "#3a5a2a", light: "#4a6a35", hi: "#6a8a50" };
 const WALL_BRICK = { dark: "#5a2820", mid: "#8a3c2a", light: "#a84e38", trim: "#3a1a10" };
 const WALL_TIMBER = { dark: "#2a1a0c", mid: "#3a2812", light: "#4a3520", trim: "#1a0e06" };
-const WALL_BLUESTONE = { dark: "#2a3040", mid: "#3e4a5c", light: "#566478", trim: "#1c2230" };
-const WALL_WARM_PLASTER = { dark: "#7a6040", mid: "#b89868", light: "#d4b480", trim: "#5a3a1a" };
-const WALL_SHINGLE = { dark: "#3a4838", mid: "#506850", light: "#688068", trim: "#2a3428" };
+const WALL_LOG = { dark: "#3a2810", mid: "#5a4020", light: "#6a5030", trim: "#2a1a08" };
 const WALL_FIELDSTONE = { dark: "#484440", mid: "#686460", light: "#888078", trim: "#383430" };
+const WALL_WARM = { dark: "#7a6040", mid: "#b89868", light: "#d4b480", trim: "#5a3a1a" };
+const ROOF_MOSS = { dark: "#2a4020", mid: "#3a5a2a", light: "#4a6a35", hi: "#6a8a50" };
 
-/** Timber-frame house: dark oak beams over white plaster, steep slate roof, diamond-pane window. */
-function buildingTimber() {
-  const s = buildingBase({ roof: ROOF_SLATE, wall: WALL_PLASTER });
+/**
+ * Timber hall — 4 tiles wide (64x56). Long building with timber-frame walls,
+ * a shallow-pitched slate roof, a row of three windows and a door at one end.
+ */
+function buildingTimberHall() {
+  const W = 64, H = 56;
+  const s = new Sprite(W, H);
+  const wall = WALL_PLASTER;
+  const trim = WALL_TIMBER;
+  const roof = ROOF_SLATE;
+  const wallY = 30, foundY = 45, groundY = 52;
 
-  // Heavy timber framing — the defining feature. Vertical posts at each third,
-  // a horizontal rail mid-wall, and diagonal braces in the upper panels.
-  const trim = WALL_TIMBER.mid;
-  const trimD = WALL_TIMBER.dark;
-  // Verticals
-  for (const x of [3, 15, 32, BUILDING_W - 4]) {
-    s.fillRect(x, 30, 2, 15, trim);
-    s.fillRect(x + 1, 30, 1, 15, trimD);
+  // Ground shadow
+  s.fillRect(4, groundY, W - 6, 2, "#14110f");
+  s.fillRect(6, groundY + 2, W - 8, 1, "#1a1712");
+  // Foundation
+  s.fillRect(3, foundY, W - 6, groundY - foundY, WALL_STONE.dark);
+  for (let x = 4; x < W - 6; x += 7) {
+    s.fillRect(x, foundY + 1, 5, 3, WALL_STONE.mid);
+    s.fillRect(x, foundY + 1, 5, 1, WALL_STONE.light);
   }
-  // Horizontal rail
-  s.fillRect(3, 37, BUILDING_W - 6, 2, trim);
-  s.fillRect(3, 38, BUILDING_W - 6, 1, trimD);
-  // Diagonal braces in the two outer panels
-  for (let i = 0; i < 6; i++) {
-    s.setPixel(5 + i * 2, 31 + i, trimD);
-    s.setPixel(6 + i * 2, 31 + i, trim);
-    s.setPixel(43 - i * 2, 31 + i, trimD);
-    s.setPixel(42 - i * 2, 31 + i, trim);
+  // Front wall — white plaster
+  s.fillRect(3, wallY, W - 6, foundY - wallY, wall.mid);
+  s.fillRect(3, wallY, 2, foundY - wallY, wall.light);
+  s.fillRect(W - 5, wallY, 2, foundY - wallY, wall.dark);
+  s.speckleRect(5, wallY + 2, W - 12, foundY - wallY - 3, 30, wall.dark, 71);
+
+  // Timber framing — vertical posts + horizontal rails
+  for (const x of [3, 18, 33, 48, W - 4]) {
+    s.fillRect(x, wallY, 2, foundY - wallY, trim.mid);
+    s.fillRect(x + 1, wallY, 1, foundY - wallY, trim.dark);
   }
+  s.fillRect(3, 37, W - 6, 2, trim.mid);
+  s.fillRect(3, 38, W - 6, 1, trim.dark);
 
-  drawDoor(s, 24, 33, 45);
-
-  // Diamond-pane window — a grid of small panes at a 45° slant.
-  s.fillRect(35, 34, 8, 6, DOOR_WOOD.dark);
-  s.fillRect(36, 35, 6, 4, GLASS.dark);
-  s.fillRect(36, 35, 6, 1, GLASS.sheen);
-  // Diamond lattice
-  for (let dx = 0; dx < 6; dx += 2) {
-    s.setPixel(36 + dx, 37, "#4a3520");
-    s.setPixel(37 + dx, 36, "#4a3520");
+  // Shallow roof — ridge sits higher (less slope), only 8px from top
+  const ridgeY = 8, eaveY = 28;
+  s.fillRect(2, eaveY, W - 4, 2, roof.dark);
+  s.fillRect(3, wallY, W - 6, 1, "#1a1512");
+  s.fillRect(2, ridgeY, W - 4, eaveY - ridgeY, roof.mid);
+  for (let y = ridgeY + 5; y < eaveY; y += 5) {
+    s.line(2, y, W - 3, y, roof.dark);
+    s.line(2, y + 1, W - 3, y + 1, roof.light);
   }
+  s.fillRect(2, ridgeY, 14, eaveY - ridgeY, roof.light);
+  s.fillRect(W - 10, ridgeY, 8, eaveY - ridgeY, roof.dark);
+  s.fillRect(2, ridgeY - 1, W - 4, 2, roof.dark);
+  s.fillRect(3, ridgeY - 1, W - 10, 1, roof.hi);
 
-  // Small flower box below the window
-  s.fillRect(35, 40, 8, 2, WALL_PLASTER.trim);
-  s.fillRect(36, 40, 2, 1, "#3f9450");
-  s.fillRect(39, 40, 2, 1, "#c85050");
-  s.fillRect(41, 40, 1, 1, "#3f9450");
+  // Three windows across — evenly spaced
+  drawWindow(s, 7, 33, 6, 6, null);
+  drawWindow(s, 23, 33, 6, 6, null);
+  drawWindow(s, 39, 33, 6, 6, null);
 
-  // No chimney — the timber-frame look stands on its own.
+  // Door at the right end
+  drawDoor(s, 54, 33, 45);
+
+  // Chimney left
+  s.fillRect(6, 2, 6, 8, WALL_STONE.dark);
+  s.fillRect(7, 3, 4, 6, WALL_STONE.mid);
+  s.fillRect(5, 2, 8, 2, WALL_STONE.light);
   return s;
 }
 
-/** Brick house: warm red brick walls, flat grey roof, arched window with iron grille. */
-function buildingBrick() {
-  const s = buildingBase({ roof: ROOF_SLATE, wall: WALL_BRICK });
+/**
+ * Tower house — 2 tiles wide, 3 tall (32x64). Narrow stone tower with a
+ * steep pointed roof, arrow-slit window, heavy studded door.
+ */
+function buildingTowerHouse() {
+  const W = 32, H = 64;
+  const s = new Sprite(W, H);
+  const wall = WALL_STONE;
+  const roof = ROOF_SLATE;
+  const wallY = 30, foundY = 52, groundY = 60;
 
-  // Brick coursing on the front wall — alternating half-bond pattern.
-  for (let y = 31; y < 45; y += 3) {
-    s.line(4, y, BUILDING_W - 5, y, WALL_BRICK.dark);
-    const off = ((y / 3) % 2) * 4;
-    for (let x = 6 + off; x < BUILDING_W - 5; x += 8) {
-      s.line(x, y, x, Math.min(y + 2, 44), WALL_BRICK.dark);
+  // Ground shadow
+  s.fillRect(3, groundY, W - 4, 2, "#14110f");
+  s.fillRect(4, groundY + 2, W - 6, 1, "#1a1712");
+  // Foundation
+  s.fillRect(2, foundY, W - 4, groundY - foundY, wall.dark);
+  for (let x = 3; x < W - 4; x += 6) {
+    s.fillRect(x, foundY + 1, 4, 3, wall.mid);
+    s.fillRect(x, foundY + 1, 4, 1, wall.light);
+  }
+  // Wall — coursed stone blocks
+  s.fillRect(2, wallY, W - 4, foundY - wallY, wall.mid);
+  s.fillRect(2, wallY, 2, foundY - wallY, wall.light);
+  s.fillRect(W - 4, wallY, 2, foundY - wallY, wall.dark);
+  for (let y = wallY + 3; y < foundY; y += 4) {
+    s.line(3, y, W - 4, y, wall.dark);
+    for (let x = 4 + ((y / 4) % 2) * 4; x < W - 4; x += 8) {
+      s.line(x, y, x, Math.min(y + 3, foundY - 1), wall.dark);
     }
   }
-  // Highlight a few individual bricks for variety
-  s.fillRect(8, 32, 3, 2, WALL_BRICK.light);
-  s.fillRect(28, 35, 3, 2, WALL_BRICK.light);
-  s.fillRect(16, 41, 3, 2, WALL_BRICK.light);
 
-  drawDoor(s, 20, 33, 45);
+  // Steep pointed roof — tall triangle
+  const ridgeY = 2, eaveY = 28;
+  s.fillRect(1, eaveY, W - 2, 2, roof.dark);
+  s.fillRect(2, wallY, W - 4, 1, "#1a1512");
+  // Fill the triangular area
+  for (let y = ridgeY; y < eaveY; y++) {
+    const progress = (y - ridgeY) / (eaveY - ridgeY);
+    const halfW = Math.floor(progress * (W / 2 - 2));
+    const cx = Math.floor(W / 2);
+    s.fillRect(cx - halfW, y, halfW * 2 + 1, 1, roof.mid);
+    if (y % 4 === 0) s.fillRect(cx - halfW, y, halfW * 2 + 1, 1, roof.dark);
+    if (y % 4 === 1) s.fillRect(cx - halfW, y, halfW * 2 + 1, 1, roof.light);
+    if (halfW > 3) s.fillRect(cx - halfW, y, 3, 1, roof.light);
+  }
+  // Pointed cap
+  s.setPixel(Math.floor(W / 2), ridgeY - 1, roof.dark);
+  s.setPixel(Math.floor(W / 2), ridgeY, roof.dark);
 
-  // Arched window with iron grille
-  s.fillRect(32, 33, 10, 9, WALL_BRICK.dark);
-  s.fillRect(33, 34, 8, 7, GLASS.dark);
-  s.fillRect(33, 34, 8, 1, GLASS.sheen);
-  // Arch top — darken the corners
-  s.setPixel(33, 34, WALL_BRICK.dark);
-  s.setPixel(40, 34, WALL_BRICK.dark);
-  // Iron grille
-  s.line(37, 34, 37, 40, "#3a3a3a");
-  s.line(33, 37, 40, 37, "#3a3a3a");
+  // Arrow slit — narrow vertical window
+  s.fillRect(13, 35, 4, 10, wall.dark);
+  s.fillRect(14, 36, 2, 8, GLASS.dark);
+  s.fillRect(14, 36, 1, 2, GLASS.sheen);
 
-  // Decorative stone lintel above the door
-  s.fillRect(15, 32, 11, 1, WALL_STONE.light);
-  s.fillRect(15, 31, 11, 1, WALL_STONE.mid);
-
-  // Short chimney, right side
-  s.fillRect(36, 0, 6, 8, WALL_BRICK.dark);
-  s.fillRect(37, 1, 4, 6, WALL_BRICK.mid);
-  s.fillRect(37, 1, 1, 6, WALL_BRICK.light);
-  s.fillRect(35, 0, 8, 2, WALL_BRICK.mid);
-  s.fillRect(38, 2, 2, 1, "#0f0d0c");
+  // Heavy studded door — narrower
+  const dx = 9, dw = 12;
+  s.fillRect(dx - 1, 40, dw + 2, foundY - 40, DOOR_WOOD.dark);
+  s.fillRect(dx, 41, dw, foundY - 41, DOOR_WOOD.mid);
+  s.fillRect(dx, 41, 1, foundY - 41, DOOR_WOOD.light);
+  // Iron studs
+  for (let sy = 43; sy < foundY - 2; sy += 4) {
+    s.setPixel(dx + 2, sy, "#5a5a5a");
+    s.setPixel(dx + dw - 3, sy, "#5a5a5a");
+  }
+  s.setPixel(dx + dw - 4, 46, "#c9a24a"); // handle
   return s;
 }
 
-/** Manor house: blue-grey stone, dark slate roof, two tall windows, a flower box. */
-function buildingManor() {
-  const s = buildingBase({ roof: ROOF_SLATE, wall: WALL_BLUESTONE });
+/**
+ * Log cabin — 3x3 but with a steep A-frame thatch roof that rises well above
+ * the standard roofline, and horizontal log walls instead of plaster.
+ */
+function buildingLogCabin() {
+  const W = 48, H = 62;
+  const s = new Sprite(W, H);
+  const log = WALL_LOG;
+  const roof = ROOF_THATCH;
+  const wallY = 34, foundY = 50, groundY = 58;
 
-  // Quoins — cut stone corner blocks
-  for (let y = 30; y < 45; y += 4) {
-    s.fillRect(3, y, 3, 3, WALL_BLUESTONE.light);
-    s.fillRect(BUILDING_W - 6, y, 3, 3, WALL_BLUESTONE.light);
+  // Ground shadow
+  s.fillRect(4, groundY, W - 6, 2, "#14110f");
+  s.fillRect(6, groundY + 2, W - 8, 1, "#1a1712");
+  // Foundation — rough stone
+  s.fillRect(3, foundY, W - 6, groundY - foundY, WALL_STONE.dark);
+  for (let x = 4; x < W - 6; x += 7) {
+    s.fillRect(x, foundY + 1, 5, 3, WALL_STONE.mid);
   }
 
-  // Two tall paired windows
-  drawWindow(s, 6, 33, 6, 8, null);
-  drawWindow(s, 34, 33, 6, 8, null);
-  // Stone sills
-  s.fillRect(5, 41, 8, 1, WALL_BLUESTONE.light);
-  s.fillRect(33, 41, 8, 1, WALL_BLUESTONE.light);
+  // Log walls — horizontal round logs with notched corners
+  s.fillRect(3, wallY, W - 6, foundY - wallY, log.mid);
+  for (let y = wallY; y < foundY; y += 3) {
+    s.fillRect(3, y, W - 6, 1, log.light);
+    s.fillRect(3, y + 2, W - 6, 1, log.dark);
+  }
+  // Notched log ends at corners
+  for (let y = wallY; y < foundY; y += 3) {
+    s.fillRect(1, y, 3, 2, log.mid);
+    s.fillRect(1, y, 3, 1, log.light);
+    s.fillRect(W - 4, y, 3, 2, log.mid);
+    s.fillRect(W - 4, y, 3, 1, log.dark);
+  }
 
-  drawDoor(s, 22, 33, 45);
+  // Steep A-frame roof — triangle reaches almost to the top
+  const ridgeY = 2, eaveY = 32;
+  s.fillRect(0, eaveY, W, 2, roof.dark);
+  for (let y = ridgeY; y < eaveY; y++) {
+    const progress = (y - ridgeY) / (eaveY - ridgeY);
+    const halfW = Math.floor(progress * (W / 2));
+    const cx = Math.floor(W / 2);
+    s.fillRect(cx - halfW, y, halfW * 2 + 1, 1, roof.mid);
+  }
+  s.speckleRect(4, ridgeY + 2, W - 8, eaveY - ridgeY - 4, 80, roof.dark, 91);
+  s.speckleRect(4, ridgeY + 2, W - 8, eaveY - ridgeY - 4, 50, roof.hi, 92);
+  // Brighten the left face
+  for (let y = ridgeY; y < eaveY; y++) {
+    const progress = (y - ridgeY) / (eaveY - ridgeY);
+    const halfW = Math.floor(progress * (W / 2));
+    const cx = Math.floor(W / 2);
+    s.fillRect(cx - halfW, y, Math.min(6, halfW), 1, roof.light);
+  }
+  // Ridge cap
+  s.setPixel(W / 2, ridgeY, roof.dark);
+  s.fillRect(W / 2 - 1, ridgeY + 1, 3, 1, roof.dark);
 
-  // Decorative keystone above the door
-  s.fillRect(18, 31, 9, 2, WALL_BLUESTONE.light);
-  s.fillRect(21, 30, 3, 1, WALL_BLUESTONE.light);
+  drawDoor(s, 24, 37, 50);
 
-  // Chimney — offset left
-  s.fillRect(8, 0, 7, 10, WALL_BLUESTONE.dark);
-  s.fillRect(9, 1, 5, 8, WALL_BLUESTONE.mid);
-  s.fillRect(9, 1, 2, 8, WALL_BLUESTONE.light);
-  s.fillRect(7, 0, 9, 2, WALL_BLUESTONE.light);
-  s.fillRect(10, 2, 3, 2, "#0f0d0c");
+  // Single square window with wooden shutters
+  s.fillRect(6, 38, 8, 7, DOOR_WOOD.dark);
+  s.fillRect(7, 39, 6, 5, GLASS.dark);
+  s.fillRect(7, 39, 2, 1, GLASS.sheen);
+  s.line(10, 39, 10, 43, DOOR_WOOD.dark);
+  // Wooden shutters
+  s.fillRect(4, 38, 2, 7, log.mid);
+  s.fillRect(14, 38, 2, 7, log.mid);
 
-  // Flower box below one window
-  s.fillRect(6, 42, 6, 2, WALL_TIMBER.mid);
-  s.fillRect(7, 42, 1, 1, "#c85050");
-  s.fillRect(9, 42, 1, 1, "#e0a040");
-  s.fillRect(10, 42, 1, 1, "#c85050");
+  // Smoke hole in the A-frame (no chimney — rustic)
+  s.fillRect(22, ridgeY + 6, 4, 3, "#0f0d0c");
   return s;
 }
 
-/** Warm plaster house: yellow/cream stucco, terracotta roof, round porthole window. */
-function buildingWarmPlaster() {
-  const s = buildingBase({ roof: ROOF_CLAY, wall: WALL_WARM_PLASTER });
+/**
+ * Workshop — 3x3 with a FLAT roof (low parapet instead of pitched), stone
+ * block walls, wide double doors, a pulley beam jutting out from the wall.
+ */
+function buildingWorkshop() {
+  const W = 48, H = 50;
+  const s = new Sprite(W, H);
+  const wall = WALL_STONE;
+  const wallY = 12, foundY = 38, groundY = 46;
 
-  // Smooth stucco look — fewer speckles, more uniform.
-  s.fillRect(5, 31, BUILDING_W - 10, 13, WALL_WARM_PLASTER.mid);
-  s.speckleRect(5, 31, BUILDING_W - 10, 13, 10, WALL_WARM_PLASTER.dark, 55);
-  s.fillRect(3, 30, 2, 15, WALL_WARM_PLASTER.light);
-  s.fillRect(BUILDING_W - 5, 30, 2, 15, WALL_WARM_PLASTER.dark);
+  // Ground shadow
+  s.fillRect(4, groundY, W - 6, 2, "#14110f");
+  s.fillRect(6, groundY + 2, W - 8, 1, "#1a1712");
+  // Foundation
+  s.fillRect(3, foundY, W - 6, groundY - foundY, wall.dark);
+  for (let x = 4; x < W - 6; x += 7) {
+    s.fillRect(x, foundY + 1, 5, 3, wall.mid);
+    s.fillRect(x, foundY + 1, 5, 1, wall.light);
+  }
 
-  drawDoor(s, 18, 33, 45);
+  // Wall — coursed stone
+  s.fillRect(3, wallY, W - 6, foundY - wallY, wall.mid);
+  s.fillRect(3, wallY, 2, foundY - wallY, wall.light);
+  s.fillRect(W - 5, wallY, 2, foundY - wallY, wall.dark);
+  for (let y = wallY + 3; y < foundY; y += 4) {
+    s.line(4, y, W - 5, y, wall.dark);
+    for (let x = 5 + ((y / 4) % 2) * 5; x < W - 5; x += 10) {
+      s.line(x, y, x, Math.min(y + 3, foundY - 1), wall.dark);
+    }
+  }
 
-  // Porthole window — circular, with a simple cross mullion
-  const pCx = 36, pCy = 37;
-  s.fillCircle(pCx, pCy, 4.5, DOOR_WOOD.dark);
-  s.fillCircle(pCx, pCy, 3.5, GLASS.dark);
-  s.fillCircle(pCx, pCy, 3, "#2a3a50");
-  s.setPixel(pCx - 1, pCy - 1, GLASS.sheen);
-  s.setPixel(pCx, pCy - 1, GLASS.sheen);
-  // Cross mullion
-  s.line(pCx, pCy - 3, pCx, pCy + 3, DOOR_WOOD.dark);
-  s.line(pCx - 3, pCy, pCx + 3, pCy, DOOR_WOOD.dark);
+  // Flat roof — just a dark parapet along the top
+  s.fillRect(2, wallY - 3, W - 4, 4, wall.dark);
+  s.fillRect(3, wallY - 3, W - 6, 1, wall.light); // lit top edge
+  // Crenellation-style notches for interest
+  for (let x = 6; x < W - 6; x += 8) {
+    s.fillRect(x, wallY - 3, 4, 2, wall.mid);
+    s.fillRect(x, wallY - 3, 4, 1, wall.light);
+  }
 
-  // Terracotta pot beside the door
-  s.fillRect(10, 43, 3, 2, "#8a4020");
-  s.fillRect(10, 42, 3, 1, "#3f9450");
-  s.fillRect(11, 41, 1, 1, "#50a060");
+  // Wide double doors
+  const dLeft = 15, dW = 18;
+  s.fillRect(dLeft - 1, 22, dW + 2, foundY - 22, DOOR_WOOD.dark);
+  s.fillRect(dLeft, 23, dW, foundY - 23, DOOR_WOOD.mid);
+  s.fillRect(dLeft, 23, 1, foundY - 23, DOOR_WOOD.light);
+  s.line(dLeft + dW / 2, 23, dLeft + dW / 2, foundY - 1, DOOR_WOOD.dark);
+  // Iron banding
+  s.line(dLeft, 28, dLeft + dW - 1, 28, "#3a3a3a");
+  s.line(dLeft, 33, dLeft + dW - 1, 33, "#3a3a3a");
+  // Handles
+  s.setPixel(dLeft + dW / 2 - 2, 30, "#c9a24a");
+  s.setPixel(dLeft + dW / 2 + 2, 30, "#c9a24a");
 
-  // Small awning above the door
-  s.fillRect(13, 32, 11, 1, ROOF_CLAY.dark);
-  s.fillRect(13, 31, 11, 1, ROOF_CLAY.mid);
-  s.fillRect(14, 31, 4, 1, ROOF_CLAY.light);
+  // Small window beside the door
+  drawWindow(s, 37, 25, 6, 6, null);
+
+  // Pulley beam jutting out above the door
+  s.fillRect(22, wallY - 6, 3, 4, WALL_TIMBER.mid);
+  s.fillRect(22, wallY - 6, 1, 4, WALL_TIMBER.light);
+  s.setPixel(23, wallY - 7, "#5a5a5a"); // pulley wheel
+  s.line(23, wallY - 7, 23, wallY - 4, "#3a3a3a"); // rope
   return s;
 }
 
-/** Shingle house: green-grey weathered wood siding, brown shingled roof, wide window. */
-function buildingShingle() {
-  const s = buildingBase({ roof: ROOF_THATCH, wall: WALL_SHINGLE });
+/**
+ * Farmhouse — 5 tiles wide (80x56). A long, low building with a stone base
+ * and timber-frame upper section, thatched roof, multiple windows and a
+ * door offset to one side. Reads as two houses joined together.
+ */
+function buildingFarmhouse() {
+  const W = 80, H = 56;
+  const s = new Sprite(W, H);
+  const roof = ROOF_THATCH;
+  const wallY = 30, foundY = 45, groundY = 52;
 
-  // Horizontal wood planks — clapboard siding effect
-  for (let y = 31; y < 45; y += 3) {
-    s.line(4, y, BUILDING_W - 5, y, WALL_SHINGLE.dark);
-    s.line(4, y + 1, BUILDING_W - 5, y + 1, WALL_SHINGLE.light);
+  // Ground shadow
+  s.fillRect(4, groundY, W - 6, 2, "#14110f");
+  s.fillRect(6, groundY + 2, W - 8, 1, "#1a1712");
+  // Foundation — heavy stone base
+  s.fillRect(3, foundY, W - 6, groundY - foundY, WALL_STONE.dark);
+  for (let x = 4; x < W - 6; x += 7) {
+    s.fillRect(x, foundY + 1, 5, 3, WALL_STONE.mid);
+    s.fillRect(x, foundY + 1, 5, 1, WALL_STONE.light);
   }
 
-  // Thatch re-texture: looser straw feel
-  s.speckleRect(3, 3, BUILDING_W - 6, 24, 80, ROOF_THATCH.dark, 61);
-  s.speckleRect(3, 3, BUILDING_W - 6, 24, 45, ROOF_THATCH.hi, 62);
-  s.fillRect(2, 26, BUILDING_W - 4, 2, ROOF_THATCH.dark);
+  // Lower wall — stone base
+  s.fillRect(3, 38, W - 6, foundY - 38, WALL_STONE.mid);
+  s.fillRect(3, 38, 2, foundY - 38, WALL_STONE.light);
+  s.fillRect(W - 5, 38, 2, foundY - 38, WALL_STONE.dark);
+  for (let y = 39; y < foundY; y += 3) s.line(4, y, W - 5, y, WALL_STONE.dark);
 
-  drawDoor(s, 14, 33, 45);
-
-  // Wide shuttered window — green shutters match the walls
-  drawWindow(s, 28, 35, 10, 6, WALL_SHINGLE.mid);
-
-  // A small plank shelf below the window with items
-  s.fillRect(28, 41, 10, 1, WALL_SHINGLE.trim);
-  s.fillRect(29, 41, 2, 1, "#8a6a3d");
-  s.fillRect(35, 41, 2, 1, "#8a6a3d");
-
-  // Woodpile leaning against the right wall
-  for (let i = 0; i < 3; i++) {
-    s.fillRect(BUILDING_W - 8 + i, 43 - i, 2, 2 + i, WALL_TIMBER.mid);
-    s.fillRect(BUILDING_W - 8 + i, 43 - i, 1, 1, WALL_TIMBER.light);
+  // Upper wall — warm plaster with timber framing
+  s.fillRect(3, wallY, W - 6, 8, WALL_WARM.mid);
+  s.fillRect(3, wallY, 2, 8, WALL_WARM.light);
+  s.fillRect(W - 5, wallY, 2, 8, WALL_WARM.dark);
+  s.speckleRect(5, wallY + 1, W - 12, 6, 15, WALL_WARM.dark, 55);
+  // Timber frame dividers
+  s.fillRect(3, 37, W - 6, 1, WALL_TIMBER.mid); // horizontal rail
+  for (const x of [3, 20, 40, 60, W - 4]) {
+    s.fillRect(x, wallY, 2, 8, WALL_TIMBER.mid);
+    s.fillRect(x + 1, wallY, 1, 8, WALL_TIMBER.dark);
   }
+
+  // Roof — broad thatch, lower slope
+  const ridgeY = 6, eaveY = 28;
+  s.fillRect(1, eaveY, W - 2, 2, roof.dark);
+  s.fillRect(3, wallY, W - 6, 1, "#1a1512");
+  s.fillRect(2, ridgeY, W - 4, eaveY - ridgeY, roof.mid);
+  s.speckleRect(3, ridgeY + 1, W - 6, eaveY - ridgeY - 2, 90, roof.dark, 41);
+  s.speckleRect(3, ridgeY + 1, W - 6, eaveY - ridgeY - 2, 55, roof.hi, 42);
+  s.fillRect(2, ridgeY, 16, eaveY - ridgeY, roof.light);
+  s.fillRect(W - 10, ridgeY, 8, eaveY - ridgeY, roof.dark);
+  // Ragged bottom edge
+  for (let x = 2; x < W - 2; x += 3) s.setPixel(x, eaveY + 1, roof.dark);
+  // Ridge cap
+  s.fillRect(2, ridgeY - 1, W - 4, 2, roof.dark);
+  s.fillRect(3, ridgeY - 1, W - 10, 1, roof.hi);
+
+  // Four windows across
+  drawWindow(s, 6, 32, 6, 5, "#5a3d22");
+  drawWindow(s, 24, 32, 6, 5, null);
+  drawWindow(s, 46, 32, 6, 5, null);
+  drawWindow(s, 64, 32, 6, 5, "#5a3d22");
+
+  // Door offset to the left third
+  drawDoor(s, 36, 33, 45);
+
+  // Chimney offset right
+  s.fillRect(58, 0, 7, 10, WALL_STONE.dark);
+  s.fillRect(59, 1, 5, 8, WALL_STONE.mid);
+  s.fillRect(59, 1, 2, 8, WALL_STONE.light);
+  s.fillRect(57, 0, 9, 2, WALL_STONE.light);
+  s.fillRect(60, 2, 3, 2, "#0f0d0c");
+
+  // Second chimney left (reads as two homes joined)
+  s.fillRect(10, 0, 6, 8, WALL_STONE.dark);
+  s.fillRect(11, 1, 4, 6, WALL_STONE.mid);
+  s.fillRect(9, 0, 8, 2, WALL_STONE.light);
+  s.fillRect(12, 2, 2, 1, "#0f0d0c");
   return s;
 }
 
-/** Fieldstone cottage: rough stacked fieldstone walls, mossy thatch roof, slot window. */
-function buildingFieldstone() {
-  const s = buildingBase({ roof: ROOF_MOSS, wall: WALL_FIELDSTONE });
+/**
+ * L-house — an L-shaped building built as a 4x4 footprint. The sprite shows
+ * the rooflines of the two wings meeting at a right angle, with a courtyard
+ * gap in one corner (that corner is still blocked because the footprint is
+ * rectangular, but the visual reads as an L).
+ *
+ * Wing A runs the full width (4 tiles), wing B extends south on the right
+ * side (2 tiles wide). The empty corner at bottom-left has a small porch
+ * / covered area with barrels, making it look like a private yard.
+ */
+function buildingLHouse() {
+  const W = 64, H = 72;
+  const s = new Sprite(W, H);
+  const wall = WALL_BRICK;
+  const roof = ROOF_CLAY;
 
-  // Mossy thatch re-texture
-  s.fillRect(2, 3, BUILDING_W - 4, 24, ROOF_MOSS.mid);
-  s.speckleRect(3, 3, BUILDING_W - 6, 24, 70, ROOF_MOSS.dark, 81);
-  s.speckleRect(3, 3, BUILDING_W - 6, 24, 50, ROOF_MOSS.light, 82);
-  s.speckleRect(3, 3, BUILDING_W - 6, 24, 25, ROOF_MOSS.hi, 83);
-  s.fillRect(2, 26, BUILDING_W - 4, 2, ROOF_MOSS.dark);
-  for (let x = 3; x < BUILDING_W - 3; x += 4) s.setPixel(x, 28, ROOF_MOSS.dark);
-  // Ridge cap — mossy
-  s.fillRect(2, 2, BUILDING_W - 4, 2, ROOF_MOSS.dark);
-  s.fillRect(3, 2, BUILDING_W - 10, 1, ROOF_MOSS.hi);
-
-  // Irregular fieldstone blocks on the wall face
-  const stones = [
-    [5, 31, 6, 3], [12, 31, 7, 4], [20, 31, 5, 3], [26, 31, 8, 4],
-    [35, 31, 6, 3], [5, 35, 7, 3], [13, 36, 6, 3], [20, 35, 8, 4],
-    [29, 36, 5, 3], [35, 35, 7, 3], [5, 39, 5, 4], [11, 40, 7, 3],
-    [19, 40, 6, 3], [26, 40, 8, 3], [35, 39, 7, 4],
-  ];
-  for (const [sx, sy, sw, sh] of stones) {
-    s.fillRect(sx, sy, sw, sh, WALL_FIELDSTONE.mid);
-    s.fillRect(sx, sy, sw, 1, WALL_FIELDSTONE.light);
-    s.fillRect(sx + sw - 1, sy, 1, sh, WALL_FIELDSTONE.dark);
+  // --- Wing A: the main front wing, spanning the full 4-tile width ---
+  const wAWallY = 30, wAFoundY = 44, wAGroundY = 48;
+  // Foundation
+  s.fillRect(3, wAFoundY, W - 6, wAGroundY - wAFoundY, WALL_STONE.dark);
+  for (let x = 4; x < W - 6; x += 7) {
+    s.fillRect(x, wAFoundY + 1, 5, 2, WALL_STONE.mid);
   }
+  // Wall — brick
+  s.fillRect(3, wAWallY, W - 6, wAFoundY - wAWallY, wall.mid);
+  s.fillRect(3, wAWallY, 2, wAFoundY - wAWallY, wall.light);
+  s.fillRect(W - 5, wAWallY, 2, wAFoundY - wAWallY, wall.dark);
+  for (let y = wAWallY + 2; y < wAFoundY; y += 3) {
+    s.line(4, y, W - 5, y, wall.dark);
+    const off = ((y / 3) % 2) * 4;
+    for (let x = 5 + off; x < W - 5; x += 8) {
+      s.line(x, y, x, Math.min(y + 2, wAFoundY - 1), wall.dark);
+    }
+  }
+  // Eave
+  s.fillRect(1, wAWallY - 2, W - 2, 2, roof.dark);
+  s.fillRect(3, wAWallY, W - 6, 1, "#1a1512");
+  // Roof
+  const ridgeAY = 6, eaveAY = wAWallY - 2;
+  s.fillRect(2, ridgeAY, W - 4, eaveAY - ridgeAY, roof.mid);
+  for (let y = ridgeAY + 3; y < eaveAY; y += 4) {
+    s.line(2, y, W - 3, y, roof.dark);
+    s.line(2, y + 1, W - 3, y + 1, roof.light);
+  }
+  s.fillRect(2, ridgeAY, 12, eaveAY - ridgeAY, roof.light);
+  s.fillRect(W - 10, ridgeAY, 8, eaveAY - ridgeAY, roof.dark);
+  s.fillRect(2, ridgeAY - 1, W - 4, 2, roof.dark);
+  s.fillRect(3, ridgeAY - 1, W - 10, 1, roof.hi);
 
-  drawDoor(s, 24, 34, 45);
+  // Windows on wing A
+  drawWindow(s, 6, 32, 6, 6, null);
+  drawWindow(s, 22, 32, 6, 6, null);
+  // Door on wing A left side
+  drawDoor(s, 42, 32, wAFoundY);
 
-  // Narrow slot window — simple and rustic
-  s.fillRect(8, 35, 4, 6, WALL_FIELDSTONE.dark);
-  s.fillRect(9, 36, 2, 4, GLASS.dark);
-  s.fillRect(9, 36, 1, 1, GLASS.sheen);
+  // --- Wing B: extends south from the right half ---
+  const wBLeft = 32, wBRight = W - 3;
+  const wBWallY = wAGroundY, wBFoundY = 60, wBGroundY = 68;
 
-  // Second slot window on the right
-  s.fillRect(37, 35, 4, 6, WALL_FIELDSTONE.dark);
-  s.fillRect(38, 36, 2, 4, GLASS.dark);
-  s.fillRect(38, 36, 1, 1, GLASS.sheen);
+  // Ground shadow for wing B
+  s.fillRect(wBLeft + 1, wBGroundY, wBRight - wBLeft - 1, 2, "#14110f");
+  // Foundation
+  s.fillRect(wBLeft, wBFoundY, wBRight - wBLeft, wBGroundY - wBFoundY, WALL_STONE.dark);
+  for (let x = wBLeft + 1; x < wBRight - 1; x += 7) {
+    s.fillRect(x, wBFoundY + 1, 5, 2, WALL_STONE.mid);
+  }
+  // Wall
+  s.fillRect(wBLeft, wBWallY, wBRight - wBLeft, wBFoundY - wBWallY, wall.mid);
+  s.fillRect(wBLeft, wBWallY, 2, wBFoundY - wBWallY, wall.light);
+  s.fillRect(wBRight - 2, wBWallY, 2, wBFoundY - wBWallY, wall.dark);
+  for (let y = wBWallY + 2; y < wBFoundY; y += 3) {
+    s.line(wBLeft + 1, y, wBRight - 1, y, wall.dark);
+  }
+  // Wing B roof — perpendicular to wing A, shorter
+  const ridgeBY = wBWallY - 10, eaveBY = wBWallY;
+  s.fillRect(wBLeft - 1, eaveBY - 2, wBRight - wBLeft + 2, 2, roof.dark);
+  s.fillRect(wBLeft, ridgeBY, wBRight - wBLeft, eaveBY - ridgeBY - 2, roof.mid);
+  for (let y = ridgeBY + 3; y < eaveBY - 2; y += 4) {
+    s.line(wBLeft, y, wBRight, y, roof.dark);
+    s.line(wBLeft, y + 1, wBRight, y + 1, roof.light);
+  }
+  s.fillRect(wBLeft, ridgeBY, 6, eaveBY - ridgeBY - 2, roof.light);
+  s.fillRect(wBLeft, ridgeBY - 1, wBRight - wBLeft, 2, roof.dark);
+  s.fillRect(wBLeft + 1, ridgeBY - 1, wBRight - wBLeft - 6, 1, roof.hi);
 
-  // Moss patches at the base
-  s.fillRect(4, 44, 3, 1, ROOF_MOSS.mid);
-  s.fillRect(BUILDING_W - 7, 44, 3, 1, ROOF_MOSS.mid);
+  // Window on wing B
+  drawWindow(s, wBLeft + 6, wBWallY + 2, 6, 6, null);
+  // Door on wing B
+  drawDoor(s, wBLeft + 18, wBWallY + 2, wBFoundY);
+
+  // --- Courtyard in the empty L-corner (bottom-left) ---
+  // Covered porch — a small wooden awning from wing A's south wall
+  s.fillRect(5, wAGroundY - 2, 24, 2, WALL_TIMBER.mid);
+  s.fillRect(5, wAGroundY - 2, 24, 1, WALL_TIMBER.light);
+  // Support posts
+  s.fillRect(5, wAGroundY, 2, 8, WALL_TIMBER.mid);
+  s.fillRect(27, wAGroundY, 2, 8, WALL_TIMBER.mid);
+  // Courtyard dressing — barrels and crate under the porch
+  s.fillRect(9, wAGroundY + 2, 5, 4, "#5a3d22"); // barrel
+  s.fillRect(9, wAGroundY + 2, 5, 1, "#6a4a2a"); // barrel lit
+  s.fillRect(16, wAGroundY + 3, 4, 4, "#4a3a28"); // crate
+  s.fillRect(16, wAGroundY + 3, 4, 1, "#5a4a38"); // crate lit
+
+  // Chimney on wing A
+  s.fillRect(14, 0, 7, 8, wall.dark);
+  s.fillRect(15, 1, 5, 6, wall.mid);
+  s.fillRect(13, 0, 9, 2, wall.mid);
+  s.fillRect(16, 2, 3, 1, "#0f0d0c");
   return s;
 }
 
@@ -3051,12 +3268,12 @@ saveSprite(buildingCottage(), SCALE, `${OUT}/buildings/cottage_01.png`);
 saveSprite(buildingHouse(), SCALE, `${OUT}/buildings/house_01.png`);
 saveSprite(buildingGuardPost(), SCALE, `${OUT}/buildings/guardpost_01.png`);
 saveSprite(buildingChurch(), SCALE, `${OUT}/buildings/church_01.png`);
-saveSprite(buildingTimber(), SCALE, `${OUT}/buildings/timber_01.png`);
-saveSprite(buildingBrick(), SCALE, `${OUT}/buildings/brick_01.png`);
-saveSprite(buildingManor(), SCALE, `${OUT}/buildings/manor_01.png`);
-saveSprite(buildingWarmPlaster(), SCALE, `${OUT}/buildings/warm_plaster_01.png`);
-saveSprite(buildingShingle(), SCALE, `${OUT}/buildings/shingle_01.png`);
-saveSprite(buildingFieldstone(), SCALE, `${OUT}/buildings/fieldstone_01.png`);
+saveSprite(buildingTimberHall(), SCALE, `${OUT}/buildings/timber_hall_01.png`);
+saveSprite(buildingTowerHouse(), SCALE, `${OUT}/buildings/tower_01.png`);
+saveSprite(buildingLogCabin(), SCALE, `${OUT}/buildings/log_cabin_01.png`);
+saveSprite(buildingWorkshop(), SCALE, `${OUT}/buildings/workshop_01.png`);
+saveSprite(buildingFarmhouse(), SCALE, `${OUT}/buildings/farmhouse_01.png`);
+saveSprite(buildingLHouse(), SCALE, `${OUT}/buildings/l_house_01.png`);
 
 // --- characters ----------------------------------------------------------
 // The player is a paper doll: one sheet per layer, all sharing frame indices
