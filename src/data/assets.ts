@@ -18,6 +18,18 @@ export interface ImageAsset {
 export interface SheetAsset extends ImageAsset {
   frameWidth: number;
   frameHeight: number;
+  /**
+   * Everything else here is procedurally-drawn hard-edged pixel art, where
+   * the renderer's global nearest-neighbor filtering (pixelArt: true in
+   * main.ts) is exactly right. A handful of sheets are smooth/shaded
+   * external art instead (e.g. AI-generated creature frames) — nearest-
+   * neighbor downscaling those to a small on-screen size turns fine detail
+   * into a muddy blob (confirmed: it looked correct at desktop test zoom
+   * but wrong on an actual phone, where the same texture renders smaller).
+   * Setting this flag switches just that texture to linear filtering in
+   * BootScene, leaving every real pixel-art sheet untouched.
+   */
+  smooth?: boolean;
 }
 
 /** Frame size shared by everything drawn on the standard one-tile canvas. */
@@ -171,7 +183,7 @@ export const SHEET_ASSETS: SheetAsset[] = [
   { key: "player-shield", path: "characters/player_shield_sheet.png", ...TILE_FRAME },
   { key: "player-backpack", path: "characters/player_backpack_sheet.png", ...TILE_FRAME },
   { key: "rat", path: "creatures/rat_sheet.png", ...TILE_FRAME },
-  { key: "cave-rat", path: "creatures/cave_rat_sheet.png", frameWidth: 40, frameHeight: 40 },
+  { key: "cave-rat", path: "creatures/cave_rat_sheet.png", frameWidth: 40, frameHeight: 40, smooth: true },
   { key: "slime", path: "creatures/slime_sheet.png", ...TILE_FRAME },
   { key: "troll", path: "creatures/troll_sheet.png", frameWidth: 40, frameHeight: 52 },
 ];
