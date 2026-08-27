@@ -41,6 +41,13 @@ export const EVENTS = {
   CLIMB_CONFIRM: "climb-confirm",
   /** Player cycled their combat stance (Full Attack/Balanced/Full Defense) from the Character panel. */
   SET_COMBAT_STANCE: "set-combat-stance",
+  /** A dragged item was released over the game world (not any UI panel) — WorldScene drops it on the ground. */
+  DROP_ITEM: "drop-item",
+  /** A hold-press on a ground item pile completed — show the pick-up menu. */
+  OPEN_PICKUP_PROMPT: "open-pickup-prompt",
+  CLOSE_PICKUP_PROMPT: "close-pickup-prompt",
+  /** Player tapped one entry in the pick-up menu. */
+  PICKUP_ITEM: "pickup-item",
 } as const;
 
 export interface InteriorStatePayload {
@@ -150,6 +157,29 @@ export interface InventoryStatePayload {
 export interface MoveItemPayload {
   from: SlotRef;
   to: SlotRef;
+}
+
+export interface DropItemPayload {
+  from: SlotRef;
+  /** Screen-space release point (not world coords — each scene has its own camera). */
+  screenX: number;
+  screenY: number;
+}
+
+export interface PickupPromptEntry {
+  /** Slot index within the ground pile's container — round-trips back in PickupItemPayload. */
+  index: number;
+  itemId: string;
+  name: string;
+  count: number;
+}
+
+export interface OpenPickupPromptPayload {
+  entries: PickupPromptEntry[];
+}
+
+export interface PickupItemPayload {
+  index: number;
 }
 
 export interface OpenContainerPayload {

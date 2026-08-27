@@ -9,6 +9,8 @@ import {
   LogPayload,
   OpenClimbPromptPayload,
   OpenDialoguePayload,
+  OpenPickupPromptPayload,
+  PickupPromptEntry,
   PlayerStatsPayload,
   SkillsPayload,
   TargetPayload,
@@ -231,11 +233,18 @@ export class UIScene extends Phaser.Scene {
   private climbPanel!: Phaser.GameObjects.Container;
   private climbOpen = false;
   private climbDirection: "down" | "up" | null = null;
+  private pickupPanel!: Phaser.GameObjects.Container;
+  private pickupOpen = false;
+  private pickupEntries: PickupPromptEntry[] = [];
 
   private readonly DIALOGUE_WIDTH = 280;
   private readonly DIALOGUE_HEIGHT = 190;
   private readonly CLIMB_WIDTH = 220;
   private readonly CLIMB_HEIGHT = 100;
+  private readonly PICKUP_WIDTH = 220;
+  private readonly PICKUP_ROW_H = 30;
+  private readonly PICKUP_HEADER_H = 26;
+  private readonly PICKUP_FOOTER_H = 36;
 
   constructor() {
     super({ key: "UI", active: false });
@@ -257,6 +266,7 @@ export class UIScene extends Phaser.Scene {
     this.buildVocationPanel();
     this.buildDialoguePanel();
     this.buildClimbPanel();
+    this.buildPickupPanel();
     this.setupDragAndDrop();
 
     bus.on(EVENTS.PLAYER_STATS, (p: PlayerStatsPayload) => {
@@ -284,6 +294,8 @@ export class UIScene extends Phaser.Scene {
     bus.on(EVENTS.OPEN_VOCATION_CHOICE, () => this.openVocationPanel());
     bus.on(EVENTS.OPEN_DIALOGUE, (p: OpenDialoguePayload) => this.openDialogue(p));
     bus.on(EVENTS.OPEN_CLIMB_PROMPT, (p: OpenClimbPromptPayload) => this.openClimbPrompt(p.direction));
+    bus.on(EVENTS.OPEN_PICKUP_PROMPT, (p: OpenPickupPromptPayload) => this.openPickupPrompt(p.entries));
+    bus.on(EVENTS.CLOSE_PICKUP_PROMPT, () => this.closePickupPanel());
     bus.on(EVENTS.INTERIOR_STATE, (p: InteriorStatePayload) => this.onInteriorState(p.active));
 
     this.input.on("wheel", (pointer: Phaser.Input.Pointer, _o: unknown, _dx: number, dy: number) => {
@@ -350,6 +362,8 @@ export class UIScene extends Phaser.Scene {
     this.vocationPanel.setPosition(gw / 2 - 130, h / 2 - 150);
     this.dialoguePanel.setPosition(gw / 2 - this.DIALOGUE_WIDTH / 2, h / 2 - this.DIALOGUE_HEIGHT / 2 - 20);
     this.climbPanel.setPosition(gw / 2 - this.CLIMB_WIDTH / 2, h / 2 - this.CLIMB_HEIGHT / 2);
+    const pickupHeight = this.PICKUP_HEADER_H + this.pickupEntries.length * this.PICKUP_ROW_H + this.PICKUP_FOOTER_H;
+    this.pickupPanel.setPosition(gw / 2 - this.PICKUP_WIDTH / 2, h / 2 - pickupHeight / 2);
 
     // The collapse tab sits outside the sidebar proper: the world view may
     // extend under it, but taps there must not also walk the player.
@@ -1087,10 +1101,31 @@ export class UIScene extends Phaser.Scene {
       if (!from) return;
 
       const target = this.dropTargets.find((t) => t.rect.contains(pointer.x, pointer.y));
-      if (target) bus.emit(EVENTS.MOVE_ITEM, { from, to: target.ref });
+      if (target) {
+        bus.emit(EVENTS.MOVE_ITEM, { from, to: target.ref });
+      } else if (this.isOverGameWorld(pointer.x, pointer.y)) {
+        bus.emit(EVENTS.DROP_ITEM, { from, screenX: pointer.x, screenY: pointer.y });
+      }
       // Either way the sidebar redraws, which restores the dimmed icon.
       this.sidebarDirty = true;
     });
+  }
+
+  /**
+   * A drag that lands on nothing counts as "drop it on the ground" only if
+   * it's genuinely over the visible game view — not the collapsed-sidebar
+   * strip, not any currently open panel (character/skills/battle/inventory
+   * windows all register in panelRects), and not the action bar.
+   */
+  private isOverGameWorld(x: number, y: number): boolean {
+    if (x >= this.scale.width - this.sidebarWidth - TOGGLE_W) return false;
+    for (const rect of this.panelRects.values()) {
+      if (x >= rect.x && x <= rect.x + rect.w && y >= rect.y && y <= rect.y + rect.h) return false;
+    }
+    for (const slot of this.actionSlots) {
+      if (slot.bg.visible && slot.bg.getBounds().contains(x, y)) return false;
+    }
+    return true;
   }
 
   private drawBar(
@@ -1257,7 +1292,9 @@ export class UIScene extends Phaser.Scene {
   // =========================================================================
 
   private syncModalState() {
-    bus.emit(EVENTS.MODAL_STATE, { open: this.shopOpen || this.vocationOpen || this.dialogueOpen || this.climbOpen });
+    bus.emit(EVENTS.MODAL_STATE, {
+      open: this.shopOpen || this.vocationOpen || this.dialogueOpen || this.climbOpen || this.pickupOpen,
+    });
   }
 
   private buildShopPanel() {
@@ -1482,6 +1519,81 @@ export class UIScene extends Phaser.Scene {
 
     this.climbPanel.add([confirmBtn, confirmLabel, cancelBtn, cancelLabel]);
     this.climbPanel.setSize(width, height);
+  }
+
+  /**
+   * Ground-pile pick-up menu: one row per stack sitting on the tile ("Pick
+   * up Sword", "Pick up 12 Cheese"), reopened with fresh entries after each
+   * pick-up (WorldScene decides whether the pile still has anything left)
+   * rather than closing after a single tap — a hold on a mixed pile can pull
+   * more than one item out.
+   */
+  private buildPickupPanel() {
+    this.pickupPanel = this.add.container(0, 0).setScrollFactor(0).setDepth(150).setVisible(false);
+  }
+
+  private openPickupPrompt(entries: PickupPromptEntry[]) {
+    this.pickupEntries = entries;
+    this.pickupOpen = true;
+    this.pickupPanel.setVisible(true);
+    this.renderPickupPanel();
+    this.syncModalState();
+  }
+
+  private closePickupPanel() {
+    this.pickupOpen = false;
+    this.pickupPanel.setVisible(false);
+    this.pickupEntries = [];
+    this.syncModalState();
+  }
+
+  private renderPickupPanel() {
+    this.pickupPanel.removeAll(true);
+    const entries = this.pickupEntries;
+    if (entries.length === 0) return;
+
+    const width = this.PICKUP_WIDTH;
+    const rowH = this.PICKUP_ROW_H;
+    const headerH = this.PICKUP_HEADER_H;
+    const height = headerH + entries.length * rowH + this.PICKUP_FOOTER_H;
+
+    const bg = this.add
+      .rectangle(0, 0, width, height, COLORS.panelBg, 0.96)
+      .setOrigin(0, 0)
+      .setStrokeStyle(1, COLORS.border);
+    const title = this.add
+      .text(width / 2, 14, "Pick up", { ...TEXT, fontSize: fs(11), color: "#f0f0f0" })
+      .setOrigin(0.5, 0);
+    this.pickupPanel.add([bg, title]);
+
+    entries.forEach((entry, i) => {
+      const y = headerH + i * rowH;
+      const rowBg = this.add
+        .rectangle(10, y, width - 20, rowH - 4, 0x000000, 0.35)
+        .setOrigin(0, 0)
+        .setStrokeStyle(1, COLORS.accent)
+        .setInteractive({ useHandCursor: true });
+      const label = entry.count > 1 ? `Pick up ${entry.count} ${entry.name}` : `Pick up ${entry.name}`;
+      const rowLabel = this.add
+        .text(10 + (width - 20) / 2, y + (rowH - 4) / 2, label, { ...TEXT, fontSize: fs(11), color: "#e6c34a" })
+        .setOrigin(0.5);
+      rowBg.on("pointerdown", () => bus.emit(EVENTS.PICKUP_ITEM, { index: entry.index }));
+      this.pickupPanel.add([rowBg, rowLabel]);
+    });
+
+    const cancelY = headerH + entries.length * rowH + 6;
+    const cancelBtn = this.add
+      .rectangle(10, cancelY, width - 20, 26, 0x000000, 0.35)
+      .setOrigin(0, 0)
+      .setStrokeStyle(1, COLORS.border)
+      .setInteractive({ useHandCursor: true });
+    const cancelLabel = this.add
+      .text(width / 2, cancelY + 13, "Cancel", { ...TEXT, fontSize: fs(11), color: "#e2e2e2" })
+      .setOrigin(0.5);
+    cancelBtn.on("pointerdown", () => this.closePickupPanel());
+
+    this.pickupPanel.add([cancelBtn, cancelLabel]);
+    this.pickupPanel.setSize(width, height);
   }
 
   private buildDialoguePanel() {

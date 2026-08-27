@@ -34,7 +34,7 @@ import { DebugOverlay } from "../game/debugOverlay";
 import { DayNightCycle } from "../game/dayNight";
 import { getActiveCharacter, updateActiveCharacter, setActiveCharacter } from "../game/profile";
 import { rollDamage, rollLoot } from "../game/combat";
-import { Container, ItemStack, SlotAccessor, SlotRef, moveStack } from "../game/containers";
+import { Container, ItemStack, SlotAccessor, SlotRef, STACK_MAX, moveStack } from "../game/containers";
 import {
   SKILL_LOG_NAMES,
   SKILL_NAMES,
@@ -73,6 +73,9 @@ import {
   UiLayoutPayload,
   SelectTargetPayload,
   SetCombatStancePayload,
+  DropItemPayload,
+  PickupItemPayload,
+  PickupPromptEntry,
 } from "../game/events";
 
 const RECHASE_INTERVAL_MS = 300;
@@ -81,6 +84,12 @@ const CORPSE_DECAY_MS = 60_000;
 
 /** Slots in a monster corpse's loot bag. */
 const CORPSE_CAPACITY = 8;
+
+/** How long a dropped item sits on the ground before vanishing, same as a corpse. */
+const GROUND_PILE_DECAY_MS = 60_000;
+
+/** Slots in one ground tile's item pile. */
+const GROUND_PILE_CAPACITY = 8;
 
 /** Wands fire a small magic bolt: cheap on mana, shorter reach than a bow. */
 const WAND_MANA_COST = 4;
@@ -116,6 +125,15 @@ interface Corpse {
   name: string;
 }
 
+/** Items dropped or thrown onto a tile — any item in the game can end up here, not just monster loot. */
+interface GroundPile {
+  sprite: Phaser.GameObjects.Sprite;
+  container: Container;
+  tileX: number;
+  tileY: number;
+  decayTimer: Phaser.Time.TimerEvent;
+}
+
 interface NpcInstance {
   def: NpcSpawn;
   sprite: Phaser.GameObjects.Image;
@@ -126,6 +144,7 @@ export class WorldScene extends Phaser.Scene {
   private monsters: Monster[] = [];
   private npcs: NpcInstance[] = [];
   private corpses: Corpse[] = [];
+  private groundPiles: GroundPile[] = [];
   private target: Monster | null = null;
   private playerPath: TileCoord[] = [];
   private chaseTimer = 0;
@@ -159,6 +178,11 @@ export class WorldScene extends Phaser.Scene {
   private climbHoldTimer: Phaser.Time.TimerEvent | null = null;
   private climbHoldCleanup: (() => void) | null = null;
   private static readonly CLIMB_HOLD_MS = 450;
+
+  // --- Ground item pile hold-to-pick-up-menu ---------------------------------
+  private pendingPickupPile: GroundPile | null = null;
+  private pickupHoldTimer: Phaser.Time.TimerEvent | null = null;
+  private pickupHoldCleanup: (() => void) | null = null;
 
   private activeLevelUpBanners: Phaser.GameObjects.Text[] = [];
 
@@ -260,6 +284,11 @@ export class WorldScene extends Phaser.Scene {
     bus.on(EVENTS.SELECT_TARGET, (payload: SelectTargetPayload) => {
       const monster = this.monsters[payload.id];
       if (monster?.alive) this.setTarget(monster);
+    });
+    bus.on(EVENTS.DROP_ITEM, (payload: DropItemPayload) => this.dropItem(payload.from, payload.screenX, payload.screenY));
+    bus.on(EVENTS.PICKUP_ITEM, (payload: PickupItemPayload) => this.pickupItem(payload.index));
+    bus.on(EVENTS.CLOSE_PICKUP_PROMPT, () => {
+      this.pendingPickupPile = null;
     });
 
     // UIScene's create() (which subscribes to these events) runs in the same
@@ -473,10 +502,20 @@ export class WorldScene extends Phaser.Scene {
 
     const wx = pointer.worldX;
     const wy = pointer.worldY;
+    const tx = Math.floor(wx / TILE_SIZE);
+    const ty = Math.floor(wy / TILE_SIZE);
 
     const hitCorpse = this.corpses.find((c) => c.sprite.getBounds().contains(wx, wy));
     if (hitCorpse) {
       this.lootCorpse(hitCorpse);
+      return;
+    }
+
+    // A ground pile is picked up via hold-to-open-menu, not a plain tap — a
+    // short tap falls back to a normal walk-there, same as a ladder tile.
+    const hitPile = this.groundPiles.find((p) => p.sprite.getBounds().contains(wx, wy));
+    if (hitPile) {
+      this.startPickupHold(pointer, hitPile, tx, ty);
       return;
     }
 
@@ -492,8 +531,6 @@ export class WorldScene extends Phaser.Scene {
       return;
     }
 
-    const tx = Math.floor(wx / TILE_SIZE);
-    const ty = Math.floor(wy / TILE_SIZE);
     if (!this.isWalkableForMover(tx, ty)) return;
 
     // A ladder/hatch only starts the hold-to-climb interaction once the
@@ -1067,6 +1104,56 @@ export class WorldScene extends Phaser.Scene {
   }
 
   /**
+   * Same hold-then-confirm shape as startClimbHold: a short tap on the pile
+   * falls back to a normal walk-there, and a sustained hold opens the pick-up
+   * menu instead of moving the player.
+   */
+  private startPickupHold(pointer: Phaser.Input.Pointer, pile: GroundPile, tx: number, ty: number) {
+    this.cancelPickupHold();
+    const startX = pointer.x;
+    const startY = pointer.y;
+
+    const releaseAsWalk = () => {
+      this.cancelPickupHold();
+      this.playerPath = findPath((x, y) => this.isWalkableForMover(x, y), this.player.tile, { x: tx, y: ty });
+    };
+    const onMove = (p: Phaser.Input.Pointer) => {
+      if (Phaser.Math.Distance.Between(p.x, p.y, startX, startY) > 12) releaseAsWalk();
+    };
+
+    this.input.on("pointerup", releaseAsWalk);
+    this.input.on("pointermove", onMove);
+    this.pickupHoldCleanup = () => {
+      this.input.off("pointerup", releaseAsWalk);
+      this.input.off("pointermove", onMove);
+    };
+
+    this.pickupHoldTimer = this.time.delayedCall(WorldScene.CLIMB_HOLD_MS, () => {
+      this.pickupHoldCleanup?.();
+      this.pickupHoldCleanup = null;
+      this.pickupHoldTimer = null;
+      this.pendingPickupPile = pile;
+      bus.emit(EVENTS.OPEN_PICKUP_PROMPT, { entries: this.pickupEntriesFor(pile) });
+    });
+  }
+
+  private cancelPickupHold() {
+    this.pickupHoldTimer?.remove();
+    this.pickupHoldTimer = null;
+    this.pickupHoldCleanup?.();
+    this.pickupHoldCleanup = null;
+  }
+
+  private pickupEntriesFor(pile: GroundPile): PickupPromptEntry[] {
+    const entries: PickupPromptEntry[] = [];
+    pile.container.slots.forEach((slot, index) => {
+      if (!slot) return;
+      entries.push({ index, itemId: slot.itemId, name: ITEMS[slot.itemId]?.name ?? slot.itemId, count: slot.count });
+    });
+    return entries;
+  }
+
+  /**
    * If the player has just stepped onto a door tile in front of a shop,
    * pause the world and launch the interior scene for that shop. The
    * outdoor player state (HP/mana) rides along so the shop can render the
@@ -1224,6 +1311,117 @@ export class WorldScene extends Phaser.Scene {
     this.openContainer(corpse.container);
   }
 
+  // --- Ground item piles ---------------------------------------------------
+
+  private groundPileAt(tx: number, ty: number): GroundPile | undefined {
+    return this.groundPiles.find((p) => p.tileX === tx && p.tileY === ty);
+  }
+
+  private spawnGroundPile(tx: number, ty: number): GroundPile {
+    const sprite = this.add
+      .sprite(tileAnchorX(tx), tileAnchorY(ty), "gold-coin")
+      .setOrigin(1, 1)
+      .setScale(0.55)
+      .setDepth(depthForTileY(ty) - 1);
+    const container = new Container("Ground", "gold-coin", GROUND_PILE_CAPACITY);
+    const pile: GroundPile = {
+      sprite,
+      container,
+      tileX: tx,
+      tileY: ty,
+      decayTimer: this.time.delayedCall(GROUND_PILE_DECAY_MS, () => this.removeGroundPile(pile)),
+    };
+    this.groundPiles.push(pile);
+    return pile;
+  }
+
+  /** Re-arms the decay timer (a fresh drop shouldn't vanish because an earlier one on the same tile is about to) and updates the sprite to show whatever was just added. */
+  private touchGroundPile(pile: GroundPile, latestItemId: string) {
+    pile.decayTimer.remove();
+    pile.decayTimer = this.time.delayedCall(GROUND_PILE_DECAY_MS, () => this.removeGroundPile(pile));
+    pile.sprite.setTexture(ITEMS[latestItemId]?.textureKey ?? pile.sprite.texture.key);
+  }
+
+  private removeGroundPile(pile: GroundPile) {
+    const idx = this.groundPiles.indexOf(pile);
+    if (idx >= 0) this.groundPiles.splice(idx, 1);
+    pile.decayTimer.remove();
+    pile.sprite.destroy();
+    if (this.pendingPickupPile === pile) {
+      this.pendingPickupPile = null;
+      bus.emit(EVENTS.CLOSE_PICKUP_PROMPT);
+    }
+  }
+
+  /** Finds a slot to receive itemId in `container`: an existing stackable stack with room first, then the first empty slot. Mirrors Container.addItem's own merge-then-empty-slot order without losing a source stack's nested container the way addItem(itemId, count) would. */
+  private findDropDestination(container: Container, itemId: string): number {
+    if (ITEMS[itemId]?.stackable) {
+      const merge = container.slots.findIndex((s) => s?.itemId === itemId && s.count < STACK_MAX);
+      if (merge >= 0) return merge;
+    }
+    return container.firstEmptySlot();
+  }
+
+  private dropItem(from: SlotRef, screenX: number, screenY: number) {
+    const stack = this.slotAccessor.get(from);
+    if (!stack) return;
+
+    const world = this.cameras.main.getWorldPoint(screenX, screenY);
+    let tx = Math.floor(world.x / TILE_SIZE);
+    let ty = Math.floor(world.y / TILE_SIZE);
+    if (!this.isWalkableForMover(tx, ty)) {
+      tx = this.player.tile.x;
+      ty = this.player.tile.y;
+    }
+
+    const pile = this.groundPileAt(tx, ty) ?? this.spawnGroundPile(tx, ty);
+    const index = this.findDropDestination(pile.container, stack.itemId);
+    if (index < 0) {
+      this.log("info", "There's no room to drop that here.");
+      return;
+    }
+
+    if (!this.moveItem(from, { kind: "container", container: pile.container, index })) {
+      if (pile.container.usedSlots === 0) this.removeGroundPile(pile); // don't leave a freshly-spawned empty pile behind
+      return;
+    }
+
+    this.touchGroundPile(pile, stack.itemId);
+    this.log("info", `You drop the ${ITEMS[stack.itemId]?.name ?? stack.itemId} on the ground.`);
+  }
+
+  private pickupItem(index: number) {
+    const pile = this.pendingPickupPile;
+    if (!pile) return;
+    const stack = pile.container.slots[index];
+    if (!stack) return;
+    const backpack = this.player.backpack;
+    if (!backpack) return;
+
+    const destIndex = this.findDropDestination(backpack, stack.itemId);
+    if (destIndex < 0) {
+      this.log("info", "You cannot carry any more.");
+      return;
+    }
+
+    const from: SlotRef = { kind: "container", container: pile.container, index };
+    const to: SlotRef = { kind: "container", container: backpack, index: destIndex };
+    if (!moveStack(this.slotAccessor, from, to)) {
+      this.log("info", "You cannot carry any more.");
+      return;
+    }
+
+    this.log("info", `You pick up the ${ITEMS[stack.itemId]?.name ?? stack.itemId}.`);
+    this.emitInventory();
+    this.emitInventoryState();
+
+    if (pile.container.usedSlots === 0) {
+      this.removeGroundPile(pile); // also clears pendingPickupPile and closes the menu
+    } else {
+      bus.emit(EVENTS.OPEN_PICKUP_PROMPT, { entries: this.pickupEntriesFor(pile) });
+    }
+  }
+
   // --- Container windows --------------------------------------------------
 
   private openContainer(container: Container) {
@@ -1296,8 +1494,8 @@ export class WorldScene extends Phaser.Scene {
     },
   };
 
-  private moveItem(from: SlotRef, to: SlotRef) {
-    if (!moveStack(this.slotAccessor, from, to)) return;
+  private moveItem(from: SlotRef, to: SlotRef): boolean {
+    if (!moveStack(this.slotAccessor, from, to)) return false;
 
     // What the character is wearing just changed, so redraw the paper doll.
     if (from.kind === "equip" || to.kind === "equip") this.player.refreshAppearance();
@@ -1311,6 +1509,7 @@ export class WorldScene extends Phaser.Scene {
     this.emitInventory();
     this.emitInventoryState();
     this.emitSkills(); // weapon/armor swaps change the attack & defense readouts
+    return true;
   }
 
   /** True if the container is the player's, nested in it, or an open corpse. */
