@@ -3052,6 +3052,17 @@ function goldCoinIcon() {
   return s;
 }
 
+function cheeseIcon() {
+  const s = new Sprite(16, 16);
+  s.fillRect(3, 5, 10, 8, "#e6c34a"); // wedge body
+  s.fillRect(3, 5, 10, 1, "#f5dd82"); // top highlight
+  s.fillRect(3, 12, 10, 1, "#9c7a1f"); // bottom shadow
+  s.fillCircle(6, 8, 1, "#9c7a1f"); // rind holes
+  s.fillCircle(10, 10, 1, "#9c7a1f");
+  s.fillCircle(8, 11, 0.8, "#9c7a1f");
+  return s;
+}
+
 // --- Containers ---
 
 /** Shared body for the bag/backpack icons, parameterised by size and leather tone. */
@@ -3459,6 +3470,7 @@ saveSprite(bagIcon(), SCALE, `${OUT}/items/container_bag.png`);
 saveSprite(healthPotionIcon(), SCALE, `${OUT}/items/potion_health.png`);
 saveSprite(manaPotionIcon(), SCALE, `${OUT}/items/potion_mana.png`);
 saveSprite(goldCoinIcon(), SCALE, `${OUT}/items/coin_gold.png`);
+saveSprite(cheeseIcon(), SCALE, `${OUT}/items/food_cheese.png`);
 saveSprite(healSpellIcon(), SCALE, `${OUT}/items/spell_heal.png`);
 saveSprite(flameSpellIcon(), SCALE, `${OUT}/items/spell_flame.png`);
 

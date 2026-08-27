@@ -3,7 +3,7 @@
 // attack/defense/armor, how much they weigh against carry capacity, and (for
 // bags and backpacks) how many slots they hold.
 
-export type ItemKind = "consumable" | "currency" | "equipment" | "container" | "ammo";
+export type ItemKind = "consumable" | "currency" | "equipment" | "container" | "ammo" | "misc";
 
 /** The ten Tibia paper-doll slots, laid out 3-wide in the sidebar. */
 export type EquipSlot = "head" | "neck" | "back" | "armor" | "left" | "right" | "legs" | "feet" | "ring" | "ammo";
@@ -48,6 +48,14 @@ export const ITEMS: Record<string, ItemDef> = {
     kind: "currency",
     stackable: true,
     weight: 0.1,
+  },
+  cheese: {
+    id: "cheese",
+    name: "Cheese",
+    textureKey: "cheese",
+    kind: "misc",
+    stackable: true,
+    weight: 6,
   },
   health_potion: {
     id: "health_potion",
