@@ -18,8 +18,12 @@ const BANNER_TARGET_WIDTH = 560;
 // shrinks if that gap is too tight — on any screen size/aspect, not just
 // the one it was eyeballed against.
 const BG_NATIVE_HEIGHT = 720;
-const DRAGON_CLEAR_Y = 110; // just below the dragon's lowest wingtip/tail
-const HOOD_CLEAR_Y = 215; // just above the top of the girl's hood
+// Re-measured tighter against the actual art (dragon's lowest pixel is
+// y=104, the hood's highest is y=228) — a few px of breathing room each
+// side rather than the wider margin used originally, to reclaim as much
+// of the true gap as the banner can grow into without touching either.
+const DRAGON_CLEAR_Y = 106; // just below the dragon's lowest wingtip/tail
+const HOOD_CLEAR_Y = 225; // just above the top of the girl's hood
 
 /**
  * Front door of the game: banner over the forest illustration, tap to enter
