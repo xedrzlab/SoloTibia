@@ -48,6 +48,8 @@ export const EVENTS = {
   CLOSE_PICKUP_PROMPT: "close-pickup-prompt",
   /** Player tapped one entry in the pick-up menu. */
   PICKUP_ITEM: "pickup-item",
+  /** On-screen D-pad direction changed — {dx:0,dy:0} means released/stopped. */
+  SET_MOVE_DIRECTION: "set-move-direction",
 } as const;
 
 export interface InteriorStatePayload {
@@ -180,6 +182,11 @@ export interface OpenPickupPromptPayload {
 
 export interface PickupItemPayload {
   index: number;
+}
+
+export interface SetMoveDirectionPayload {
+  dx: number;
+  dy: number;
 }
 
 export interface OpenContainerPayload {

@@ -16,10 +16,13 @@ export const STEP_QUANTUM_MS = 50;
 /** Every step is at least this long — matches Tibia's 50 ms floor per tile. */
 export const MIN_STEP_MS = STEP_QUANTUM_MS;
 /**
- * Diagonal steps take longer than cardinal ones. Old Tibia used 2×; modern
- * uses 3×. We use 2 as a compromise between authenticity and playability.
+ * Diagonal steps take longer than cardinal ones — confirmed against
+ * TibiaWiki/community speed-formula references: the client's own
+ * DiagonalFactor is 3, not the ~1.41 a straight Pythagorean distance would
+ * suggest, a deliberate balance choice so diagonal movement isn't a free
+ * shortcut. Matches real Tibia exactly rather than compromising.
  */
-export const DIAGONAL_STEP_MULT = 2;
+export const DIAGONAL_STEP_MULT = 3;
 
 /**
  * Retained for the paperdoll walk-animation frame-timing (attack cooldown

@@ -2,9 +2,9 @@ import Phaser from "phaser";
 import { TILE_SIZE, NPC_INTERACT_RANGE } from "../game/constants";
 import { tileAnchorX, tileAnchorY, depthForTileY } from "../game/tileAnchor";
 import { INTERIORS, InteriorRoom, isFloorTile, tileKind } from "../data/interiors";
-import { findPath, chebyshevDistance, TileCoord } from "../game/pathfinding";
+import { chebyshevDistance, TileCoord } from "../game/pathfinding";
 import { Player } from "../game/entities/Player";
-import { bus, EVENTS } from "../game/events";
+import { bus, EVENTS, SetMoveDirectionPayload } from "../game/events";
 
 const ROOM_MARGIN_TILES = 2;
 
@@ -52,7 +52,8 @@ export class InteriorScene extends Phaser.Scene {
 
   private player!: Player;
   private npcSprite: Phaser.GameObjects.Image | null = null;
-  private playerPath: TileCoord[] = [];
+  /** Direction held on the on-screen D-pad — the only way to move now. */
+  private heldDirection: TileCoord | null = null;
   private transitionScheduled = false;
 
   constructor() {
@@ -62,7 +63,7 @@ export class InteriorScene extends Phaser.Scene {
   init(data: InteriorInit) {
     this.initData = data;
     this.transitionScheduled = false;
-    this.playerPath = [];
+    this.heldDirection = null;
   }
 
   create() {
@@ -161,7 +162,10 @@ export class InteriorScene extends Phaser.Scene {
     this.player.hp = this.initData.playerState.hp;
     this.player.mana = this.initData.playerState.mana;
 
-    this.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => this.handleTap(pointer));
+    const onMoveDirection = (payload: SetMoveDirectionPayload) => {
+      this.heldDirection = payload.dx === 0 && payload.dy === 0 ? null : { x: payload.dx, y: payload.dy };
+    };
+    bus.on(EVENTS.SET_MOVE_DIRECTION, onMoveDirection);
 
     // Tell the UI we're indoors — it hides the action bar and anything else
     // that would clutter or overlap the tiny interior room.
@@ -169,6 +173,7 @@ export class InteriorScene extends Phaser.Scene {
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.input.removeAllListeners();
+      bus.off(EVENTS.SET_MOVE_DIRECTION, onMoveDirection);
       // Only broadcast "back outside" if we're actually exiting to the
       // world; a room-to-room transition (SHUTDOWN + create) keeps the
       // action bar hidden by re-emitting active:true in the new create.
@@ -190,29 +195,23 @@ export class InteriorScene extends Phaser.Scene {
 
   // --- Movement & interaction --------------------------------------------
 
-  private handleTap(pointer: Phaser.Input.Pointer) {
-    if (this.transitionScheduled) return;
-    if (this.npcSprite && this.npcSprite.getBounds().contains(pointer.worldX, pointer.worldY)) return;
-
-    const tx = Math.floor(pointer.worldX / TILE_SIZE);
-    const ty = Math.floor(pointer.worldY / TILE_SIZE);
-    if (!this.isWalkableWorld(tx, ty)) return;
-
-    const path = findPath(
-      (x, y) => this.isWalkableWorld(x, y),
-      { x: this.player.tileX, y: this.player.tileY },
-      { x: tx, y: ty },
-    );
-    this.playerPath = path;
+  /** Diagonal corner-cutting is blocked exactly like the outdoor world's rule — never squeeze between two solid tiles. */
+  private canStepInDirection(dir: TileCoord): boolean {
+    const next = { x: this.player.tileX + dir.x, y: this.player.tileY + dir.y };
+    if (!this.isWalkableWorld(next.x, next.y)) return false;
+    if (dir.x !== 0 && dir.y !== 0) {
+      if (!this.isWalkableWorld(this.player.tileX + dir.x, this.player.tileY)) return false;
+      if (!this.isWalkableWorld(this.player.tileX, this.player.tileY + dir.y)) return false;
+    }
+    return true;
   }
 
   update() {
     if (this.transitionScheduled) return;
-    if (this.player.moving || this.playerPath.length === 0) {
-      if (!this.player.moving) this.checkTransition();
-      return;
-    }
-    const next = this.playerPath.shift()!;
+    if (this.player.moving) return;
+    this.checkTransition();
+    if (!this.heldDirection || !this.canStepInDirection(this.heldDirection)) return;
+    const next = { x: this.player.tileX + this.heldDirection.x, y: this.player.tileY + this.heldDirection.y };
     // Interior floors are always cobble/plank — friction 100, same as a
     // town street. Interiors don't need per-tile friction lookup.
     void this.player.stepTo(next.x, next.y, 100).then(() => this.checkTransition());

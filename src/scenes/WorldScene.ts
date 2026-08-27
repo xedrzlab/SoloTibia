@@ -76,6 +76,7 @@ import {
   DropItemPayload,
   PickupItemPayload,
   PickupPromptEntry,
+  SetMoveDirectionPayload,
 } from "../game/events";
 
 const RECHASE_INTERVAL_MS = 300;
@@ -147,6 +148,8 @@ export class WorldScene extends Phaser.Scene {
   private groundPiles: GroundPile[] = [];
   private target: Monster | null = null;
   private playerPath: TileCoord[] = [];
+  /** Direction held on the on-screen D-pad — takes over from playerPath every frame it's set. */
+  private heldDirection: TileCoord | null = null;
   private chaseTimer = 0;
   private modalOpen = false;
   /** Container windows the player has open — backpacks, bags, corpses. */
@@ -295,6 +298,13 @@ export class WorldScene extends Phaser.Scene {
     bus.on(EVENTS.PICKUP_ITEM, (payload: PickupItemPayload) => this.pickupItem(payload.index));
     bus.on(EVENTS.CLOSE_PICKUP_PROMPT, () => {
       this.pendingPickupPile = null;
+    });
+    bus.on(EVENTS.SET_MOVE_DIRECTION, (payload: SetMoveDirectionPayload) => {
+      this.heldDirection = payload.dx === 0 && payload.dy === 0 ? null : { x: payload.dx, y: payload.dy };
+      // Manual D-pad input always wins over a queued auto-walk (chase-to-attack
+      // aside — that's re-issued every RECHASE_INTERVAL_MS and just gets
+      // overridden again next frame while a direction is held).
+      if (this.heldDirection) this.playerPath = [];
     });
 
     // UIScene's create() (which subscribes to these events) runs in the same
@@ -523,11 +533,10 @@ export class WorldScene extends Phaser.Scene {
       return;
     }
 
-    // A ground pile is picked up via hold-to-open-menu, not a plain tap — a
-    // short tap falls back to a normal walk-there, same as a ladder tile.
+    // A ground pile is picked up via hold-to-open-menu, not a plain tap.
     const hitPile = this.groundPiles.find((p) => p.sprite.getBounds().contains(wx, wy));
     if (hitPile) {
-      this.startPickupHold(pointer, hitPile, tx, ty);
+      this.startPickupHold(pointer, hitPile);
       return;
     }
 
@@ -545,19 +554,16 @@ export class WorldScene extends Phaser.Scene {
 
     if (!this.isWalkableForMover(tx, ty)) return;
 
-    // A ladder/hatch only starts the hold-to-climb interaction once the
-    // player is already on or right next to it — tapping one from across
-    // the map is just a normal walk-there tap, same as any other tile.
+    // A ladder/hatch's hold-to-climb only starts once the player is already
+    // on or right next to it (walked over via the D-pad) — the D-pad is the
+    // only way to move now, so there's no "walk there" fallback left to fall
+    // back to.
     const down = sewerLinkAtSurface(tx, ty);
     const up = down ? null : sewerLinkAtSewer(tx, ty);
     const climbLink = down ?? up;
     if (climbLink && chebyshevDistance(this.player.tile, { x: tx, y: ty }) <= 1) {
-      this.startClimbHold(pointer, climbLink, down ? "down" : "up", tx, ty);
-      return;
+      this.startClimbHold(pointer, climbLink, down ? "down" : "up");
     }
-
-    const path = findPath((x, y) => this.isWalkableForMover(x, y), this.player.tile, { x: tx, y: ty });
-    this.playerPath = path;
   }
 
   private interactWithNpc(npc: NpcSpawn) {
@@ -1034,8 +1040,34 @@ export class WorldScene extends Phaser.Scene {
     this.emitPlayerStats();
   }
 
+  /** Diagonal corner-cutting is blocked exactly like findPath's own rule — never squeeze between two solid tiles. */
+  private canStepInDirection(dir: TileCoord): boolean {
+    const next = { x: this.player.tileX + dir.x, y: this.player.tileY + dir.y };
+    if (!this.isWalkableForMover(next.x, next.y)) return false;
+    if (dir.x !== 0 && dir.y !== 0) {
+      const cornerA = this.isWalkableForMover(this.player.tileX + dir.x, this.player.tileY);
+      const cornerB = this.isWalkableForMover(this.player.tileX, this.player.tileY + dir.y);
+      if (!cornerA || !cornerB) return false;
+    }
+    return true;
+  }
+
   private updatePlayerMovement(_delta: number) {
-    if (this.player.moving || this.playerPath.length === 0) return;
+    if (this.player.moving) return;
+
+    if (this.heldDirection) {
+      const dir = this.heldDirection;
+      if (this.canStepInDirection(dir)) {
+        const next = { x: this.player.tileX + dir.x, y: this.player.tileY + dir.y };
+        void this.player.stepTo(next.x, next.y, frictionAt(next.x, next.y)).then(() => {
+          this.emitPlayerStats();
+          this.checkForZoneIn();
+        });
+      }
+      return;
+    }
+
+    if (this.playerPath.length === 0) return;
     const next = this.playerPath.shift()!;
     // Feed the destination tile's ground friction into stepTo so cobble
     // walks faster than grass and grass walks faster than sand — old-Tibia
@@ -1122,31 +1154,22 @@ export class WorldScene extends Phaser.Scene {
    * than a deliberate action. Instead, a tap that lands on one of these
    * tiles (and the player is already on/next to it) starts a hold timer; if
    * the press is held long enough it opens the Climb Down/Climb Up confirm
-   * panel, and releasing early just falls back to a normal walk-there tap.
+   * panel, and releasing early just cancels — there's no walk-there fallback
+   * now that the D-pad is the only way to move.
    */
-  private startClimbHold(
-    pointer: Phaser.Input.Pointer,
-    link: SewerLink,
-    direction: "down" | "up",
-    tx: number,
-    ty: number,
-  ) {
+  private startClimbHold(pointer: Phaser.Input.Pointer, link: SewerLink, direction: "down" | "up") {
     this.cancelClimbHold();
     const startX = pointer.x;
     const startY = pointer.y;
 
-    const releaseAsWalk = () => {
-      this.cancelClimbHold();
-      this.playerPath = findPath((x, y) => this.isWalkableForMover(x, y), this.player.tile, { x: tx, y: ty });
-    };
     const onMove = (p: Phaser.Input.Pointer) => {
-      if (Phaser.Math.Distance.Between(p.x, p.y, startX, startY) > 12) releaseAsWalk();
+      if (Phaser.Math.Distance.Between(p.x, p.y, startX, startY) > 12) this.cancelClimbHold();
     };
 
-    this.input.on("pointerup", releaseAsWalk);
+    this.input.on("pointerup", this.cancelClimbHold, this);
     this.input.on("pointermove", onMove);
     this.climbHoldCleanup = () => {
-      this.input.off("pointerup", releaseAsWalk);
+      this.input.off("pointerup", this.cancelClimbHold, this);
       this.input.off("pointermove", onMove);
     };
 
@@ -1168,26 +1191,21 @@ export class WorldScene extends Phaser.Scene {
 
   /**
    * Same hold-then-confirm shape as startClimbHold: a short tap on the pile
-   * falls back to a normal walk-there, and a sustained hold opens the pick-up
-   * menu instead of moving the player.
+   * just cancels, and a sustained hold opens the pick-up menu.
    */
-  private startPickupHold(pointer: Phaser.Input.Pointer, pile: GroundPile, tx: number, ty: number) {
+  private startPickupHold(pointer: Phaser.Input.Pointer, pile: GroundPile) {
     this.cancelPickupHold();
     const startX = pointer.x;
     const startY = pointer.y;
 
-    const releaseAsWalk = () => {
-      this.cancelPickupHold();
-      this.playerPath = findPath((x, y) => this.isWalkableForMover(x, y), this.player.tile, { x: tx, y: ty });
-    };
     const onMove = (p: Phaser.Input.Pointer) => {
-      if (Phaser.Math.Distance.Between(p.x, p.y, startX, startY) > 12) releaseAsWalk();
+      if (Phaser.Math.Distance.Between(p.x, p.y, startX, startY) > 12) this.cancelPickupHold();
     };
 
-    this.input.on("pointerup", releaseAsWalk);
+    this.input.on("pointerup", this.cancelPickupHold, this);
     this.input.on("pointermove", onMove);
     this.pickupHoldCleanup = () => {
-      this.input.off("pointerup", releaseAsWalk);
+      this.input.off("pointerup", this.cancelPickupHold, this);
       this.input.off("pointermove", onMove);
     };
 

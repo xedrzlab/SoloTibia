@@ -158,6 +158,16 @@ interface ActionSlot {
   label: Phaser.GameObjects.Text;
 }
 
+interface DPadButton {
+  dx: number;
+  dy: number;
+  /** Grid offset in button-widths from the pad's center, e.g. (-1,-1) for up-left. */
+  gridX: number;
+  gridY: number;
+  bg: Phaser.GameObjects.Rectangle;
+  label: Phaser.GameObjects.Text;
+}
+
 const LOG_COLORS: Record<string, string> = {
   damage: "#e2e2e2",
   loot: "#e6c34a",
@@ -216,6 +226,7 @@ export class UIScene extends Phaser.Scene {
   private targetBarBg!: Phaser.GameObjects.Rectangle;
   private targetBarFill!: Phaser.GameObjects.Rectangle;
   private actionSlots: ActionSlot[] = [];
+  private dpadButtons: DPadButton[] = [];
   private logLines: Phaser.GameObjects.Text[] = [];
   private logMessages: { text: string; color: string }[] = [];
   private toggleBg!: Phaser.GameObjects.Rectangle;
@@ -260,6 +271,7 @@ export class UIScene extends Phaser.Scene {
 
     this.buildTargetPanel();
     this.buildActionBar();
+    this.buildDPad();
     this.buildLog();
     this.buildSidebarToggle();
     this.buildShopPanel();
@@ -352,6 +364,19 @@ export class UIScene extends Phaser.Scene {
 
     for (let i = 0; i < this.logLines.length; i++) {
       this.logLines[i].setPosition(10, h - 66 - (this.logLines.length - 1 - i) * 13);
+    }
+
+    // D-pad: mid-left, clear of both the log (bottom-left) and the action
+    // bar (bottom-center) — a thumb resting there in landscape reaches every
+    // button without the hand ever needing to move.
+    const dpadStep = slotSize + slotGap;
+    const dpadCenterX = 20 + slotSize * 1.5;
+    const dpadCenterY = h / 2;
+    for (const btn of this.dpadButtons) {
+      const bx = dpadCenterX + btn.gridX * dpadStep;
+      const by = dpadCenterY + btn.gridY * dpadStep;
+      btn.bg.setPosition(bx, by);
+      btn.label.setPosition(bx, by);
     }
 
     this.toggleBg.setPosition(this.scale.width - this.sidebarWidth - TOGGLE_W / 2, h / 2);
@@ -1248,6 +1273,55 @@ export class UIScene extends Phaser.Scene {
       slot.icon.setVisible(!active);
       slot.label.setVisible(!active);
     }
+  }
+
+  /**
+   * The only way to move now — 8 directional buttons in a classic 3x3
+   * D-pad layout (no center button). Held down (not tapped): pointerdown
+   * tells WorldScene/InteriorScene to start stepping that way every time
+   * the current step finishes, and releasing — however it's released,
+   * including sliding a finger off the button while still touching —
+   * stops it, so a stuck-moving character can never happen.
+   */
+  private buildDPad() {
+    const dirs: { dx: number; dy: number; gridX: number; gridY: number; glyph: string }[] = [
+      { dx: -1, dy: -1, gridX: -1, gridY: -1, glyph: "↖" },
+      { dx: 0, dy: -1, gridX: 0, gridY: -1, glyph: "↑" },
+      { dx: 1, dy: -1, gridX: 1, gridY: -1, glyph: "↗" },
+      { dx: -1, dy: 0, gridX: -1, gridY: 0, glyph: "←" },
+      { dx: 1, dy: 0, gridX: 1, gridY: 0, glyph: "→" },
+      { dx: -1, dy: 1, gridX: -1, gridY: 1, glyph: "↙" },
+      { dx: 0, dy: 1, gridX: 0, gridY: 1, glyph: "↓" },
+      { dx: 1, dy: 1, gridX: 1, gridY: 1, glyph: "↘" },
+    ];
+
+    const stop = () => bus.emit(EVENTS.SET_MOVE_DIRECTION, { dx: 0, dy: 0 });
+
+    for (const dir of dirs) {
+      const bg = this.add
+        .rectangle(0, 0, ACTION_SLOT_SIZE, ACTION_SLOT_SIZE, COLORS.panelBg, 0.7)
+        .setStrokeStyle(1, COLORS.border)
+        .setScrollFactor(0)
+        .setDepth(100)
+        .setInteractive({ useHandCursor: true });
+      const label = this.add
+        .text(0, 0, dir.glyph, { ...TEXT, fontSize: fs(16), color: "#e2e2e2" })
+        .setOrigin(0.5)
+        .setScrollFactor(0)
+        .setDepth(101);
+
+      bg.on("pointerdown", () => bus.emit(EVENTS.SET_MOVE_DIRECTION, { dx: dir.dx, dy: dir.dy }));
+      bg.on("pointerup", stop);
+      bg.on("pointerout", stop);
+
+      this.dpadButtons.push({ dx: dir.dx, dy: dir.dy, gridX: dir.gridX, gridY: dir.gridY, bg, label });
+    }
+
+    // A release anywhere at all (finger lifted off-screen, or the pointer
+    // simply moving too fast for pointerout to catch mid-frame) must also
+    // stop movement — the same belt-and-suspenders the hold-gesture code
+    // elsewhere in this scene already relies on.
+    this.input.on("pointerup", stop);
   }
 
   private onInventory(inv: InventoryPayload) {
