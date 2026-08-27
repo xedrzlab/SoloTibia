@@ -9,14 +9,27 @@ import { UIScene } from "./scenes/UIScene";
 import { TARGET_FPS } from "./game/constants";
 import { initOrientationLock } from "./game/orientationLock";
 
-// Take a fresh service worker as soon as it's ready and reload, so a new
-// build (Title screen, character select, whatever else changed) is picked up
-// on next open of the PWA rather than hanging on the previous cached bundle
-// until the user manually clears storage.
-const updateSW = registerSW({
+// With registerType: "autoUpdate" (vite.config.ts), the generated register
+// script reloads the page automatically once a new service worker takes
+// over — but Workbox only ever CHECKS for one on a fresh page navigation.
+// An installed PWA that's opened once and left running (the normal way to
+// play this) never triggers that check, so a pushed update could sit
+// unnoticed indefinitely. Force the check ourselves: once on load, again
+// whenever the app regains focus (reopening from the home screen/task
+// switcher), and on a coarse timer as a backstop for a long play session
+// that never backgrounds.
+const UPDATE_CHECK_INTERVAL_MS = 30 * 60 * 1000;
+
+registerSW({
   immediate: true,
-  onNeedRefresh() {
-    updateSW(true);
+  onRegisteredSW(_swUrl, registration) {
+    if (!registration) return;
+    const checkForUpdate = () => registration.update().catch(() => {});
+    checkForUpdate();
+    setInterval(checkForUpdate, UPDATE_CHECK_INTERVAL_MS);
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden) checkForUpdate();
+    });
   },
 });
 
