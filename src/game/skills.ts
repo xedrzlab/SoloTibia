@@ -36,13 +36,21 @@ const CURVES: Record<Exclude<SkillId, "magic">, SkillCurve> = {
   shielding: { start: 10, baseTries: 50 },
 };
 
-/** Per-vocation try multipliers for melee/distance/shielding — lower means the skill trains faster. */
+/**
+ * Per-vocation try multipliers for melee/distance/shielding — lower means
+ * the skill trains faster. Shielding specifically: TibiaWiki documents
+ * knights and paladins advancing at the *identical* speed (fastest), with
+ * druids/sorcerers advancing "significantly" slower — rarely getting
+ * shielding much past 25-30 — and druids a hair faster at it than
+ * sorcerers. Melee/distance don't have that knight/paladin tie or
+ * druid/sorcerer split documented, so those keep their existing spread.
+ */
 const VOCATION_FACTORS: Record<Vocation, Record<Exclude<SkillId, "magic">, number>> = {
   none: { melee: 1.5, distance: 1.5, shielding: 1.5 },
   knight: { melee: 1.0, distance: 1.4, shielding: 1.0 },
-  paladin: { melee: 1.2, distance: 1.0, shielding: 1.1 },
-  sorcerer: { melee: 2.0, distance: 2.0, shielding: 1.5 },
-  druid: { melee: 2.0, distance: 2.0, shielding: 1.5 },
+  paladin: { melee: 1.2, distance: 1.0, shielding: 1.0 },
+  sorcerer: { melee: 2.0, distance: 2.0, shielding: 4.5 },
+  druid: { melee: 2.0, distance: 2.0, shielding: 4.0 },
 };
 
 // Magic level's own documented mechanic: each vocation spends mana at a
