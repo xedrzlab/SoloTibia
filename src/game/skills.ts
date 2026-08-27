@@ -122,13 +122,27 @@ export class SkillSet {
 // ---------------------------------------------------------------------------
 
 /**
- * Combat stance (Full Attack/Balanced/Full Defense) isn't implemented yet —
- * every call site passes the default 1.0 (full attack) until that's added.
+ * Combat stance: a single CombatFactor variable multiplies only the
+ * skill x weapon-attack component of the damage formula, never the level
+ * contribution — so adding a future stance (Berserk, a Defensive Stance,
+ * whatever) is just one more entry here, no new formula branch.
  */
-export const COMBAT_FACTOR_FULL_ATTACK = 1.0;
+export type CombatStance = "attack" | "balanced" | "defense";
 
-/** Melee: maxDamage = 0.085 * combatFactor * attack * skill + level/5. */
-export function meleeMaxDamage(skill: number, attack: number, level: number, combatFactor = COMBAT_FACTOR_FULL_ATTACK): number {
+export const COMBAT_FACTORS: Record<CombatStance, number> = {
+  attack: 1.0,
+  balanced: 0.75,
+  defense: 0.5,
+};
+
+export const COMBAT_STANCE_NAMES: Record<CombatStance, string> = {
+  attack: "Full Attack",
+  balanced: "Balanced",
+  defense: "Full Defense",
+};
+
+/** Melee: maxDamage = (0.085 * combatFactor * attack * skill) + level/5 — the stance factor never touches the level term. */
+export function meleeMaxDamage(skill: number, attack: number, level: number, combatFactor: number): number {
   return Math.max(1, Math.floor(0.085 * combatFactor * attack * skill + level / 5));
 }
 
@@ -138,12 +152,30 @@ export function meleeMinDamage(max: number): number {
 }
 
 /** Distance: same shape as melee but its own coefficient (0.09) and floor (level/5, not 20% of max). */
-export function distanceMaxDamage(skill: number, attack: number, level: number, combatFactor = COMBAT_FACTOR_FULL_ATTACK): number {
+export function distanceMaxDamage(skill: number, attack: number, level: number, combatFactor: number): number {
   return Math.max(1, Math.floor(0.09 * combatFactor * attack * skill + level / 5));
 }
 
 export function distanceMinDamage(level: number): number {
   return Math.max(0, Math.floor(level / 5));
+}
+
+/**
+ * Distance hit chance: its own function, deliberately kept separate from
+ * the damage formula above so either can be re-tuned without touching the
+ * other, and hit/miss never modifies the damage range itself. Highest at
+ * an "optimal" range partway into the weapon's max reach; falls off both
+ * point-blank (too close) and at the ragged edge of range (too far).
+ */
+const DISTANCE_HIT_BASE = 0.97;
+const DISTANCE_HIT_PENALTY_PER_TILE = 0.06;
+const DISTANCE_HIT_MIN = 0.5;
+
+export function distanceHitChance(distance: number, maxRange: number): number {
+  const optimal = Math.max(2, Math.round(maxRange * 0.6));
+  const tilesFromOptimal = Math.abs(distance - optimal);
+  const chance = DISTANCE_HIT_BASE - DISTANCE_HIT_PENALTY_PER_TILE * tilesFromOptimal;
+  return Math.max(DISTANCE_HIT_MIN, Math.min(DISTANCE_HIT_BASE, chance));
 }
 
 /** Spells (damage or healing): level*0.2 + magicLevel*coefficient, rolled between the spell's min and max coefficient. */

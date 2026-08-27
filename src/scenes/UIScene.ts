@@ -19,6 +19,7 @@ import { SPELLS, SPELL_BAR } from "../data/spells";
 import { Container, ItemStack, SlotRef } from "../game/containers";
 import { Equipment, EQUIP_SLOT_NAMES } from "../game/equipment";
 import { VOCATION_DESCRIPTIONS, VOCATION_NAMES, ChosenVocation } from "../game/stats";
+import { CombatStance, COMBAT_STANCE_NAMES } from "../game/skills";
 
 // --- UI scale: one factor derived from the actual viewport, so a phone's
 // small landscape screen gets proportionally smaller chrome instead of the
@@ -75,6 +76,7 @@ let BATTLE_ROW_H = Math.round(24 * UI_SCALE);
 /** Action bar slots are the primary combat tap targets — floored well above the scale-down of decorative chrome. */
 let ACTION_SLOT_SIZE = Math.max(36, Math.round(40 * UI_SCALE));
 let ACTION_SLOT_GAP = Math.round(6 * UI_SCALE);
+let STANCE_ROW_H = Math.round(14 * UI_SCALE);
 
 /** Recomputes every scaled layout constant from the current viewport. Call on create() and on resize. */
 function applyUiScale() {
@@ -89,6 +91,7 @@ function applyUiScale() {
   BATTLE_ROW_H = Math.round(24 * UI_SCALE);
   ACTION_SLOT_SIZE = Math.max(36, Math.round(40 * UI_SCALE));
   ACTION_SLOT_GAP = Math.round(6 * UI_SCALE);
+  STANCE_ROW_H = Math.round(14 * UI_SCALE);
 }
 
 /** How close a dragged panel's edge has to land near another panel's edge to snap flush against it. */
@@ -522,9 +525,10 @@ export class UIScene extends Phaser.Scene {
   private characterPanelHeight(): number {
     if (this.collapsed.has("character")) return WINDOW_TITLE_H;
     // 12px is the "▾ Equipment" toggle strip, always drawn even when the
-    // paperdoll below it is collapsed.
+    // paperdoll below it is collapsed. STANCE_ROW_H is the tappable combat
+    // stance row, always visible just below the HP/mana bars.
     const equip = this.equipmentOpen ? equipGridHeight() + PAD : 0;
-    return WINDOW_TITLE_H + PAD + BAR_H * 2 + 2 + PAD + 12 + equip;
+    return WINDOW_TITLE_H + PAD + BAR_H * 2 + 2 + PAD + STANCE_ROW_H + 12 + equip;
   }
 
   /** 60% of the Character panel's height (reduced from a 1:1 match — it was taking up more space than a monster list needs) — its own internal scroll handles any overflow. */
@@ -660,6 +664,28 @@ export class UIScene extends Phaser.Scene {
       stats ? `${stats.mana} / ${stats.maxMana}` : "",
     );
     y += BAR_H + PAD;
+
+    // Combat stance: tap to cycle Full Attack -> Balanced -> Full Defense ->
+    // back around. CombatFactor scales only the skill x weapon-attack term
+    // of the damage formula (see meleeMaxDamage/distanceMaxDamage), never
+    // the level contribution.
+    const stance = this.stats?.combatStance ?? "attack";
+    const stanceRow = this.add
+      .text(left + w / 2, y, `⚔ ${COMBAT_STANCE_NAMES[stance]}`, {
+        ...TEXT,
+        fontSize: fs(10),
+        color: "#e6c34a",
+      })
+      .setOrigin(0.5, 0)
+      .setScrollFactor(0)
+      .setInteractive({ useHandCursor: true });
+    stanceRow.on("pointerdown", () => {
+      const order: CombatStance[] = ["attack", "balanced", "defense"];
+      const next = order[(order.indexOf(stance) + 1) % order.length];
+      bus.emit(EVENTS.SET_COMBAT_STANCE, { stance: next });
+    });
+    this.addToLayer(stanceRow);
+    y += STANCE_ROW_H;
 
     // Small ▾/▸ toggle in the top-right of the equipment area, so a player
     // who wants the map view can hide the paperdoll without collapsing the

@@ -42,6 +42,9 @@ import {
   SkillId,
   armorReduction,
   blockChance,
+  COMBAT_FACTORS,
+  COMBAT_STANCE_NAMES,
+  distanceHitChance,
   distanceMaxDamage,
   distanceMinDamage,
   meleeMaxDamage,
@@ -66,6 +69,7 @@ import {
   LootAllPayload,
   UiLayoutPayload,
   SelectTargetPayload,
+  SetCombatStancePayload,
 } from "../game/events";
 
 const RECHASE_INTERVAL_MS = 300;
@@ -155,6 +159,10 @@ export class WorldScene extends Phaser.Scene {
 
   private activeLevelUpBanners: Phaser.GameObjects.Text[] = [];
 
+  /** The most recent distance attack's hit-chance roll, surfaced in the debug overlay (?debug=1). */
+  private lastDistanceDebug: { distance: number; hitChance: number; roll: number; result: "HIT" | "MISS" } | null =
+    null;
+
   constructor() {
     super("World");
   }
@@ -219,6 +227,14 @@ export class WorldScene extends Phaser.Scene {
       this.modalOpen = payload.open;
     });
     bus.on(EVENTS.CLIMB_CONFIRM, () => this.performClimb());
+    bus.on(EVENTS.SET_COMBAT_STANCE, (payload: SetCombatStancePayload) => {
+      this.player.combatStance = payload.stance;
+      // Push the new stance straight back to the UI so the Character panel's
+      // tap-to-cycle row re-renders with it — otherwise the row's closure
+      // stays stale at whatever stance was current when it was last drawn,
+      // and every subsequent tap re-computes "next after the old stance".
+      this.emitPlayerStats();
+    });
     bus.on(EVENTS.REQUEST_VOCATION_TALK, (payload: RequestVocationTalkPayload) =>
       this.requestVocationTalk(payload.npcId),
     );
@@ -603,7 +619,16 @@ export class WorldScene extends Phaser.Scene {
       mobs: this.monsters.filter((m) => m.alive).length,
       corpse: this.corpses.length,
       mode: this.resolveAttackMode().mode,
+      stance: COMBAT_STANCE_NAMES[this.player.combatStance],
       time: this.dayNight.phaseName,
+      ...(this.lastDistanceDebug
+        ? {
+            "dist  ": `${this.lastDistanceDebug.distance} tiles`,
+            "hit%  ": `${this.lastDistanceDebug.hitChance}%`,
+            "roll  ": this.lastDistanceDebug.roll,
+            "result": this.lastDistanceDebug.result,
+          }
+        : {}),
     });
   }
 
@@ -712,17 +737,37 @@ export class WorldScene extends Phaser.Scene {
       const skill: SkillId = mode === "distance" ? "distance" : "melee";
       const attack = equipment.attackValue();
       const skillLevel = player.skills.level(skill);
+      const combatFactor = COMBAT_FACTORS[player.combatStance];
       if (mode === "distance") {
-        const max = distanceMaxDamage(skillLevel, attack, player.level);
-        damage = rollDamage(distanceMinDamage(player.level), max);
-      } else {
-        const max = meleeMaxDamage(skillLevel, attack, player.level);
-        damage = rollDamage(meleeMinDamage(max), max);
-      }
-      this.trainSkill(skill, 1);
-      if (mode === "distance") {
+        // Hit chance is its own roll, entirely separate from the damage
+        // range — a miss deals 0 and never touches meleeMinDamage/
+        // distanceMaxDamage; a hit rolls the normal range untouched by
+        // whatever the hit chance happened to be.
+        const maxRange = equipment.attackRange();
+        const dist = chebyshevDistance(player.tile, target.tile);
+        const hitChancePct = distanceHitChance(dist, maxRange) * 100;
+        const roll = Math.random() * 100;
+        const hit = roll < hitChancePct;
+        this.lastDistanceDebug = {
+          distance: dist,
+          hitChance: Math.round(hitChancePct),
+          roll: Math.round(roll * 10) / 10,
+          result: hit ? "HIT" : "MISS",
+        };
+        if (hit) {
+          const max = distanceMaxDamage(skillLevel, attack, player.level, combatFactor);
+          damage = rollDamage(distanceMinDamage(player.level), max);
+          // Only a landed hit counts as a "try" for training — a miss never happened as far as the skill is concerned.
+          this.trainSkill(skill, 1);
+        } else {
+          damage = 0;
+        }
         this.consumeAmmo();
         this.fireProjectile(target, "arrow");
+      } else {
+        const max = meleeMaxDamage(skillLevel, attack, player.level, combatFactor);
+        damage = rollDamage(meleeMinDamage(max), max);
+        this.trainSkill(skill, 1);
       }
     }
 
@@ -1425,6 +1470,7 @@ export class WorldScene extends Phaser.Scene {
       exp: this.player.exp,
       expIntoLevel: this.player.expIntoLevel(),
       expForLevel: this.player.expForLevel(),
+      combatStance: this.player.combatStance,
     });
   }
 

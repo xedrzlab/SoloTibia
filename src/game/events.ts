@@ -1,7 +1,7 @@
 import Phaser from "phaser";
 import type { Container, SlotRef } from "./containers";
 import type { Equipment } from "./equipment";
-import type { SkillId } from "./skills";
+import type { CombatStance, SkillId } from "./skills";
 
 // A tiny scene-to-scene message bus (WorldScene <-> UIScene) so the HUD
 // doesn't need direct references into world/game-logic internals.
@@ -39,6 +39,8 @@ export const EVENTS = {
   OPEN_CLIMB_PROMPT: "open-climb-prompt",
   /** Player confirmed the climb prompt — WorldScene performs the actual teleport. */
   CLIMB_CONFIRM: "climb-confirm",
+  /** Player cycled their combat stance (Full Attack/Balanced/Full Defense) from the Character panel. */
+  SET_COMBAT_STANCE: "set-combat-stance",
 } as const;
 
 export interface InteriorStatePayload {
@@ -54,6 +56,7 @@ export interface PlayerStatsPayload {
   exp: number;
   expIntoLevel: number;
   expForLevel: number;
+  combatStance: CombatStance;
 }
 
 export interface TargetPayload {
@@ -190,4 +193,8 @@ export interface SelectTargetPayload {
 
 export interface OpenClimbPromptPayload {
   direction: "down" | "up";
+}
+
+export interface SetCombatStancePayload {
+  stance: CombatStance;
 }

@@ -17,7 +17,7 @@ import {
   expIntoCurrentLevel,
   expNeededForNextLevel,
 } from "../stats";
-import { SkillSet } from "../skills";
+import { CombatStance, SkillSet } from "../skills";
 import { Equipment } from "../equipment";
 import { Container, createStack } from "../containers";
 import { ITEMS } from "../../data/items";
@@ -43,6 +43,8 @@ export class Player {
   private stepToggle = false;
 
   vocation: Vocation = "none";
+  /** Full Attack/Balanced/Full Defense — scales only the skill x weapon-attack term of the damage formula. */
+  combatStance: CombatStance = "attack";
   level = 1;
   exp = 0;
   hp: number;
