@@ -507,6 +507,14 @@ for (const npc of NPC_SPAWNS) {
 }
 b.set(TEMPLE_SPAWN.x, TEMPLE_SPAWN.y, "S");
 
+// Three houses ended up stranded off the road network — the workshop's row
+// only has an approach lane as far as Borin's shop, and the eastern tower +
+// house sit past where Fenn's approach ends, behind trees the scatter above
+// happened to drop right in front of their doors. Short spurs (after the
+// scatter, so they win over any tree there) close both gaps.
+b.rect(20, 20, 6, 1, "R"); // workshop (20,17) — links up to Borin's approach at x26
+b.rect(44, 20, 10, 1, "R"); // tower (47,17) + house (51,17) — links up to Fenn's approach at x43
+
 // ---------------------------------------------------------------------------
 // Tile legend and lookup helpers
 // ---------------------------------------------------------------------------
