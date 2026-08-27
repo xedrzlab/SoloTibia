@@ -466,7 +466,7 @@ export class WorldScene extends Phaser.Scene {
 
     const tx = Math.floor(wx / TILE_SIZE);
     const ty = Math.floor(wy / TILE_SIZE);
-    if (!isWalkable(tx, ty)) return;
+    if (!this.isWalkableForMover(tx, ty)) return;
 
     // A ladder/hatch only starts the hold-to-climb interaction once the
     // player is already on or right next to it — tapping one from across
@@ -479,7 +479,7 @@ export class WorldScene extends Phaser.Scene {
       return;
     }
 
-    const path = findPath(isWalkable, this.player.tile, { x: tx, y: ty });
+    const path = findPath((x, y) => this.isWalkableForMover(x, y), this.player.tile, { x: tx, y: ty });
     this.playerPath = path;
   }
 
@@ -533,6 +533,29 @@ export class WorldScene extends Phaser.Scene {
     bus.emit(EVENTS.TARGET, null);
   }
 
+  /**
+   * Living entities block a tile the same way solid terrain does — so
+   * monsters can't stack on each other, and neither side can path onto the
+   * other. The entity actually being chased (a combat target) is excluded:
+   * both the player and monsters path toward their target's own tile as the
+   * pathfinding goal, then stop once in range, so treating that one tile as
+   * "occupied" would make findPath's goal-reachability check fail and break
+   * chasing outright.
+   */
+  private isWalkableForMover(
+    x: number,
+    y: number,
+    opts: { ignoreMonster?: Monster; ignorePlayer?: boolean } = {},
+  ): boolean {
+    if (!isWalkable(x, y)) return false;
+    if (!opts.ignorePlayer && this.player.tileX === x && this.player.tileY === y) return false;
+    for (const m of this.monsters) {
+      if (!m.alive || m === opts.ignoreMonster) continue;
+      if (m.tileX === x && m.tileY === y) return false;
+    }
+    return true;
+  }
+
   update(_time: number, delta: number) {
     if (this.player.hp <= 0) {
       this.handlePlayerDeath();
@@ -540,8 +563,12 @@ export class WorldScene extends Phaser.Scene {
     }
 
     for (const monster of this.monsters) {
-      monster.update(delta, this.player.tile, this.player.hp > 0, isWalkable, (damage, attackerName) =>
-        this.damagePlayer(damage, attackerName),
+      monster.update(
+        delta,
+        this.player.tile,
+        this.player.hp > 0,
+        (x, y) => this.isWalkableForMover(x, y, { ignorePlayer: true, ignoreMonster: monster }),
+        (damage, attackerName) => this.damagePlayer(damage, attackerName),
       );
     }
 
@@ -645,7 +672,11 @@ export class WorldScene extends Phaser.Scene {
     this.chaseTimer -= delta;
     if (this.chaseTimer <= 0 && !this.player.moving) {
       this.chaseTimer = RECHASE_INTERVAL_MS;
-      this.playerPath = findPath(isWalkable, this.player.tile, target.tile);
+      this.playerPath = findPath(
+        (x, y) => this.isWalkableForMover(x, y, { ignoreMonster: target }),
+        this.player.tile,
+        target.tile,
+      );
     }
   }
 
@@ -901,7 +932,7 @@ export class WorldScene extends Phaser.Scene {
 
     const releaseAsWalk = () => {
       this.cancelClimbHold();
-      this.playerPath = findPath(isWalkable, this.player.tile, { x: tx, y: ty });
+      this.playerPath = findPath((x, y) => this.isWalkableForMover(x, y), this.player.tile, { x: tx, y: ty });
     };
     const onMove = (p: Phaser.Input.Pointer) => {
       if (Phaser.Math.Distance.Between(p.x, p.y, startX, startY) > 12) releaseAsWalk();
