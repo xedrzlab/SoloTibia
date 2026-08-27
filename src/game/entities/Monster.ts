@@ -119,11 +119,18 @@ export class Monster {
     this.nameLabel.setPosition(barX, this.nameY());
   }
 
-  /** Directional sheets (framesPerDirection set) index by facing + idle/step; simple 2-frame sheets just toggle frame 0/1, flipped horizontally for movement direction. */
+  /**
+   * Directional sheets (framesPerDirection set) index by facing + idle/step;
+   * simple 2-frame sheets just toggle frame 0/1, flipped horizontally for
+   * movement direction. The walk toggle wants frames 1/2 to alternate, but a
+   * creature with only 2 poses per direction (idle, move — no separate
+   * step-alternation art) doesn't have a frame 2, so it's clamped to the
+   * last real frame instead of indexing past the sheet.
+   */
   private applyFrame(idle: boolean) {
     const perDir = this.def.framesPerDirection;
     if (perDir) {
-      const frameInDirection = idle ? 0 : this.stepToggle ? 1 : 2;
+      const frameInDirection = idle ? 0 : Math.min(this.stepToggle ? 1 : 2, perDir - 1);
       this.sprite.setFrame(directionalFrameIndex(this.facing, frameInDirection, perDir));
     } else {
       this.sprite.setFrame(idle ? 0 : 1 % this.def.frameCount);

@@ -3435,10 +3435,9 @@ saveSprite(bankerFrame(), SCALE, `${OUT}/characters/npc_banker.png`);
 const trollMeta = saveSpriteSheet(directionalFrames(trollFrame), SCALE, `${OUT}/creatures/troll_sheet.png`);
 const ratFrames = [ratFrame({ step: 0 }), ratFrame({ step: 1 })];
 const ratMeta = saveSpriteSheet(ratFrames, SCALE, `${OUT}/creatures/rat_sheet.png`);
-// Darker fur and red eyes mark the cave variant apart from the field rat.
-const CAVE_RAT = { furBase: "#4a3626", furDark: "#2a2018", belly: "#8a7060", earPink: "#a85a52", eye: "#a83232", scale: 1.15 };
-const caveRatFrames = [ratFrame({ ...CAVE_RAT, step: 0 }), ratFrame({ ...CAVE_RAT, step: 1 })];
-const caveRatMeta = saveSpriteSheet(caveRatFrames, SCALE, `${OUT}/creatures/cave_rat_sheet.png`);
+// cave_rat_sheet.png is no longer generated here — it's hand/AI-authored art
+// (4 directions x idle/move, assembled by a one-off import script) checked
+// straight into public/assets/creatures/. Don't regenerate over it.
 const slimeFrames = [slimeFrame({ squish: false }), slimeFrame({ squish: true })];
 const slimeMeta = saveSpriteSheet(slimeFrames, SCALE, `${OUT}/creatures/slime_sheet.png`);
 
@@ -3482,4 +3481,3 @@ console.log("water sheet meta:", waterMeta);
 console.log("PLAYER_SHEET must match:", playerMeta);
 console.log("TROLL_SHEET must match:", trollMeta);
 console.log("rat sheet meta:", ratMeta);
-console.log("cave rat sheet meta:", caveRatMeta);

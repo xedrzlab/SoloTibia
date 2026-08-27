@@ -171,7 +171,7 @@ export const SHEET_ASSETS: SheetAsset[] = [
   { key: "player-shield", path: "characters/player_shield_sheet.png", ...TILE_FRAME },
   { key: "player-backpack", path: "characters/player_backpack_sheet.png", ...TILE_FRAME },
   { key: "rat", path: "creatures/rat_sheet.png", ...TILE_FRAME },
-  { key: "cave-rat", path: "creatures/cave_rat_sheet.png", ...TILE_FRAME },
+  { key: "cave-rat", path: "creatures/cave_rat_sheet.png", frameWidth: 40, frameHeight: 40 },
   { key: "slime", path: "creatures/slime_sheet.png", ...TILE_FRAME },
   { key: "troll", path: "creatures/troll_sheet.png", frameWidth: 40, frameHeight: 52 },
 ];

@@ -70,6 +70,9 @@ for (const [id, monster] of Object.entries(MONSTERS)) {
   if (monster.armor < 0) fail(`${tag}: negative armor`);
   if (monster.speed <= 0) fail(`${tag}: speed must be positive`);
   if (monster.fleeAtHpPct < 0 || monster.fleeAtHpPct > 1) fail(`${tag}: fleeAtHpPct must be 0-1`);
+  if (monster.framesPerDirection !== undefined && monster.frameCount !== monster.framesPerDirection * 4) {
+    fail(`${tag}: frameCount (${monster.frameCount}) must equal framesPerDirection * 4 (${monster.framesPerDirection * 4}) — one direction per DIRECTION_ORDER entry`);
+  }
   if (!sheetKeys.has(monster.textureKey)) {
     fail(`${tag}: textureKey "${monster.textureKey}" is not registered in SHEET_ASSETS`);
   }
