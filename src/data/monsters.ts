@@ -109,4 +109,26 @@ export const MONSTERS: Record<string, MonsterDef> = {
       { itemId: "health_potion", chance: 0.15, min: 1, max: 1 },
     ],
   },
+  // A harmless town novelty, not a combat encounter — see its MONSTER_SPAWNS
+  // entry for why it's allowed to live on the (otherwise deliberately
+  // peaceful) surface. hitChance 0 means every "attack" is a guaranteed
+  // miss, so it can chase the player around without ever actually landing
+  // a hit; min/maxDamage are 0 too, redundantly, in case that ever changes.
+  curious_rat: {
+    id: "curious_rat",
+    name: "Curious Rat",
+    textureKey: "cave-rat",
+    frameCount: 8,
+    framesPerDirection: 2,
+    hp: 20,
+    xp: 0,
+    minDamage: 0,
+    maxDamage: 0,
+    attackIntervalMs: 2000,
+    hitChance: 0,
+    armor: 0,
+    speed: 90,
+    fleeAtHpPct: 0,
+    loot: [],
+  },
 };
