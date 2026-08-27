@@ -19,23 +19,76 @@ import { Container, ItemStack, SlotRef } from "../game/containers";
 import { Equipment, EQUIP_SLOT_NAMES } from "../game/equipment";
 import { VOCATION_DESCRIPTIONS, VOCATION_NAMES, ChosenVocation } from "../game/stats";
 
+// --- UI scale: one factor derived from the actual viewport, so a phone's
+// small landscape screen gets proportionally smaller chrome instead of the
+// same fixed pixel sizes tuned on a full-size desktop test window. Clamped
+// so it never shrinks tap targets below a comfortable size or grows text
+// oversized on a tablet. Recomputed on scene create + on resize.
+const UI_SCALE_MIN = 0.7;
+const UI_SCALE_MAX = 1.1;
+// Baseline viewport this UI was designed at (~900x420 desktop test window).
+const UI_SCALE_BASE_W = 900;
+const UI_SCALE_BASE_H = 420;
+function computeUiScale(): number {
+  if (typeof window === "undefined") return 1;
+  return Phaser.Math.Clamp(
+    Math.min(window.innerWidth / UI_SCALE_BASE_W, window.innerHeight / UI_SCALE_BASE_H),
+    UI_SCALE_MIN,
+    UI_SCALE_MAX,
+  );
+}
+let UI_SCALE = computeUiScale();
+
+/** Rounds a design-time px value by the current UI scale for a Phaser text style. */
+function fs(px: number): string {
+  return `${Math.round(px * UI_SCALE)}px`;
+}
+
 // --- Sidebar geometry, modelled on the 176px-wide classic Tibia client panel.
-// Width scales down on short viewports (phones in landscape) so the sidebar
-// doesn't eat the game view — recomputed on scene create + on resize.
+// Scaled by UI_SCALE, but also hard-capped as a fraction of the actual
+// screen width so the sidebar + Battle panel together can never eat an
+// outsized share of a narrow phone screen (the previous version scaled off
+// viewport height alone, which let a wide-but-short phone screen keep a
+// full-width sidebar).
 const SIDEBAR_WIDTH_MAX = 176;
-const SIDEBAR_WIDTH_MIN = 128;
+const SIDEBAR_WIDTH_MIN = 112;
 function computeSidebarWidth(): number {
-  const h = typeof window !== "undefined" ? window.innerHeight : SIDEBAR_WIDTH_MAX;
-  return Math.round(Math.max(SIDEBAR_WIDTH_MIN, Math.min(SIDEBAR_WIDTH_MAX, h * 0.35)));
+  const w = typeof window !== "undefined" ? window.innerWidth : SIDEBAR_WIDTH_MAX;
+  const scaled = Math.round(SIDEBAR_WIDTH_MAX * UI_SCALE);
+  // The sidebar and the Battle panel next to it are BOTH this width, so this
+  // fraction is really half of what the two columns cost the player — keep
+  // it tight enough that a phone still gets most of its width back for the
+  // actual game view.
+  const capByWidth = Math.round(w * 0.17);
+  return Phaser.Math.Clamp(Math.min(scaled, capByWidth), SIDEBAR_WIDTH_MIN, SIDEBAR_WIDTH_MAX);
 }
 let SIDEBAR_WIDTH = computeSidebarWidth();
-const PAD = 6;
-const BAR_H = 14;
-const SLOT = 32;
-const SLOT_GAP = 2;
-const WINDOW_TITLE_H = 20;
-const TOGGLE_W = 18;
-const BATTLE_ROW_H = 24;
+let PAD = Math.round(6 * UI_SCALE);
+let BAR_H = Math.round(14 * UI_SCALE);
+/** Equipment/backpack slots are drag targets, so they get their own floor rather than following UI_SCALE all the way down. */
+let SLOT = Math.max(26, Math.round(32 * UI_SCALE));
+let SLOT_GAP = Math.max(1, Math.round(2 * UI_SCALE));
+let WINDOW_TITLE_H = Math.max(16, Math.round(20 * UI_SCALE));
+let TOGGLE_W = Math.round(18 * UI_SCALE);
+let BATTLE_ROW_H = Math.round(24 * UI_SCALE);
+/** Action bar slots are the primary combat tap targets — floored well above the scale-down of decorative chrome. */
+let ACTION_SLOT_SIZE = Math.max(36, Math.round(40 * UI_SCALE));
+let ACTION_SLOT_GAP = Math.round(6 * UI_SCALE);
+
+/** Recomputes every scaled layout constant from the current viewport. Call on create() and on resize. */
+function applyUiScale() {
+  UI_SCALE = computeUiScale();
+  SIDEBAR_WIDTH = computeSidebarWidth();
+  PAD = Math.round(6 * UI_SCALE);
+  BAR_H = Math.round(14 * UI_SCALE);
+  SLOT = Math.max(26, Math.round(32 * UI_SCALE));
+  SLOT_GAP = Math.max(1, Math.round(2 * UI_SCALE));
+  WINDOW_TITLE_H = Math.max(16, Math.round(20 * UI_SCALE));
+  TOGGLE_W = Math.round(18 * UI_SCALE);
+  BATTLE_ROW_H = Math.round(24 * UI_SCALE);
+  ACTION_SLOT_SIZE = Math.max(36, Math.round(40 * UI_SCALE));
+  ACTION_SLOT_GAP = Math.round(6 * UI_SCALE);
+}
 
 /** How close a dragged panel's edge has to land near another panel's edge to snap flush against it. */
 const SNAP_THRESHOLD = 14;
@@ -82,7 +135,9 @@ const EQUIP_LAYOUT: { slot: EquipSlot; col: number; row: number }[] = [
 ];
 
 const EQUIP_ROWS = 4;
-const EQUIP_GRID_H = EQUIP_ROWS * SLOT + (EQUIP_ROWS - 1) * SLOT_GAP;
+function equipGridHeight(): number {
+  return EQUIP_ROWS * SLOT + (EQUIP_ROWS - 1) * SLOT_GAP;
+}
 
 interface DropTarget {
   rect: Phaser.Geom.Rectangle;
@@ -178,6 +233,10 @@ export class UIScene extends Phaser.Scene {
   }
 
   create() {
+    // Compute real sizes for this viewport before anything is built — the
+    // action bar in particular sizes its slots once at construction time.
+    applyUiScale();
+
     this.sidebarLayer = this.add.layer().setDepth(120);
     this.loadPanelPositions();
 
@@ -224,10 +283,9 @@ export class UIScene extends Phaser.Scene {
     });
 
     this.scale.on("resize", () => {
-      SIDEBAR_WIDTH = computeSidebarWidth();
+      applyUiScale();
       this.layout();
     });
-    SIDEBAR_WIDTH = computeSidebarWidth();
     this.layout();
   }
 
@@ -257,8 +315,8 @@ export class UIScene extends Phaser.Scene {
 
     this.targetPanel.setPosition(gw / 2, 8);
 
-    const slotSize = 40;
-    const slotGap = 6;
+    const slotSize = ACTION_SLOT_SIZE;
+    const slotGap = ACTION_SLOT_GAP;
     const total = this.actionSlots.length * slotSize + (this.actionSlots.length - 1) * slotGap;
     let x = gw / 2 - total / 2 + slotSize / 2;
     const y = h - slotSize / 2 - 8;
@@ -302,7 +360,7 @@ export class UIScene extends Phaser.Scene {
       .setDepth(130)
       .setInteractive({ useHandCursor: true });
     this.toggleText = this.add
-      .text(0, 0, "›", { ...TEXT, fontSize: "16px", color: "#f0f0f0" })
+      .text(0, 0, "›", { ...TEXT, fontSize: fs(16), color: "#f0f0f0" })
       .setOrigin(0.5)
       .setScrollFactor(0)
       .setDepth(131);
@@ -448,7 +506,7 @@ export class UIScene extends Phaser.Scene {
     if (this.collapsed.has("character")) return WINDOW_TITLE_H;
     // 12px is the "▾ Equipment" toggle strip, always drawn even when the
     // paperdoll below it is collapsed.
-    const equip = this.equipmentOpen ? EQUIP_GRID_H + PAD : 0;
+    const equip = this.equipmentOpen ? equipGridHeight() + PAD : 0;
     return WINDOW_TITLE_H + PAD + BAR_H * 2 + 2 + PAD + 12 + equip;
   }
 
@@ -536,7 +594,7 @@ export class UIScene extends Phaser.Scene {
       this.add
         .text(pos.x + 8, pos.y + WINDOW_TITLE_H / 2, `${isCollapsed ? "▸" : "▾"} ${title}`, {
           ...TEXT,
-          fontSize: "10px",
+          fontSize: fs(10),
           color: "#e6c34a",
         })
         .setOrigin(0, 0.5)
@@ -594,7 +652,7 @@ export class UIScene extends Phaser.Scene {
     const toggle = this.add
       .text(left + w - PAD, y, `${toggleLabel} Equipment`, {
         ...TEXT,
-        fontSize: "10px",
+        fontSize: fs(10),
         color: "#e6c34a",
       })
       .setOrigin(1, 0)
@@ -630,7 +688,7 @@ export class UIScene extends Phaser.Scene {
       this.add
         .text(gridLeft + SLOT / 2, bottomY + 6, `Cap:\n${Math.floor(free)}`, {
           ...TEXT,
-          fontSize: "9px",
+          fontSize: fs(9),
           color: "#cccccc",
           align: "center",
         })
@@ -645,7 +703,7 @@ export class UIScene extends Phaser.Scene {
           gridLeft + 2 * (SLOT + SLOT_GAP) + SLOT / 2,
           bottomY + 2,
           skills ? `Atk ${skills.attack}\nDef ${skills.defense}\nArm ${skills.armor}` : "",
-          { ...TEXT, fontSize: "9px", color: "#cccccc", align: "center" },
+          { ...TEXT, fontSize: fs(9), color: "#cccccc", align: "center" },
         )
         .setOrigin(0.5, 0)
         .setScrollFactor(0),
@@ -654,7 +712,7 @@ export class UIScene extends Phaser.Scene {
 
   private drawTinyButton(x: number, y: number, glyph: string, onTap: () => void): Phaser.GameObjects.Text {
     const t = this.add
-      .text(x, y, glyph, { ...TEXT, fontSize: "13px", color: "#e2e2e2" })
+      .text(x, y, glyph, { ...TEXT, fontSize: fs(13), color: "#e2e2e2" })
       .setOrigin(1, 0.5)
       .setScrollFactor(0)
       .setInteractive({ useHandCursor: true });
@@ -691,13 +749,13 @@ export class UIScene extends Phaser.Scene {
     for (const [label, value] of lines) {
       this.addToLayer(
         this.add
-          .text(contentLeft, y + 1, label, { ...TEXT, fontSize: "10px", color: "#b0b0b0" })
+          .text(contentLeft, y + 1, label, { ...TEXT, fontSize: fs(10), color: "#b0b0b0" })
           .setOrigin(0, 0)
           .setScrollFactor(0),
       );
       this.addToLayer(
         this.add
-          .text(contentLeft + contentW, y + 1, value, { ...TEXT, fontSize: "10px", color: "#f0f0f0" })
+          .text(contentLeft + contentW, y + 1, value, { ...TEXT, fontSize: fs(10), color: "#f0f0f0" })
           .setOrigin(1, 0)
           .setScrollFactor(0),
       );
@@ -719,13 +777,13 @@ export class UIScene extends Phaser.Scene {
     for (const skill of skills.skills) {
       this.addToLayer(
         this.add
-          .text(contentLeft, y, skill.name, { ...TEXT, fontSize: "10px", color: "#b0b0b0" })
+          .text(contentLeft, y, skill.name, { ...TEXT, fontSize: fs(10), color: "#b0b0b0" })
           .setOrigin(0, 0)
           .setScrollFactor(0),
       );
       this.addToLayer(
         this.add
-          .text(contentLeft + contentW, y, String(skill.level), { ...TEXT, fontSize: "10px", color: "#f0f0f0" })
+          .text(contentLeft + contentW, y, String(skill.level), { ...TEXT, fontSize: fs(10), color: "#f0f0f0" })
           .setOrigin(1, 0)
           .setScrollFactor(0),
       );
@@ -769,7 +827,7 @@ export class UIScene extends Phaser.Scene {
     if (this.battleEntries.length === 0) {
       this.addToLayer(
         this.add
-          .text(contentLeft, y + 4, "(nothing nearby)", { ...TEXT, fontSize: "10px", color: "#777777" })
+          .text(contentLeft, y + 4, "(nothing nearby)", { ...TEXT, fontSize: fs(10), color: "#777777" })
           .setOrigin(0, 0)
           .setScrollFactor(0)
           .setMask(mask),
@@ -803,7 +861,7 @@ export class UIScene extends Phaser.Scene {
         this.addToLayer(row);
         this.addToLayer(
           this.add
-            .text(contentLeft + 4, y + 3, entry.name, { ...TEXT, fontSize: "10px", color: "#f0f0f0" })
+            .text(contentLeft + 4, y + 3, entry.name, { ...TEXT, fontSize: fs(10), color: "#f0f0f0" })
             .setOrigin(0, 0)
             .setScrollFactor(0)
             .setMask(mask),
@@ -864,7 +922,7 @@ export class UIScene extends Phaser.Scene {
       if (hint) {
         this.addToLayer(
           this.add
-            .text(x + size / 2, y + size / 2, hint.slice(0, 4), { ...TEXT, fontSize: "8px", color: "#4a4a4a" })
+            .text(x + size / 2, y + size / 2, hint.slice(0, 4), { ...TEXT, fontSize: fs(8), color: "#4a4a4a" })
             .setOrigin(0.5)
             .setScrollFactor(0),
         );
@@ -892,7 +950,7 @@ export class UIScene extends Phaser.Scene {
         this.add
           .text(x + size - 2, y + size - 2, String(stack.count), {
             ...TEXT,
-            fontSize: "9px",
+            fontSize: fs(9),
             color: "#ffffff",
             stroke: "#000000",
             strokeThickness: 3,
@@ -1015,7 +1073,7 @@ export class UIScene extends Phaser.Scene {
       const text = this.add
         .text(x + width / 2, y + height / 2, label, {
           ...TEXT,
-          fontSize: "10px",
+          fontSize: fs(10),
           color: "#f0f0f0",
           stroke: "#000000",
           strokeThickness: 2,
@@ -1040,7 +1098,7 @@ export class UIScene extends Phaser.Scene {
     this.targetPanel = this.add.container(0, 0).setScrollFactor(0).setDepth(100).setVisible(false);
     const bg = this.add.rectangle(0, 0, 180, 32, COLORS.panelBg, 0.75).setOrigin(0.5, 0);
     this.targetLabel = this.add
-      .text(0, 3, "", { ...TEXT, fontSize: "12px", color: "#f0f0f0" })
+      .text(0, 3, "", { ...TEXT, fontSize: fs(12), color: "#f0f0f0" })
       .setOrigin(0.5, 0);
     this.targetBarBg = this.add.rectangle(-80, 19, 160, 8, COLORS.barBg, 0.8).setOrigin(0, 0);
     this.targetBarFill = this.add.rectangle(-79, 20, 158, 6, COLORS.hp, 1).setOrigin(0, 0);
@@ -1066,14 +1124,18 @@ export class UIScene extends Phaser.Scene {
 
     for (const entry of entries) {
       const bg = this.add
-        .rectangle(0, 0, 40, 40, COLORS.panelBg, 0.8)
+        .rectangle(0, 0, ACTION_SLOT_SIZE, ACTION_SLOT_SIZE, COLORS.panelBg, 0.8)
         .setStrokeStyle(1, COLORS.border)
         .setScrollFactor(0)
         .setDepth(100)
         .setInteractive({ useHandCursor: true });
-      const icon = this.add.image(0, 0, entry.textureKey).setScrollFactor(0).setDepth(101);
+      const icon = this.add
+        .image(0, 0, entry.textureKey)
+        .setDisplaySize(ACTION_SLOT_SIZE * 0.8, ACTION_SLOT_SIZE * 0.8)
+        .setScrollFactor(0)
+        .setDepth(101);
       const label = this.add
-        .text(0, 0, "", { ...TEXT, fontSize: "10px", color: "#f0f0f0", stroke: "#000000", strokeThickness: 3 })
+        .text(0, 0, "", { ...TEXT, fontSize: fs(10), color: "#f0f0f0", stroke: "#000000", strokeThickness: 3 })
         .setOrigin(1, 1)
         .setScrollFactor(0)
         .setDepth(102);
@@ -1117,7 +1179,7 @@ export class UIScene extends Phaser.Scene {
     for (let i = 0; i < 5; i++) {
       this.logLines.push(
         this.add
-          .text(0, 0, "", { ...TEXT, fontSize: "11px", color: "#cccccc", stroke: "#000000", strokeThickness: 3 })
+          .text(0, 0, "", { ...TEXT, fontSize: fs(11), color: "#cccccc", stroke: "#000000", strokeThickness: 3 })
           .setScrollFactor(0)
           .setDepth(100),
       );
