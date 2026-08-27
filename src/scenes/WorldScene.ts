@@ -36,6 +36,7 @@ import { getActiveCharacter, updateActiveCharacter, setActiveCharacter } from ".
 import { rollDamage, rollLoot } from "../game/combat";
 import { Container, ItemStack, SlotAccessor, SlotRef, moveStack } from "../game/containers";
 import {
+  SKILL_LOG_NAMES,
   SKILL_NAMES,
   SKILL_ORDER,
   SkillId,
@@ -148,6 +149,8 @@ export class WorldScene extends Phaser.Scene {
   private climbHoldTimer: Phaser.Time.TimerEvent | null = null;
   private climbHoldCleanup: (() => void) | null = null;
   private static readonly CLIMB_HOLD_MS = 450;
+
+  private activeLevelUpBanners: Phaser.GameObjects.Text[] = [];
 
   constructor() {
     super("World");
@@ -765,7 +768,9 @@ export class WorldScene extends Phaser.Scene {
   private trainSkill(skill: SkillId, amount: number) {
     const gained = this.player.skills.train(skill, amount, this.player.vocation);
     if (gained > 0) {
-      this.log("levelup", `You advanced to ${SKILL_NAMES[skill]} level ${this.player.skills.level(skill)}.`);
+      const text = `You advanced to ${SKILL_LOG_NAMES[skill]} level ${this.player.skills.level(skill)}.`;
+      this.log("levelup", text);
+      this.showLevelUpBanner(text);
     }
     this.skillsDirty = true;
   }
@@ -1060,12 +1065,15 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private rewardKill(monster: Monster) {
+    const levelBefore = this.player.level;
     const { leveledUp } = this.player.gainExp(monster.def.xp);
     this.saveCharacter(); // exp / level are what the select screen shows
     this.log("xp", `You destroy the ${monster.def.name}. +${monster.def.xp} exp.`);
     this.floatText(this.spriteCenterX(this.player.sprite), this.spriteTopY(this.player.sprite) - 14, `+${monster.def.xp} xp`, "#8fd0ff");
     if (leveledUp) {
-      this.log("levelup", `You advanced to level ${this.player.level}!`);
+      const text = `You advanced from level ${levelBefore} to level ${this.player.level}.`;
+      this.log("levelup", text);
+      this.showLevelUpBanner(text);
       this.burst(
         this.spriteCenterX(this.player.sprite),
         this.spriteTopY(this.player.sprite) + this.player.sprite.displayHeight / 2,
@@ -1324,6 +1332,45 @@ export class WorldScene extends Phaser.Scene {
 
   private spriteTopY(sprite: Phaser.GameObjects.Sprite): number {
     return sprite.y - sprite.displayHeight;
+  }
+
+  /**
+   * A level-up/skill-up announcement, fixed at ~60% down the actual game
+   * viewport (the main camera's own width/height already exclude the
+   * sidebar, per applyUiLayout) rather than anchored to the player sprite —
+   * unlike floatText, this should stay put and be readable regardless of
+   * where the player or camera currently are.
+   */
+  private showLevelUpBanner(text: string) {
+    const cam = this.cameras.main;
+    // A single kill can grant an XP level-up and a skill level-up in the
+    // same instant — stack banners under one another instead of letting a
+    // second one land dead-center on top of the first, unreadable.
+    const y = cam.height * 0.6 + this.activeLevelUpBanners.length * 24;
+    const banner = this.add
+      .text(cam.width / 2, y, text, {
+        fontFamily: "monospace",
+        fontSize: "18px",
+        color: "#ffe08a",
+        stroke: "#000000",
+        strokeThickness: 4,
+        align: "center",
+      })
+      .setOrigin(0.5, 0.5)
+      .setScrollFactor(0)
+      .setDepth(500);
+    this.activeLevelUpBanners.push(banner);
+    this.tweens.add({
+      targets: banner,
+      alpha: 0,
+      delay: 1400,
+      duration: 500,
+      onComplete: () => {
+        banner.destroy();
+        const idx = this.activeLevelUpBanners.indexOf(banner);
+        if (idx >= 0) this.activeLevelUpBanners.splice(idx, 1);
+      },
+    });
   }
 
   private floatText(x: number, y: number, text: string, color: string) {

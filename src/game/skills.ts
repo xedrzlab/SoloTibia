@@ -16,6 +16,19 @@ export const SKILL_NAMES: Record<SkillId, string> = {
   shielding: "Shielding",
 };
 
+/**
+ * Wording for level-up messages, matching Tibia's actual phrasing ("melee
+ * fighting", "distance fighting") — real Tibia splits melee into
+ * sword/axe/club/fist, but this game trains them as one combined "melee"
+ * skill, so this is the closest equivalent per skill.
+ */
+export const SKILL_LOG_NAMES: Record<SkillId, string> = {
+  melee: "melee fighting",
+  distance: "distance fighting",
+  magic: "magic",
+  shielding: "shielding",
+};
+
 interface SkillCurve {
   /** Level the skill starts at for a fresh character. */
   start: number;
