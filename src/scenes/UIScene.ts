@@ -33,7 +33,6 @@ const PAD = 6;
 const BAR_H = 14;
 const SLOT = 32;
 const SLOT_GAP = 2;
-const TAB_H = 22;
 const WINDOW_TITLE_H = 20;
 const TOGGLE_W = 18;
 
@@ -112,7 +111,6 @@ export class UIScene extends Phaser.Scene {
    * refreshes.
    */
   private equipmentOpen = true;
-  private activeTab: "skills" | "battle" = "skills";
   // (interior state is only used to drive action-bar visibility inside onInteriorState)
   private scrollY = 0;
   private contentHeight = 0;
@@ -182,7 +180,7 @@ export class UIScene extends Phaser.Scene {
     });
     bus.on(EVENTS.BATTLE_LIST, (p: BattleListPayload) => {
       this.battleEntries = p.entries;
-      if (this.activeTab === "battle") this.sidebarDirty = true;
+      this.sidebarDirty = true;
     });
     bus.on(EVENTS.TARGET, (t: TargetPayload | null) => this.onTarget(t));
     bus.on(EVENTS.LOG, (l: LogPayload) => this.pushLog(l));
@@ -207,9 +205,14 @@ export class UIScene extends Phaser.Scene {
     if (this.sidebarDirty && !this.dragFrom) this.renderSidebar();
   }
 
-  /** Width the world view must leave free on the right. */
-  private get sidebarWidth(): number {
+  /** The Battle window's own panel, immediately left of the main sidebar. */
+  private get battlePanelWidth(): number {
     return this.sidebarOpen ? SIDEBAR_WIDTH : 0;
+  }
+
+  /** Width the world view must leave free on the right — both panels combined. */
+  private get sidebarWidth(): number {
+    return (this.sidebarOpen ? SIDEBAR_WIDTH : 0) + this.battlePanelWidth;
   }
 
   private get gameWidth(): number {
@@ -290,7 +293,7 @@ export class UIScene extends Phaser.Scene {
     // 12px is the "▾ Equipment" toggle strip, always drawn even when the
     // paperdoll below it is collapsed.
     const equip = this.equipmentOpen ? EQUIP_GRID_H + PAD : 0;
-    return PAD + BAR_H * 2 + 2 + PAD + 12 + equip + TAB_H + 2;
+    return PAD + BAR_H * 2 + 2 + PAD + 12 + equip;
   }
 
   private renderSidebar() {
@@ -319,6 +322,23 @@ export class UIScene extends Phaser.Scene {
     this.addToLayer(catcher);
 
     this.renderBody(left, bodyTop, h - bodyTop);
+
+    this.renderBattlePanel();
+  }
+
+  /** The Battle window, standalone in its own panel left of the main sidebar. */
+  private renderBattlePanel() {
+    const left = this.scale.width - this.sidebarWidth;
+    const h = this.scale.height;
+
+    this.addToLayer(
+      this.add
+        .rectangle(left, 0, this.battlePanelWidth, h, COLORS.sidebarBg, 0.97)
+        .setOrigin(0, 0)
+        .setScrollFactor(0),
+    );
+
+    this.renderBattleWindow(left, PAD, PAD, h);
   }
 
   private renderHeader(left: number) {
@@ -371,8 +391,6 @@ export class UIScene extends Phaser.Scene {
       this.renderEquipmentGrid(left, y);
       y += EQUIP_GRID_H + PAD;
     }
-
-    this.renderTabs(left, y);
   }
 
   private renderEquipmentGrid(left: number, top: number) {
@@ -415,41 +433,6 @@ export class UIScene extends Phaser.Scene {
     );
   }
 
-  private renderTabs(left: number, top: number) {
-    const tabs: { id: "skills" | "battle"; label: string }[] = [
-      { id: "skills", label: "Skills" },
-      { id: "battle", label: "Battle" },
-    ];
-    const width = (SIDEBAR_WIDTH - PAD * 2 - (tabs.length - 1) * 2) / tabs.length;
-    let x = left + PAD;
-    for (const tab of tabs) {
-      const active = this.activeTab === tab.id;
-      const bg = this.add
-        .rectangle(x, top, width, TAB_H, active ? COLORS.titleBg : 0x161616, 1)
-        .setOrigin(0, 0)
-        .setStrokeStyle(1, active ? COLORS.accent : COLORS.border)
-        .setScrollFactor(0)
-        .setInteractive({ useHandCursor: true });
-      bg.on("pointerdown", () => {
-        this.activeTab = tab.id;
-        this.scrollY = 0;
-        this.sidebarDirty = true;
-      });
-      this.addToLayer(bg);
-      this.addToLayer(
-        this.add
-          .text(x + width / 2, top + TAB_H / 2, tab.label, {
-            ...TEXT,
-            fontSize: "11px",
-            color: active ? "#e6c34a" : "#b0b0b0",
-          })
-          .setOrigin(0.5)
-          .setScrollFactor(0),
-      );
-      x += width + 2;
-    }
-  }
-
   /**
    * Windows are laid out top-to-bottom in one scrolling column. Anything that
    * falls outside the visible band is skipped rather than drawn-and-clipped,
@@ -459,8 +442,7 @@ export class UIScene extends Phaser.Scene {
     const bodyBottom = bodyTop + bodyHeight;
     let y = bodyTop - this.scrollY;
 
-    if (this.activeTab === "skills") y = this.renderSkillsWindow(left, y, bodyTop, bodyBottom);
-    else y = this.renderBattleWindow(left, y, bodyTop, bodyBottom);
+    y = this.renderSkillsWindow(left, y, bodyTop, bodyBottom);
 
     for (const container of this.openContainers) {
       y = this.renderContainerWindow(container, left, y, bodyTop, bodyBottom);
