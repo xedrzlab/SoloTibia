@@ -30,6 +30,7 @@ export class Monster {
 
   private hpBarBg: Phaser.GameObjects.Rectangle;
   private hpBarFill: Phaser.GameObjects.Rectangle;
+  private nameLabel: Phaser.GameObjects.Text;
   private aiTimer = Math.random() * AI_TICK_MS; // desync monsters so they don't all decide on the same frame
   private attackCooldown = 0;
   private respawnTimer = 0;
@@ -52,6 +53,20 @@ export class Monster {
     const barX = this.barX();
     this.hpBarBg = scene.add.rectangle(barX, barY, 24, 4, 0x000000, 0.6).setDepth(6).setVisible(false);
     this.hpBarFill = scene.add.rectangle(barX, barY, 24, 4, 0xc9302f).setDepth(7).setVisible(false);
+
+    // Name tag: always up while the monster is alive (unlike the HP bar,
+    // which only shows once damaged) — so a player can tell what they're
+    // looking at before ever landing a hit.
+    this.nameLabel = scene.add
+      .text(barX, this.nameY(), def.name, {
+        fontFamily: "monospace",
+        fontSize: "11px",
+        color: "#ffffff",
+        stroke: "#000000",
+        strokeThickness: 3,
+      })
+      .setOrigin(0.5, 1)
+      .setDepth(6);
   }
 
   get tile(): TileCoord {
@@ -66,6 +81,11 @@ export class Monster {
   /** A few px above the sprite's own top edge, so taller monsters (e.g. the troll) don't have their HP bar overlapping their head. */
   private barY(): number {
     return this.sprite.y - this.sprite.displayHeight - 6;
+  }
+
+  /** Above the HP bar's row, whether or not the bar itself is currently shown. */
+  private nameY(): number {
+    return this.barY() - 8;
   }
 
   private updateHpBar() {
@@ -83,6 +103,7 @@ export class Monster {
     this.hpBarBg.setPosition(barX, barY);
     this.hpBarFill.y = barY;
     this.hpBarFill.x = barX - (24 - this.hpBarFill.width) / 2;
+    this.nameLabel.setPosition(barX, this.nameY());
   }
 
   /** Directional sheets (framesPerDirection set) index by facing + idle/step; simple 2-frame sheets just toggle frame 0/1, flipped horizontally for movement direction. */
@@ -169,6 +190,7 @@ export class Monster {
     this.sprite.setVisible(false);
     this.hpBarBg.setVisible(false);
     this.hpBarFill.setVisible(false);
+    this.nameLabel.setVisible(false);
     this.respawnTimer = MONSTER_RESPAWN_MS;
   }
 
@@ -182,6 +204,7 @@ export class Monster {
     this.facing = "down";
     this.applyFrame(true);
     this.sprite.setVisible(true);
+    this.nameLabel.setVisible(true);
     this.updateHpBar();
   }
 
@@ -243,5 +266,6 @@ export class Monster {
     this.sprite.destroy();
     this.hpBarBg.destroy();
     this.hpBarFill.destroy();
+    this.nameLabel.destroy();
   }
 }
