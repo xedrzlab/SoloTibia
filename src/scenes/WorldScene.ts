@@ -351,10 +351,19 @@ export class WorldScene extends Phaser.Scene {
     // Props are anchored like everything else, so tall ones (torches, carts)
     // lean up-left and sort correctly against the player walking past them.
     for (const prop of PROPS) {
-      const sprite = this.add
-        .image(tileAnchorX(prop.x), tileAnchorY(prop.y), prop.textureKey)
-        .setOrigin(1, 1)
-        .setDepth(depthForTileY(prop.y));
+      // A rotated prop is flat and single-tile (no lean/occlusion needs), so
+      // it rotates in place around its tile's center rather than the usual
+      // bottom-right lean anchor.
+      const sprite = prop.angle
+        ? this.add
+            .image(tileAnchorX(prop.x) - TILE_SIZE / 2, tileAnchorY(prop.y) - TILE_SIZE / 2, prop.textureKey)
+            .setOrigin(0.5, 0.5)
+            .setAngle(prop.angle)
+            .setDepth(depthForTileY(prop.y))
+        : this.add
+            .image(tileAnchorX(prop.x), tileAnchorY(prop.y), prop.textureKey)
+            .setOrigin(1, 1)
+            .setDepth(depthForTileY(prop.y));
       // Ladders are two tiles tall and only one tile wide — there's no way
       // to walk "around" one the way you can skirt a tree's canopy, so it
       // fades instead of hiding the player standing behind it.

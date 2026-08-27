@@ -365,6 +365,8 @@ export interface PropPlacement {
   x: number;
   y: number;
   blocks?: boolean;
+  /** Degrees, clockwise. Only for flat single-tile props (no lean/occlusion needs) — rotates in place around the tile's center. */
+  angle?: number;
 }
 
 const penFences: PropPlacement[] = [];
@@ -428,13 +430,12 @@ export const PROPS: PropPlacement[] = [
   { textureKey: "well", x: 30, y: 22, blocks: true },
   // A planter tucked between the well and the church's north-west corner.
   { textureKey: "planter", x: 31, y: 22, blocks: true },
-  // A bench on the grass verge north of the E-W road, east of the church —
-  // off the open square in front of the door (where it used to block the
-  // direct line between the spawn point and the shops) and onto the road's
-  // own shoulder instead. The sprite is drawn back-north/seat-south, so
-  // sitting just above the road means it already faces the right way
-  // without needing a rotated variant.
-  { textureKey: "bench", x: 37, y: 23, blocks: true },
+  // A bench on the grass north of the E-W road, east of the church — clear
+  // of both the road itself and the open square in front of the door
+  // (where it used to sit, blocking the direct line between the spawn
+  // point and the shops). Rotated 90° so it sits lengthwise facing the
+  // road rather than square-on to it.
+  { textureKey: "bench", x: 37, y: 22, blocks: true, angle: 90 },
   // Two torches on the grass strip immediately south of the church door,
   // one either side of the doorway. They light the safe zone at night
   // without blocking the E-W spine.
