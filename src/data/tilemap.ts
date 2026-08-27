@@ -430,12 +430,12 @@ export const PROPS: PropPlacement[] = [
   { textureKey: "well", x: 30, y: 22, blocks: true },
   // A planter tucked between the well and the church's north-west corner.
   { textureKey: "planter", x: 31, y: 22, blocks: true },
-  // A bench on the grass north of the E-W road, east of the church — clear
-  // of both the road itself and the open square in front of the door
-  // (where it used to sit, blocking the direct line between the spawn
-  // point and the shops). Rotated 90° so it sits lengthwise facing the
-  // road rather than square-on to it.
-  { textureKey: "bench", x: 37, y: 22, blocks: true, angle: 90 },
+  // A bench on the grass at (39,22) — one tile east of (clear of) the N-S
+  // spine's jog past the church at x=37-38 (verified against the actual
+  // tile grid, not just the surrounding comments: tileAt(37,22) and
+  // tileAt(38,22) are road). Rotated 90°: the sprite's legs/shadow (open
+  // seat side) land on its west edge after rotation, so it faces the road.
+  { textureKey: "bench", x: 39, y: 22, blocks: true, angle: 90 },
   // Two torches on the grass strip immediately south of the church door,
   // one either side of the doorway. They light the safe zone at night
   // without blocking the E-W spine.
