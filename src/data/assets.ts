@@ -111,17 +111,6 @@ export const IMAGE_ASSETS: ImageAsset[] = [
   { key: "wood-floor", path: "terrain/wood_floor_01.png" },
 
   // --- environment ---
-  // Trees are layered: trunk, canopy and optional detail are separate sprites
-  // so the canopy can sort above a player walking behind the trunk.
-  { key: "tree-oak-trunk", path: "environment/tree_oak_trunk_01.png" },
-  { key: "tree-oak-canopy", path: "environment/tree_oak_canopy_01.png" },
-  { key: "tree-oak-canopy-2", path: "environment/tree_oak_canopy_02.png" },
-  { key: "tree-pine-trunk", path: "environment/tree_pine_trunk_01.png" },
-  { key: "tree-pine-canopy", path: "environment/tree_pine_canopy_01.png" },
-  { key: "tree-dead-trunk", path: "environment/tree_dead_trunk_01.png" },
-  { key: "tree-detail-fruit", path: "environment/tree_detail_fruit_01.png" },
-  { key: "tree-detail-vine", path: "environment/tree_detail_vine_01.png" },
-  { key: "tree-detail-moss", path: "environment/tree_detail_moss_01.png" },
   { key: "bush", path: "environment/bush_01.png" },
   { key: "rock-small", path: "environment/rock_small_01.png" },
   { key: "rock-medium", path: "environment/rock_medium_01.png" },
@@ -130,38 +119,25 @@ export const IMAGE_ASSETS: ImageAsset[] = [
   { key: "stump", path: "environment/stump_01.png" },
   { key: "mushrooms", path: "environment/mushrooms_01.png" },
   { key: "flowers", path: "environment/flowers_01.png" },
-  // 24 single-sprite trees (trunk+foliage baked into one image, unlike the
-  // split trunk/canopy pairs above) cropped from the user's Trees.png (not
-  // checked into the repo) — a 6x4 sheet on a solid-black background,
-  // chroma-keyed to real alpha, cropped to each tree's bounding box with
-  // margin, then downscaled (Lanczos) by a uniform factor so relative size
-  // differences between trees survive. Real pixel art, but soft-shaded
-  // (not hard-edged like the procedural sheets) — smooth-filtered for the
-  // same reason the AI-generated buildings are.
-  { key: "tree-oak-round-1", path: "environment/tree-oak-round-1.png", smooth: true },
-  { key: "tree-oak-round-2", path: "environment/tree-oak-round-2.png", smooth: true },
-  { key: "tree-oak-round-3", path: "environment/tree-oak-round-3.png", smooth: true },
-  { key: "tree-oak-round-4", path: "environment/tree-oak-round-4.png", smooth: true },
-  { key: "tree-oak-round-5", path: "environment/tree-oak-round-5.png", smooth: true },
-  { key: "tree-oak-cluster", path: "environment/tree-oak-cluster.png", smooth: true },
-  { key: "tree-spruce", path: "environment/tree-spruce.png", smooth: true },
-  { key: "tree-spruce-teal", path: "environment/tree-spruce-teal.png", smooth: true },
-  { key: "tree-spruce-dark", path: "environment/tree-spruce-dark.png", smooth: true },
-  { key: "tree-pine-small", path: "environment/tree-pine-small.png", smooth: true },
-  { key: "tree-cypress", path: "environment/tree-cypress.png", smooth: true },
-  { key: "tree-cypress-slim", path: "environment/tree-cypress-slim.png", smooth: true },
-  { key: "tree-willow", path: "environment/tree-willow.png", smooth: true },
-  { key: "tree-cherry-white", path: "environment/tree-cherry-white.png", smooth: true },
-  { key: "tree-cherry-pink", path: "environment/tree-cherry-pink.png", smooth: true },
-  { key: "tree-maple-red", path: "environment/tree-maple-red.png", smooth: true },
-  { key: "tree-maple-orange", path: "environment/tree-maple-orange.png", smooth: true },
-  { key: "tree-maple-yellow", path: "environment/tree-maple-yellow.png", smooth: true },
-  { key: "tree-birch", path: "environment/tree-birch.png", smooth: true },
-  { key: "tree-dead-bare", path: "environment/tree-dead-bare.png", smooth: true },
-  { key: "tree-apple", path: "environment/tree-apple.png", smooth: true },
-  { key: "tree-orange-fruit", path: "environment/tree-orange-fruit.png", smooth: true },
-  { key: "tree-bush-small", path: "environment/tree-bush-small.png", smooth: true },
-  { key: "tree-palm", path: "environment/tree-palm.png", smooth: true },
+  // Third tree pass — six distinct species (Trees.zip, not checked into the
+  // repo), each its own single-sprite (trunk+foliage baked in) image with a
+  // ~70%-scale "-small" companion for size variety within one species. Both
+  // the original procedural split trunk/canopy system (oak/pine/dead) and
+  // the second pass's 24-tree mixed-species pool are gone — replaced by
+  // dedicated per-species LEGEND letters (see tilemap.ts) so a forest patch
+  // stays one species rather than mixing, e.g., a maple next to a palm.
+  { key: "tree-pine", path: "environment/tree-pine.png" },
+  { key: "tree-pine-small", path: "environment/tree-pine-small.png" },
+  { key: "tree-large-pine", path: "environment/tree-large-pine.png" },
+  { key: "tree-large-pine-small", path: "environment/tree-large-pine-small.png" },
+  { key: "tree-dark-forest", path: "environment/tree-dark-forest.png" },
+  { key: "tree-dark-forest-small", path: "environment/tree-dark-forest-small.png" },
+  { key: "tree-light-green", path: "environment/tree-light-green.png" },
+  { key: "tree-light-green-small", path: "environment/tree-light-green-small.png" },
+  { key: "tree-autumn", path: "environment/tree-autumn.png" },
+  { key: "tree-autumn-small", path: "environment/tree-autumn-small.png" },
+  { key: "tree-tall", path: "environment/tree-tall.png" },
+  { key: "tree-tall-small", path: "environment/tree-tall-small.png" },
 
   // --- props ---
   { key: "barrel", path: "props/barrel_01.png" },
@@ -315,21 +291,4 @@ export const SHEET_ASSETS: SheetAsset[] = [
 /** How many frames the water cycle has, and how long each is held. */
 export const WATER_FRAME_COUNT = 4;
 export const WATER_FRAME_MS = 420;
-
-export type TreeSpecies = "oak" | "pine" | "dead";
-
-export interface TreeLayers {
-  trunk: string;
-  /** Canopy variants; empty for species whose branches live on the trunk. */
-  canopies: string[];
-}
-
-export const TREE_LAYERS: Record<TreeSpecies, TreeLayers> = {
-  oak: { trunk: "tree-oak-trunk", canopies: ["tree-oak-canopy", "tree-oak-canopy-2"] },
-  pine: { trunk: "tree-pine-trunk", canopies: ["tree-pine-canopy"] },
-  dead: { trunk: "tree-dead-trunk", canopies: [] },
-};
-
-/** Accents layered over a canopy on some trees, chosen per position. */
-export const TREE_DETAILS = ["tree-detail-fruit", "tree-detail-vine", "tree-detail-moss"];
 

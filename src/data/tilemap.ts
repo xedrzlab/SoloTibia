@@ -12,7 +12,6 @@
 // sewers are where the starter rats live.
 
 import { MapBuilder } from "../game/mapBuilder";
-import type { TreeSpecies } from "./assets";
 
 export const MAP_WIDTH = 70;
 // The island/town occupy rows 0-57. Rows 58+ are a separate underground
@@ -312,40 +311,66 @@ export function sewerLinkAtSewer(x: number, y: number): SewerLink | null {
 // Vegetation
 // ---------------------------------------------------------------------------
 
-b.scatter(2, 4, 18, 20, "t", ["."], 0.14, 700);
+// Each forest patch below scatters exactly one tree letter — species never
+// share a zone, so a patch never mixes (e.g. a maple standing next to a
+// palm). Non-tree decoration (bushes, flowers, rocks, mushrooms, ground
+// variety) still layers into the same zones independently.
+
+// NW corner: a pine wood.
+b.scatter(2, 4, 18, 20, "t", ["."], 0.16, 700);
 b.scatter(2, 4, 18, 20, "b", ["."], 0.05, 701);
 b.scatter(2, 4, 18, 20, "f", ["."], 0.04, 702);
-b.scatter(2, 4, 18, 20, "e", ["."], 0.06, 703);
 b.scatter(2, 4, 18, 20, "z", ["."], 0.02, 704);
 b.scatter(2, 4, 18, 20, "i", ["."], 0.05, 705);
 b.scatter(2, 4, 18, 20, "h", ["."], 0.03, 706);
 b.scatter(2, 4, 18, 20, "j", ["."], 0.02, 707);
 b.scatter(2, 4, 18, 20, "l", ["."], 0.015, 708);
 
-b.scatter(50, 4, 18, 20, "p", ["."], 0.14, 720);
+// NE corner: a grander stand of large pines — a distinct patch from the NW
+// wood, not the same species scattered twice.
+b.scatter(50, 4, 18, 20, "p", ["."], 0.12, 720);
 b.scatter(50, 4, 18, 20, "m", ["."], 0.05, 721);
 b.scatter(50, 4, 18, 20, "f", ["."], 0.03, 722);
-b.scatter(50, 4, 18, 20, "e", ["."], 0.06, 723);
 b.scatter(50, 4, 18, 20, "z", ["."], 0.02, 724);
 b.scatter(50, 4, 18, 20, "i", ["."], 0.05, 725);
 b.scatter(50, 4, 18, 20, "h", ["."], 0.03, 726);
 b.scatter(50, 4, 18, 20, "j", ["."], 0.02, 727);
 b.scatter(50, 4, 18, 20, "l", ["."], 0.015, 728);
 
+// West-mid coastal strip, between the NW wood and the south band: a small
+// stand of tall slender trees — one of the "smaller chunk of trees" patches.
+b.scatter(2, 20, 11, 11, "c", ["."], 0.12, 710);
+b.scatter(2, 20, 11, 11, "b", ["."], 0.03, 711);
+
+// East-mid coastal strip, mirroring the west one: a small autumn grove.
+b.scatter(57, 20, 11, 11, "a", ["."], 0.12, 712);
+b.scatter(57, 20, 11, 11, "f", ["."], 0.03, 713);
+
 b.scatter(TOWN.x - 3, TOWN.y - 3, TOWN.w + 6, TOWN.h + 6, "f", ["."], 0.03, 730);
 b.scatter(TOWN.x - 3, TOWN.y - 3, TOWN.w + 6, TOWN.h + 6, "n", ["."], 0.02, 731);
 b.scatter(TOWN.x - 3, TOWN.y - 3, TOWN.w + 6, TOWN.h + 6, "i", ["."], 0.03, 732);
 b.scatter(TOWN.x - 3, TOWN.y - 3, TOWN.w + 6, TOWN.h + 6, "l", ["."], 0.01, 733);
 
-b.scatter(2, 32, MAP_WIDTH - 4, 24, "t", ["."], 0.05, 740);
-b.scatter(2, 32, MAP_WIDTH - 4, 24, "b", ["."], 0.02, 741);
-b.scatter(2, 32, MAP_WIDTH - 4, 24, "f", ["."], 0.04, 742);
-b.scatter(2, 32, MAP_WIDTH - 4, 24, "e", ["."], 0.04, 743);
-b.scatter(2, 32, MAP_WIDTH - 4, 24, "z", ["."], 0.015, 744);
-b.scatter(2, 32, MAP_WIDTH - 4, 24, "i", ["."], 0.04, 745);
-b.scatter(2, 32, MAP_WIDTH - 4, 24, "h", ["."], 0.025, 746);
-b.scatter(2, 32, MAP_WIDTH - 4, 24, "j", ["."], 0.015, 747);
-b.scatter(2, 32, MAP_WIDTH - 4, 24, "l", ["."], 0.01, 748);
+// South band, split in half so it's two patches rather than one zone with
+// two species scattered on top of each other: a dark forest to the west of
+// the farm, a lighter grove to the east.
+b.scatter(2, 32, 33, 24, "y", ["."], 0.08, 740);
+b.scatter(2, 32, 33, 24, "b", ["."], 0.02, 741);
+b.scatter(2, 32, 33, 24, "f", ["."], 0.04, 742);
+b.scatter(2, 32, 33, 24, "z", ["."], 0.015, 744);
+b.scatter(2, 32, 33, 24, "i", ["."], 0.04, 745);
+b.scatter(2, 32, 33, 24, "h", ["."], 0.025, 746);
+b.scatter(2, 32, 33, 24, "j", ["."], 0.015, 747);
+b.scatter(2, 32, 33, 24, "l", ["."], 0.01, 748);
+
+b.scatter(35, 32, 33, 24, "e", ["."], 0.08, 760);
+b.scatter(35, 32, 33, 24, "b", ["."], 0.02, 761);
+b.scatter(35, 32, 33, 24, "f", ["."], 0.04, 762);
+b.scatter(35, 32, 33, 24, "z", ["."], 0.015, 763);
+b.scatter(35, 32, 33, 24, "i", ["."], 0.04, 764);
+b.scatter(35, 32, 33, 24, "h", ["."], 0.025, 765);
+b.scatter(35, 32, 33, 24, "j", ["."], 0.015, 766);
+b.scatter(35, 32, 33, 24, "l", ["."], 0.01, 767);
 
 // Dirt accents ("D" cells: the island's shoreline ring, farm paths, and the
 // road stretch just outside the south gate) — same low-density tiering as
@@ -565,13 +590,14 @@ export interface TileInfo {
   overlayKey?: string;
   overlayVariants?: string[];
   animated?: boolean;
-  tree?: TreeSpecies;
   /**
-   * A single-sprite tree (trunk+foliage baked into one image, unlike the
-   * split-layer TREE_LAYERS species) — picked per-tile from this list the
-   * same way overlayVariants works. Rendered as one leaning sprite like a
-   * building, not baked into the ground layer like overlayKey, so it gets
-   * proper occlusion when the player walks behind it.
+   * A single-sprite tree (trunk+foliage baked into one image) — picked
+   * per-tile from this list the same way overlayVariants works. Rendered as
+   * one leaning sprite like a building, not baked into the ground layer
+   * like overlayKey, so it gets proper occlusion when the player walks
+   * behind it. Every LEGEND entry using this keeps the list single-species
+   * (a tree plus its own "-small" companion for size variety) so a forest
+   * patch never mixes species.
    */
   wholeTree?: string[];
   safe: boolean;
@@ -610,36 +636,6 @@ export function wholeTreeForCell(tile: TileInfo, x: number, y: number): string |
   if (!tile.wholeTree || tile.wholeTree.length === 0) return undefined;
   return tile.wholeTree[cellHash(x + 29, y + 31) % tile.wholeTree.length];
 }
-
-// Single-sprite trees (see TileInfo.wholeTree) — real art the user supplied
-// (Trees.png, not checked into the repo), cropped into individual images.
-// Picked randomly per tile the same way TREE_LAYERS canopy variety works.
-const WHOLE_TREE_KEYS = [
-  "tree-oak-round-1",
-  "tree-oak-round-2",
-  "tree-oak-round-3",
-  "tree-oak-round-4",
-  "tree-oak-round-5",
-  "tree-oak-cluster",
-  "tree-spruce",
-  "tree-spruce-teal",
-  "tree-spruce-dark",
-  "tree-pine-small",
-  "tree-cypress",
-  "tree-cypress-slim",
-  "tree-willow",
-  "tree-cherry-white",
-  "tree-cherry-pink",
-  "tree-maple-red",
-  "tree-maple-orange",
-  "tree-maple-yellow",
-  "tree-birch",
-  "tree-dead-bare",
-  "tree-apple",
-  "tree-orange-fruit",
-  "tree-bush-small",
-  "tree-palm",
-];
 
 const LEGEND: Record<string, TileInfo> = {
   "#": { walkable: false, textureKey: "void-wall", safe: false },
@@ -697,14 +693,52 @@ const LEGEND: Record<string, TileInfo> = {
   K: { walkable: true, textureKey: "sewer-floor", safe: false, groundFriction: 145 },
   V: { walkable: false, textureKey: "wall-sewer", safe: false },
 
-  t: { walkable: false, textureKey: "grass-clean", variants: ["grass-clean", "grass-short"], tree: "oak", safe: false },
-  p: { walkable: false, textureKey: "grass-clean", variants: ["grass-clean", "grass-short"], tree: "pine", safe: false },
-  y: { walkable: false, textureKey: "rocky-ground", tree: "dead", safe: false },
+  // Third tree pass — six distinct species (Trees.zip, see assets.ts), each
+  // its own letter with a single-species wholeTree list so a forest patch
+  // never mixes species (e.g. a maple standing next to a palm). Each list
+  // repeats the full-size key twice against the "-small" key once, so
+  // roughly a third of a patch reads as slightly younger/smaller trees
+  // without needing a second species.
+  t: {
+    walkable: false,
+    textureKey: "grass-clean",
+    variants: ["grass-clean", "grass-short"],
+    wholeTree: ["tree-pine", "tree-pine", "tree-pine-small"],
+    safe: false,
+  },
+  p: {
+    walkable: false,
+    textureKey: "grass-clean",
+    variants: ["grass-clean", "grass-short"],
+    wholeTree: ["tree-large-pine", "tree-large-pine", "tree-large-pine-small"],
+    safe: false,
+  },
+  y: {
+    walkable: false,
+    textureKey: "grass-clean",
+    variants: ["grass-clean", "grass-short"],
+    wholeTree: ["tree-dark-forest", "tree-dark-forest", "tree-dark-forest-small"],
+    safe: false,
+  },
   e: {
     walkable: false,
     textureKey: "grass-clean",
-    variants: ["grass-clean", "grass-short", "grass-light"],
-    wholeTree: WHOLE_TREE_KEYS,
+    variants: ["grass-clean", "grass-short"],
+    wholeTree: ["tree-light-green", "tree-light-green", "tree-light-green-small"],
+    safe: false,
+  },
+  a: {
+    walkable: false,
+    textureKey: "grass-clean",
+    variants: ["grass-clean", "grass-short"],
+    wholeTree: ["tree-autumn", "tree-autumn", "tree-autumn-small"],
+    safe: false,
+  },
+  c: {
+    walkable: false,
+    textureKey: "grass-clean",
+    variants: ["grass-clean", "grass-short"],
+    wholeTree: ["tree-tall", "tree-tall", "tree-tall-small"],
     safe: false,
   },
   b: {
