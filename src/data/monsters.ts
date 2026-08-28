@@ -161,15 +161,15 @@ export const MONSTERS: Record<string, MonsterDef> = {
     fleeAtHpPct: 0,
     loot: [],
   },
-  // Same deal as goblin above: real isolated bear art (6-frame walk cycle x
+  // Same deal as goblin above: real isolated bear art (4-frame walk cycle x
   // 4 directions) just landed, dropped into town with 0 damage/hitChance
   // for a look-and-walk-into test, not a balanced encounter yet.
   bear: {
     id: "bear",
     name: "Bear",
     textureKey: "bear",
-    frameCount: 24,
-    framesPerDirection: 6,
+    frameCount: 16,
+    framesPerDirection: 4,
     continuousWalk: true,
     hp: 60,
     xp: 0,
