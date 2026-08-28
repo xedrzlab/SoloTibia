@@ -13,8 +13,6 @@ import {
 import { CombatStance, SkillSet } from "../skills";
 import { Equipment } from "../equipment";
 import { Container, createStack } from "../containers";
-import { ITEMS } from "../../data/items";
-import { PAPER_DOLL_ORDER, paperDollKey } from "../../data/assets";
 import { Direction, directionFromDelta, directionalFrameIndex } from "../directionalSprite";
 
 // player_base_sheet.png (docs/monster-sources-style real art, see
@@ -131,25 +129,16 @@ export class Player {
    * Rebuild the worn layers from what's equipped. Called whenever equipment
    * changes, so armour and weapons are visible on the character rather than
    * only in the stat readout.
+   *
+   * Temporarily disabled: the equipment layer art was drawn to match the
+   * old (smaller, flatter) body and visibly misaligns on the new one —
+   * floating/offset armor reads worse than no armor at all. Equipment
+   * still fully works mechanically (stats, inventory, stacking); this only
+   * stops drawing it on the character until those layers get redrawn.
    */
   refreshAppearance() {
     for (const layer of this.equipLayers) layer.destroy();
     this.equipLayers = [];
-
-    // Depth steps stay under 1 so the whole doll still sorts as one figure
-    // against everything standing on neighbouring tiles.
-    let depthStep = 0.1;
-    for (const slot of PAPER_DOLL_ORDER) {
-      const stack = this.equipment.get(slot);
-      const layerName = stack ? ITEMS[stack.itemId]?.paperDoll : undefined;
-      if (!layerName) continue;
-      const sprite = this.scene.add
-        .sprite(this.sprite.x, this.sprite.y, paperDollKey(layerName), this.sprite.frame.name)
-        .setOrigin(1, 1)
-        .setDepth(this.sprite.depth + depthStep);
-      this.equipLayers.push(sprite);
-      depthStep += 0.1;
-    }
   }
 
   /** Keep the worn layers on the body: same position, frame and sort order. */
