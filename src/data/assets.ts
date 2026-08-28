@@ -123,12 +123,12 @@ export const IMAGE_ASSETS: ImageAsset[] = [
   { key: "building-workshop", path: "buildings/workshop_01.png" },
   { key: "building-farmhouse", path: "buildings/farmhouse_01.png" },
   { key: "building-l-house", path: "buildings/l_house_01.png" },
-  // Procedurally generated like the rest of this list (buildingTudorHouse
-  // in generate-assets.mjs) — started as real art cropped from the user's
-  // transparent props sheet, but that crop's pixel size wasn't a clean
-  // multiple of a tile and never sat flush on its footprint. Its chimney
-  // is a separate animated "chimney-brick" prop placed on the roof, not
-  // baked into this image.
+  // Real art cropped from the user's transparent props sheet (PropsSheetTrans.png,
+  // not checked into the repo) — one of its ready-made "whole house as seen
+  // from above" rooftop icons (walls + roof + window baked into a single
+  // small image), cropped with margin on all sides this time so nothing
+  // is clipped. Placed at its native ~1-tile size in tilemap.ts rather than
+  // stretched to a wider building footprint.
   { key: "building-tudor-house", path: "buildings/tudor_house_01.png" },
 
   // --- npcs ---
