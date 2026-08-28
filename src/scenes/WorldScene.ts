@@ -424,10 +424,20 @@ export class WorldScene extends Phaser.Scene {
       // anchor) so the building leans up-left over the tiles behind it.
       const anchorTileX = building.footprintX + building.footprintW - 1;
       const anchorTileY = building.footprintY + building.footprintH - 1;
-      this.add
+      const image = this.add
         .image(tileAnchorX(anchorTileX), tileAnchorY(anchorTileY), building.textureKey)
         .setOrigin(1, 1)
         .setDepth(depthForTileY(anchorTileY));
+      // Procedurally-drawn buildings are rendered exactly footprintW tiles
+      // wide already, so this is a no-op for them. Real-art buildings (e.g.
+      // the Tudor house, cropped from a source sheet at a size that doesn't
+      // land on a clean multiple of TILE_SIZE) get scaled up to match —
+      // otherwise the bottom-right anchor leaves a gap of exposed ground
+      // down one side of the footprint instead of the building filling it.
+      const targetWidth = building.footprintW * TILE_SIZE;
+      if (image.width !== targetWidth) {
+        image.setScale(targetWidth / image.width);
+      }
     }
     // Props are anchored like everything else, so tall ones (torches, carts)
     // lean up-left and sort correctly against the player walking past them.
