@@ -216,7 +216,6 @@ export const IMAGE_ASSETS: ImageAsset[] = [
 
   // --- props ---
   { key: "barrel", path: "props/barrel_01.png" },
-  { key: "crate", path: "props/crate_01.png" },
   { key: "well", path: "props/well_01.png" },
   { key: "signpost", path: "props/sign_01.png" },
   { key: "fence", path: "props/fence_01.png" },
@@ -233,9 +232,14 @@ export const IMAGE_ASSETS: ImageAsset[] = [
   { key: "ladder-up", path: "props/ladder_up_01.png" },
   { key: "sewer-entrance", path: "props/sewer_entrance_01.png" },
   { key: "sack", path: "props/sack_01.png" },
-  { key: "weapon-rack", path: "props/weapon_rack_01.png" },
+  // Real art (ShopCounter.zip, not checked into the repo), replacing the
+  // old procedural single-tile "counter". Three pieces so a multi-tile
+  // counter reads as one built bar with proper end caps rather than a flat
+  // texture repeated across the row — see InteriorScene's shopCounterFor.
+  { key: "shop-counter-left", path: "props/shop-counter-left.png" },
+  { key: "shop-counter-center", path: "props/shop-counter-center.png" },
+  { key: "shop-counter-right", path: "props/shop-counter-right.png" },
   { key: "fence-gate", path: "props/fence_gate_01.png" },
-  { key: "counter", path: "props/counter_01.png" },
   { key: "statue", path: "props/statue_01.png" },
   { key: "planter", path: "props/planter_01.png" },
   { key: "altar", path: "props/altar_01.png" },

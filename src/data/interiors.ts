@@ -208,14 +208,7 @@ export const INTERIORS: Record<string, InteriorRoom> = {
       x: 4,
       y: 3,
     },
-    decor: [
-      { textureKey: "weapon-rack", x: 1, y: 2, blocks: true },
-      { textureKey: "sack", x: 3, y: 2, blocks: true },
-      { textureKey: "sack", x: 7, y: 2, blocks: true },
-      { textureKey: "crate", x: 8, y: 2, blocks: true },
-      { textureKey: "barrel", x: 1, y: 6, blocks: true },
-      { textureKey: "chest", x: 8, y: 6, blocks: true },
-    ],
+    decor: [],
   },
 
   ranged_shop: {
@@ -234,14 +227,7 @@ export const INTERIORS: Record<string, InteriorRoom> = {
       x: 4,
       y: 3,
     },
-    decor: [
-      { textureKey: "weapon-rack", x: 2, y: 2, blocks: true },
-      { textureKey: "weapon-rack", x: 7, y: 2, blocks: true },
-      { textureKey: "barrel", x: 1, y: 2, blocks: true },
-      { textureKey: "crate", x: 8, y: 2, blocks: true },
-      { textureKey: "sack", x: 1, y: 6, blocks: true },
-      { textureKey: "sack", x: 8, y: 6, blocks: true },
-    ],
+    decor: [],
   },
 
   // ---------------------------------------------------------------------
@@ -263,14 +249,7 @@ export const INTERIORS: Record<string, InteriorRoom> = {
       x: 4,
       y: 3,
     },
-    decor: [
-      { textureKey: "chest", x: 1, y: 2, blocks: true },
-      { textureKey: "chest", x: 8, y: 2, blocks: true },
-      { textureKey: "barrel", x: 3, y: 2, blocks: true },
-      { textureKey: "crate", x: 7, y: 2, blocks: true },
-      { textureKey: "bench", x: 1, y: 6, blocks: true },
-      { textureKey: "bench", x: 8, y: 6, blocks: true },
-    ],
+    decor: [],
   },
 
   // ---------------------------------------------------------------------
@@ -323,14 +302,7 @@ export const INTERIORS: Record<string, InteriorRoom> = {
       x: 4,
       y: 3,
     },
-    decor: [
-      { textureKey: "chest", x: 1, y: 2, blocks: true },
-      { textureKey: "barrel", x: 2, y: 2, blocks: true },
-      { textureKey: "barrel", x: 7, y: 2, blocks: true },
-      { textureKey: "crate", x: 8, y: 2, blocks: true },
-      { textureKey: "bench", x: 1, y: 6, blocks: true },
-      { textureKey: "chest", x: 8, y: 6, blocks: true },
-    ],
+    decor: [],
   },
 };
 

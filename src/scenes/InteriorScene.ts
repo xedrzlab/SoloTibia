@@ -185,7 +185,7 @@ export class InteriorScene extends Phaser.Scene {
           }
         } else if (ch === CH_COUNTER) {
           this.add
-            .image(tileAnchorX(x + this.tileOffsetX), tileAnchorY(worldTileY), "counter")
+            .image(tileAnchorX(x + this.tileOffsetX), tileAnchorY(worldTileY), this.shopCounterTextureFor(x, y))
             .setOrigin(1, 1)
             .setDepth(depthForTileY(worldTileY));
         }
@@ -281,6 +281,16 @@ export class InteriorScene extends Phaser.Scene {
     if (isLeft) return { key: "shop-wall-left", flipY: false };
     if (isRight) return { key: "shop-wall-right", flipY: false };
     return { key: "shop-wall-basic", flipY: false };
+  }
+
+  /** The counter is a run of consecutive "C" cells in one row — left/right end caps at the run's edges, center tiled between them. */
+  private shopCounterTextureFor(x: number, y: number): string {
+    const row = this.room.rows[y];
+    const first = row.indexOf(CH_COUNTER);
+    const last = row.lastIndexOf(CH_COUNTER);
+    if (x === first) return "shop-counter-left";
+    if (x === last) return "shop-counter-right";
+    return "shop-counter-center";
   }
 
   /** One of six compatible flagstone tiles (a couple carry a subtle crack), picked per-cell like the shop floor. */

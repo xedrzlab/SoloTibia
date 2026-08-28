@@ -347,20 +347,6 @@ function barrelSprite() {
   return s;
 }
 
-/** A crated shipment — flat wooden slats, town-yard clutter outside shops. */
-function crateSprite() {
-  const s = new Sprite(16, 16);
-  s.fillEllipse(8, 13.5, 5.4, 1.4, "#14110f"); // ground shadow
-  s.fillRect(3, 6, 10, 7, "#8a6a3d");
-  s.fillRect(3, 6, 10, 1, "#a3814f");
-  s.fillRect(3, 6, 1, 7, "#5a3d22");
-  s.fillRect(12, 6, 1, 7, "#5a3d22");
-  s.line(3, 9, 13, 9, "#5a3d22");
-  s.line(3, 6, 8, 13, "#6b4a2a");
-  s.line(13, 6, 8, 13, "#6b4a2a");
-  return s;
-}
-
 // ---------------------------------------------------------------------------
 // Prop library. These are the pieces a location is composed from: a mine reads
 // as a mine because of the carts and crates around it, not because the ground
@@ -516,24 +502,6 @@ function sackSprite() {
   s.fillRect(6, 5, 4, 3, "#8a7860"); // gathered neck
   s.fillRect(6, 6, 4, 1, "#6b5a48"); // cord
   s.setPixel(5, 6, "#4a2f1a");
-  return s;
-}
-
-/** Weapon rack — dresses the forge yard. */
-function weaponRackSprite() {
-  const s = new Sprite(16, 16);
-  s.fillEllipse(8, 14, 5, 1, "#14110f");
-  s.fillRect(2, 4, 2, 10, P_BARK.mid);
-  s.fillRect(12, 4, 2, 10, P_BARK.mid);
-  s.fillRect(2, 4, 1, 10, P_BARK.light);
-  s.fillRect(1, 4, 14, 2, "#6b4a2a"); // crossbar
-  s.fillRect(1, 4, 14, 1, "#8a6a3d");
-  // Two blades and a haft leaning in the rack.
-  s.fillRect(5, 6, 1, 7, "#c9ccd1");
-  s.fillRect(5, 12, 1, 2, "#5a3d22");
-  s.fillRect(8, 6, 1, 8, "#9aa0a8");
-  s.fillRect(10, 6, 1, 8, "#5a3d22");
-  s.fillRect(9, 6, 3, 2, "#c9ccd1"); // axe head
   return s;
 }
 
@@ -2119,41 +2087,6 @@ function woodFloorTile() {
 }
 
 /**
- * Wooden shop counter: a bar the shopkeeper stands behind. Draws as a low
- * chest-high plank front with a lit top edge; occupies one tile and blocks
- * movement so the customer is separated from the keeper.
- */
-function counterSprite() {
-  const s = new Sprite(16, 16);
-  // Deliberately darker than the plank floor so the counter reads as
-  // furniture rather than blending into the wood beneath it.
-  const wood = "#4a2f1a";
-  const woodMid = "#6b4a2a";
-  const woodDark = "#2a1808";
-  const brass = "#c9a24a";
-  const brassHi = "#f0d67a";
-  const shadow = "#0a0a0a";
-  // ground shadow
-  s.fillRect(1, 15, 14, 1, shadow);
-  // Counter body: dark plank front with a broad chest-high bar.
-  s.fillRect(1, 5, 14, 9, wood);
-  s.fillRect(1, 5, 14, 1, brass); // brass top edge — the eye-catch
-  s.fillRect(1, 6, 14, 1, brassHi);
-  s.fillRect(1, 13, 14, 1, woodDark); // bottom shadow
-  // Vertical plank seams
-  s.fillRect(5, 7, 1, 6, woodDark);
-  s.fillRect(10, 7, 1, 6, woodDark);
-  // A thin lit rail across the middle for a bit of relief on the front.
-  s.fillRect(1, 9, 14, 1, woodMid);
-  // Corner posts, standing a touch above the counter top.
-  s.fillRect(0, 4, 2, 11, woodDark);
-  s.fillRect(14, 4, 2, 11, woodDark);
-  s.setPixel(1, 4, brass);
-  s.setPixel(14, 4, brass);
-  return s;
-}
-
-/**
  * Small hero statue on a stone pedestal: the plaza centrepiece. Blocks
  * movement and is anchored at its base like every other tall thing.
  */
@@ -2728,7 +2661,6 @@ saveSprite(flowersSprite(), SCALE, `${OUT}/environment/flowers_01.png`);
 
 // --- props ---------------------------------------------------------------
 saveSprite(barrelSprite(), SCALE, `${OUT}/props/barrel_01.png`);
-saveSprite(crateSprite(), SCALE, `${OUT}/props/crate_01.png`);
 saveSprite(wellSprite(), SCALE, `${OUT}/props/well_01.png`);
 saveSprite(signpostSprite(), SCALE, `${OUT}/props/sign_01.png`);
 saveSprite(fenceSprite(), SCALE, `${OUT}/props/fence_01.png`);
@@ -2742,9 +2674,7 @@ saveSprite(chestSprite(), SCALE, `${OUT}/props/chest_01.png`);
 saveSprite(ladderUpSprite(), SCALE, `${OUT}/props/ladder_up_01.png`);
 saveSprite(sewerEntranceSprite(), SCALE, `${OUT}/props/sewer_entrance_01.png`);
 saveSprite(sackSprite(), SCALE, `${OUT}/props/sack_01.png`);
-saveSprite(weaponRackSprite(), SCALE, `${OUT}/props/weapon_rack_01.png`);
 saveSprite(fenceGateSprite(), SCALE, `${OUT}/props/fence_gate_01.png`);
-saveSprite(counterSprite(), SCALE, `${OUT}/props/counter_01.png`);
 saveSprite(statueSprite(), SCALE, `${OUT}/props/statue_01.png`);
 saveSprite(planterSprite(), SCALE, `${OUT}/props/planter_01.png`);
 saveSprite(altarSprite(), SCALE, `${OUT}/props/altar_01.png`);
