@@ -596,10 +596,11 @@ export const NPC_SPAWNS: NpcSpawn[] = [
 // ---------------------------------------------------------------------------
 // Monsters — the surface stays peaceful (tutorial area); rats live in the
 // sewers underneath, which is the only combat the game has right now. The
-// exceptions are curious_rat and (temporarily) goblin: both harmless
+// exceptions are curious_rat and (temporarily) goblin/bear: all harmless
 // (hitChance 0, no damage), so letting them wander near the temple doesn't
-// actually break "peaceful". goblin's spawn is a testing placement only —
-// it's there to look at the new art in-engine, not a real encounter yet.
+// actually break "peaceful". goblin's and bear's spawns are testing
+// placements only — they're there to look at the new art in-engine, not a
+// real encounter yet.
 // ---------------------------------------------------------------------------
 
 export interface MonsterSpawn {
@@ -611,6 +612,7 @@ export interface MonsterSpawn {
 export const MONSTER_SPAWNS: MonsterSpawn[] = [
   { monsterId: "curious_rat", x: 36, y: 24 }, // near the temple, a few tiles from where a fresh character spawns
   { monsterId: "goblin", x: 38, y: 26 }, // testing spawn only: real goblin art just landed, 0 damage until it gets balanced stats and a real hunting-ground home
+  { monsterId: "bear", x: 40, y: 26 }, // testing spawn only: real bear art just landed, 0 damage until it gets balanced stats and a real hunting-ground home
   { monsterId: "rat", x: 21, y: 66 }, // room A
   { monsterId: "rat", x: 48, y: 66 }, // room B
   { monsterId: "rat", x: 11, y: 67 }, // dead-end side chamber

@@ -187,6 +187,7 @@ export const SHEET_ASSETS: SheetAsset[] = [
   { key: "slime", path: "creatures/slime_sheet.png", ...TILE_FRAME },
   { key: "troll", path: "creatures/troll_sheet.png", frameWidth: 40, frameHeight: 52 },
   { key: "goblin", path: "creatures/goblin_sheet.png", ...TILE_FRAME, smooth: true },
+  { key: "bear", path: "creatures/bear_sheet.png", ...TILE_FRAME, smooth: true },
 ];
 
 /** How many frames the water cycle has, and how long each is held. */
