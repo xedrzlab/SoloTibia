@@ -198,12 +198,14 @@ export const BUILDINGS: BuildingPlacement[] = [
   { textureKey: "building-house", footprintX: 20, footprintY: 33, footprintW: 3, footprintH: 3 },
   // L-shaped brick house — 4x4 footprint with courtyard.
   { textureKey: "building-l-house", footprintX: 26, footprintY: 32, footprintW: 4, footprintH: 4 },
-  // A small real-art rooftop icon cropped from the user's props sheet —
-  // it's whole-house-in-one-icon art (walls, roof and window baked
-  // together) drawn at roughly a single tile's size, not a wide building
-  // facade, so it keeps its native footprint rather than being stretched
-  // to fill the same 4x3 gap a procedural building would.
-  { textureKey: "building-tudor-house", footprintX: 33, footprintY: 33, footprintW: 1, footprintH: 1 },
+  // Composited from real art cropped from the user's props sheet
+  // (PropsSheetTrans.png, not checked into the repo) — a timber-frame
+  // wall tile (tiled twice), a door, two windows, and a gable roof
+  // piece, each cropped separately with margin on every side so nothing
+  // is clipped. 112x103 native, slightly wider than its 3x3 footprint —
+  // leans up-left over the tiles behind it like every other oversized
+  // building/prop.
+  { textureKey: "building-tudor-house", footprintX: 33, footprintY: 33, footprintW: 3, footprintH: 3 },
   { textureKey: "building-log-cabin", footprintX: 40, footprintY: 33, footprintW: 3, footprintH: 3 },
   { textureKey: "building-house", footprintX: 47, footprintY: 33, footprintW: 3, footprintH: 3 },
 

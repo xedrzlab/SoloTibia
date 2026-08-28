@@ -123,12 +123,11 @@ export const IMAGE_ASSETS: ImageAsset[] = [
   { key: "building-workshop", path: "buildings/workshop_01.png" },
   { key: "building-farmhouse", path: "buildings/farmhouse_01.png" },
   { key: "building-l-house", path: "buildings/l_house_01.png" },
-  // Real art cropped from the user's transparent props sheet (PropsSheetTrans.png,
-  // not checked into the repo) — one of its ready-made "whole house as seen
-  // from above" rooftop icons (walls + roof + window baked into a single
-  // small image), cropped with margin on all sides this time so nothing
-  // is clipped. Placed at its native ~1-tile size in tilemap.ts rather than
-  // stretched to a wider building footprint.
+  // Composited from several pieces of real art cropped from the user's
+  // transparent props sheet (PropsSheetTrans.png, not checked into the
+  // repo): a timber-frame wall panel, a door, two windows, and a gable
+  // roof piece — each cropped separately with margin on every side so
+  // none of them are clipped, then assembled into one building image.
   { key: "building-tudor-house", path: "buildings/tudor_house_01.png" },
 
   // --- npcs ---
