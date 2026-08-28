@@ -134,6 +134,17 @@ export const IMAGE_ASSETS: ImageAsset[] = [
   // sheets — linear-filtered in BootScene rather than left on the
   // renderer's default nearest-neighbor pixel-art filtering.
   { key: "building-tudor-house", path: "buildings/tudor_house_01.png", smooth: true },
+  // Six more AI-generated house icons the user supplied (House2-7.png, not
+  // checked into the repo), processed the same way as building-tudor-house:
+  // checkerboard/near-white background matched to real alpha, cropped to
+  // each house's bounding box, downscaled (Lanczos) to a clean multiple of
+  // TILE_SIZE. Also linear-filtered — same reasoning as building-tudor-house.
+  { key: "building-house2", path: "buildings/house2_01.png", smooth: true },
+  { key: "building-house3", path: "buildings/house3_01.png", smooth: true },
+  { key: "building-house4", path: "buildings/house4_01.png", smooth: true },
+  { key: "building-house5", path: "buildings/house5_01.png", smooth: true },
+  { key: "building-house6", path: "buildings/house6_01.png", smooth: true },
+  { key: "building-house7", path: "buildings/house7_01.png", smooth: true },
 
   // --- npcs ---
   { key: "npc-borin", path: "characters/npc_borin.png" },

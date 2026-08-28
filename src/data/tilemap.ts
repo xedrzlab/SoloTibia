@@ -134,18 +134,30 @@ export interface BuildingPlacement {
 // Every building sits north of the road its door opens onto, because the
 // sprite always draws its door on the south face.
 //
-// Stripped down to just the church and the new House1 building for now —
-// every decorative house, shop, guardpost, bank, depot and the farmhouses
-// are gone (their interiors, entry points and shop-sign/backyard props
-// went with them; see the ENTRY_POINTS and PROPS sections below). Both
-// remaining buildings front the same E-W spine (road at y=24-25), the
-// same convention the church always used: footprint bottom row = door
-// row = one tile north of the road.
+// Stripped down to just the church and the new House1-7 buildings for now
+// — every decorative house, shop, guardpost, bank, depot and the
+// farmhouses are gone (their interiors, entry points and shop-sign/
+// backyard props went with them; see the ENTRY_POINTS and PROPS sections
+// below). All of these front either the main E-W spine (road y=24-25) or
+// the upper street (road y=13), the same convention the church always
+// used: footprint bottom row = door row = one tile north of the road.
+// The upper-street group leaves x=31-38 clear — that's where the N-S
+// spine's vertical run sits at that latitude (it doesn't jog east to
+// x=37 until y=20), so a building there would collide with the road.
 export const BUILDINGS: BuildingPlacement[] = [
+  // --- Main spine (footprints y=21-23, doors y=23, road y=24-25) ---
+  { textureKey: "building-house4", footprintX: 15, footprintY: 21, footprintW: 5, footprintH: 3 },
   // House1 — west of the church, same row and door alignment.
   { textureKey: "building-tudor-house", footprintX: 25, footprintY: 21, footprintW: 4, footprintH: 3 },
   // The church.
   { textureKey: "building-church", footprintX: 32, footprintY: 21, footprintW: 4, footprintH: 3 },
+  { textureKey: "building-house2", footprintX: 39, footprintY: 21, footprintW: 4, footprintH: 3 },
+  { textureKey: "building-house3", footprintX: 47, footprintY: 21, footprintW: 4, footprintH: 3 },
+
+  // --- Upper street (footprints y=10-12, doors y=12, road y=13) ---
+  { textureKey: "building-house5", footprintX: 18, footprintY: 10, footprintW: 5, footprintH: 3 },
+  { textureKey: "building-house6", footprintX: 40, footprintY: 10, footprintW: 5, footprintH: 3 },
+  { textureKey: "building-house7", footprintX: 47, footprintY: 10, footprintW: 5, footprintH: 3 },
 ];
 for (const building of BUILDINGS) {
   b.rect(building.footprintX, building.footprintY, building.footprintW, building.footprintH, "B");
