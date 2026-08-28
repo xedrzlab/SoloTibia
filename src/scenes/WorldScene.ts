@@ -422,22 +422,21 @@ export class WorldScene extends Phaser.Scene {
     for (const building of BUILDINGS) {
       // Anchor at the bottom-right tile of the footprint (Tibia-style oblique
       // anchor) so the building leans up-left over the tiles behind it.
-      const anchorTileX = building.footprintX + building.footprintW - 1;
       const anchorTileY = building.footprintY + building.footprintH - 1;
-      const image = this.add
-        .image(tileAnchorX(anchorTileX), tileAnchorY(anchorTileY), building.textureKey)
-        .setOrigin(1, 1)
+      // Centered horizontally on the footprint rather than flush against its
+      // right edge: every procedurally-drawn building is already exactly
+      // footprintW tiles wide, so this lands in the same place it always
+      // did for them. Real-art buildings (e.g. the Tudor house, cropped
+      // from a source sheet at a width that isn't a clean multiple of
+      // TILE_SIZE) split the leftover margin evenly across both sides
+      // instead of piling it up on one — no stretching, so the art stays
+      // crisp at its native resolution rather than the blur/smear a forced
+      // scale-to-fit produced.
+      const footprintCenterX = tileAnchorX(building.footprintX - 1) + (building.footprintW * TILE_SIZE) / 2;
+      this.add
+        .image(footprintCenterX, tileAnchorY(anchorTileY), building.textureKey)
+        .setOrigin(0.5, 1)
         .setDepth(depthForTileY(anchorTileY));
-      // Procedurally-drawn buildings are rendered exactly footprintW tiles
-      // wide already, so this is a no-op for them. Real-art buildings (e.g.
-      // the Tudor house, cropped from a source sheet at a size that doesn't
-      // land on a clean multiple of TILE_SIZE) get scaled up to match —
-      // otherwise the bottom-right anchor leaves a gap of exposed ground
-      // down one side of the footprint instead of the building filling it.
-      const targetWidth = building.footprintW * TILE_SIZE;
-      if (image.width !== targetWidth) {
-        image.setScale(targetWidth / image.width);
-      }
     }
     // Props are anchored like everything else, so tall ones (torches, carts)
     // lean up-left and sort correctly against the player walking past them.
