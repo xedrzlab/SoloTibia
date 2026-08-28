@@ -36,21 +36,12 @@ const TILE_FRAME = { frameWidth: 32, frameHeight: 32 };
 
 export const IMAGE_ASSETS: ImageAsset[] = [
   // --- terrain ---
-  { key: "grass", path: "terrain/grass_01.png" },
-  { key: "grass-2", path: "terrain/grass_02.png" },
-  { key: "grass-3", path: "terrain/grass_03.png" },
-  // 15 more ground variants cropped from the user's GrassTiles.png (not
-  // checked into the repo) — a 5x3 sheet of pre-tiled 32x32-ish swatches,
-  // cropped to each cell's bounding box and resized to exactly 32x32. Real
-  // pixel art at native tile resolution already, so no smooth flag needed
-  // (unlike the AI-generated buildings).
-  { key: "grass-plain-1", path: "terrain/grass-plain-1.png" },
-  { key: "grass-plain-2", path: "terrain/grass-plain-2.png" },
-  { key: "grass-clover", path: "terrain/grass-clover.png" },
-  { key: "grass-autumn", path: "terrain/grass-autumn.png" },
-  { key: "grass-mossy", path: "terrain/grass-mossy.png" },
-  { key: "grass-sparse-1", path: "terrain/grass-sparse-1.png" },
-  { key: "grass-sparse-2", path: "terrain/grass-sparse-2.png" },
+  // The original procedural grass_01/02/03 and the first real-art grass
+  // batch's plain/sparse/autumn/mossy variants are gone — dropped in favor
+  // of the grass-clean/short/light set below once mixing three different
+  // grass "eras" into one variants pool started looking inconsistent.
+  // grass-flowers-* survives because "z" (a deliberate rare meadow-patch
+  // accent, not part of the base-ground mixing problem) still uses it.
   { key: "grass-flowers-white", path: "terrain/grass-flowers-white.png" },
   { key: "grass-flowers-yellow", path: "terrain/grass-flowers-yellow.png" },
   { key: "grass-flowers-red", path: "terrain/grass-flowers-red.png" },

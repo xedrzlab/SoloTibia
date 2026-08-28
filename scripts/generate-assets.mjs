@@ -49,43 +49,6 @@ function clusters(s, spots, hex) {
   for (const [x, y, w = 2, h = 1] of spots) s.fillRect(x, y, w, h, hex);
 }
 
-/**
- * Grass. Kept deliberately quiet: the ground is background, so it carries
- * broad tonal variation and a few blade tufts rather than detail that would
- * compete with characters and loot standing on it.
- */
-function grassTile(variant = 0) {
-  const s = new Sprite(16, 16);
-  s.fillRect(0, 0, 16, 16, P_GRASS.mid);
-
-  // Broad shading patches, so the tile has areas rather than an even field.
-  clusters(
-    s,
-    [[0, 2, 4, 2], [6, 0, 3, 2], [11, 4, 5, 3], [2, 7, 4, 2], [8, 9, 3, 2], [0, 12, 5, 2], [12, 12, 4, 2]],
-    P_GRASS.dark,
-  );
-  clusters(s, [[4, 1, 2, 1], [9, 3, 3, 1], [1, 5, 3, 1], [7, 6, 2, 1], [12, 8, 3, 1], [5, 11, 3, 1], [9, 14, 3, 1]], P_GRASS.light);
-
-  // Blade tufts: a lit tip over a darker base reads as standing grass.
-  for (const [x, y] of [[2, 3], [7, 1], [13, 5], [4, 9], [10, 11], [14, 9], [6, 13]]) {
-    s.setPixel(x, y, P_GRASS.hi);
-    s.setPixel(x, y + 1, P_GRASS.deep);
-  }
-
-  if (variant === 1) {
-    // A single small flower. More than one reads as a pattern once the variant
-    // repeats across a field, and the ground is meant to stay quiet.
-    s.setPixel(11, 9, "#c9b86a");
-    s.setPixel(11, 10, P_GRASS.deep);
-  } else if (variant === 2) {
-    // One small stone, warm-toned so it sits in the earth palette rather than
-    // reading as a cold speck against the green.
-    s.fillRect(9, 3, 2, 1, "#8a8175");
-    s.fillRect(9, 4, 2, 1, "#54503f");
-  }
-  return s;
-}
-
 /** Bare earth: packed dirt with small embedded stones. */
 function dirtTile(variant = 0) {
   const s = new Sprite(16, 16);
@@ -3054,9 +3017,6 @@ function appIcon(size) {
 // ---------------------------------------------------------------------------
 
 // --- terrain -------------------------------------------------------------
-saveSprite(grassTile(0), SCALE, `${OUT}/terrain/grass_01.png`);
-saveSprite(grassTile(1), SCALE, `${OUT}/terrain/grass_02.png`);
-saveSprite(grassTile(2), SCALE, `${OUT}/terrain/grass_03.png`);
 saveSprite(dirtTile(0), SCALE, `${OUT}/terrain/dirt_01.png`);
 saveSprite(dirtTile(1), SCALE, `${OUT}/terrain/dirt_02.png`);
 saveSprite(caveFloorTile(), SCALE, `${OUT}/terrain/cave_floor_01.png`);

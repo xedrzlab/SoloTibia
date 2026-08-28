@@ -635,31 +635,28 @@ const LEGEND: Record<string, TileInfo> = {
   "#": { walkable: false, textureKey: "void-wall", safe: false },
   ".": {
     walkable: true,
-    textureKey: "grass",
-    variants: [
-      "grass",
-      "grass-2",
-      "grass-3",
-      "grass-plain-1",
-      "grass-plain-2",
-      "grass-clover",
-      "grass-sparse-1",
-      "grass-sparse-2",
-      "grass-autumn",
-      "grass-mossy",
-      "grass-clean",
-      "grass-short",
-      "grass-light",
-    ],
+    textureKey: "grass-clean",
+    variants: ["grass-clean", "grass-short", "grass-light"],
     safe: false,
     groundFriction: 150,
   },
   T: { walkable: true, textureKey: "temple-floor", safe: true, groundFriction: 100 },
-  S: { walkable: true, textureKey: "grass", variants: ["grass", "grass-2", "grass-3"], safe: true, groundFriction: 150 },
+  S: {
+    walkable: true,
+    textureKey: "grass-clean",
+    variants: ["grass-clean", "grass-short", "grass-light"],
+    safe: true,
+    groundFriction: 150,
+  },
   D: { walkable: true, textureKey: "dirt", variants: ["dirt", "dirt-2"], safe: false, groundFriction: 130 },
   C: { walkable: true, textureKey: "cave-floor", safe: false, groundFriction: 140 },
   W: { walkable: false, textureKey: "stone-wall", safe: false },
-  B: { walkable: false, textureKey: "grass", variants: ["grass", "grass-2", "grass-3"], safe: false },
+  B: {
+    walkable: false,
+    textureKey: "grass-clean",
+    variants: ["grass-clean", "grass-short", "grass-light"],
+    safe: false,
+  },
   "~": { walkable: false, textureKey: "water", animated: true, safe: false, groundFriction: 250 },
   g: { walkable: true, textureKey: "rocky-ground", safe: false, groundFriction: 160 },
   M: { walkable: false, textureKey: "mountain", safe: false },
@@ -669,34 +666,53 @@ const LEGEND: Record<string, TileInfo> = {
   K: { walkable: true, textureKey: "sewer-floor", safe: false, groundFriction: 145 },
   V: { walkable: false, textureKey: "wall-sewer", safe: false },
 
-  t: { walkable: false, textureKey: "grass", variants: ["grass", "grass-2"], tree: "oak", safe: false },
-  p: { walkable: false, textureKey: "grass", variants: ["grass", "grass-2"], tree: "pine", safe: false },
+  t: { walkable: false, textureKey: "grass-clean", variants: ["grass-clean", "grass-short"], tree: "oak", safe: false },
+  p: { walkable: false, textureKey: "grass-clean", variants: ["grass-clean", "grass-short"], tree: "pine", safe: false },
   y: { walkable: false, textureKey: "rocky-ground", tree: "dead", safe: false },
   e: {
     walkable: false,
-    textureKey: "grass",
-    variants: ["grass", "grass-2", "grass-plain-2", "grass-clover"],
+    textureKey: "grass-clean",
+    variants: ["grass-clean", "grass-short", "grass-light"],
     wholeTree: WHOLE_TREE_KEYS,
     safe: false,
   },
-  b: { walkable: false, textureKey: "grass", variants: ["grass", "grass-2"], overlayKey: "bush", safe: false },
+  b: {
+    walkable: false,
+    textureKey: "grass-clean",
+    variants: ["grass-clean", "grass-short"],
+    overlayKey: "bush",
+    safe: false,
+  },
   o: {
     walkable: false,
-    textureKey: "grass",
-    variants: ["grass", "grass-3"],
+    textureKey: "grass-clean",
+    variants: ["grass-clean", "grass-light"],
     overlayVariants: ["boulder", "rock-mossy"],
     safe: false,
   },
-  r: { walkable: false, textureKey: "grass", variants: ["grass", "grass-3"], overlayKey: "rock-medium", safe: false },
-  u: { walkable: false, textureKey: "grass", overlayKey: "stump", safe: false },
+  r: {
+    walkable: false,
+    textureKey: "grass-clean",
+    variants: ["grass-clean", "grass-light"],
+    overlayKey: "rock-medium",
+    safe: false,
+  },
+  u: { walkable: false, textureKey: "grass-clean", overlayKey: "stump", safe: false },
 
-  f: { walkable: true, textureKey: "grass", variants: ["grass", "grass-2"], overlayKey: "flowers", safe: false, groundFriction: 150 },
+  f: {
+    walkable: true,
+    textureKey: "grass-clean",
+    variants: ["grass-clean", "grass-short"],
+    overlayKey: "flowers",
+    safe: false,
+    groundFriction: 150,
+  },
   // A patch of solid colour from GrassTiles.png (a single flower species
   // covering the whole tile) rather than the single small clump "f" overlays
   // onto plain grass — reads as a proper wildflower meadow when scattered.
   z: {
     walkable: true,
-    textureKey: "grass",
+    textureKey: "grass-clean",
     variants: [
       "grass-flowers-white",
       "grass-flowers-yellow",
@@ -721,7 +737,7 @@ const LEGEND: Record<string, TileInfo> = {
   h: {
     // Ground patches — the most visible tier, so the lowest density.
     walkable: true,
-    textureKey: "grass",
+    textureKey: "grass-clean",
     variants: ["grass-mud-patch", "grass-dark-patch", "grass-light-patch"],
     safe: false,
     groundFriction: 150,
@@ -729,7 +745,7 @@ const LEGEND: Record<string, TileInfo> = {
   i: {
     // Tufts/weeds — light texture detail.
     walkable: true,
-    textureKey: "grass",
+    textureKey: "grass-clean",
     variants: ["grass-tuft", "grass-two-tufts", "grass-small-weeds", "grass-mixed-weeds"],
     safe: false,
     groundFriction: 150,
@@ -737,7 +753,7 @@ const LEGEND: Record<string, TileInfo> = {
   j: {
     // Small debris.
     walkable: true,
-    textureKey: "grass",
+    textureKey: "grass-clean",
     variants: ["grass-small-rocks", "grass-pebbles", "grass-twig", "grass-leaf-clusters"],
     safe: false,
     groundFriction: 150,
@@ -746,7 +762,7 @@ const LEGEND: Record<string, TileInfo> = {
     // Single wildflowers, dotted thinly — distinct from "z"'s solid-colour
     // meadow patches (a denser cluster covering the whole tile).
     walkable: true,
-    textureKey: "grass",
+    textureKey: "grass-clean",
     variants: [
       "grass-flower-white",
       "grass-flower-yellow",
@@ -758,12 +774,19 @@ const LEGEND: Record<string, TileInfo> = {
     safe: false,
     groundFriction: 150,
   },
-  m: { walkable: true, textureKey: "grass", overlayKey: "mushrooms", safe: false, groundFriction: 150 },
-  n: { walkable: true, textureKey: "grass", variants: ["grass", "grass-3"], overlayKey: "rock-small", safe: false, groundFriction: 150 },
+  m: { walkable: true, textureKey: "grass-clean", overlayKey: "mushrooms", safe: false, groundFriction: 150 },
+  n: {
+    walkable: true,
+    textureKey: "grass-clean",
+    variants: ["grass-clean", "grass-light"],
+    overlayKey: "rock-small",
+    safe: false,
+    groundFriction: 150,
+  },
   N: { walkable: true, textureKey: "cave-floor", overlayKey: "rock-small", safe: false, groundFriction: 140 },
 
-  k: { walkable: false, textureKey: "grass", overlayKey: "barrel", safe: false },
-  x: { walkable: false, textureKey: "grass", overlayKey: "crate", safe: false },
+  k: { walkable: false, textureKey: "grass-clean", overlayKey: "barrel", safe: false },
+  x: { walkable: false, textureKey: "grass-clean", overlayKey: "crate", safe: false },
   w: { walkable: false, textureKey: "temple-floor", overlayKey: "well", safe: true },
 };
 
