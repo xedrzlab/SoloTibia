@@ -202,9 +202,11 @@ export const BUILDINGS: BuildingPlacement[] = [
   // (PropsSheetTrans.png, not checked into the repo) — a timber-frame
   // wall tile (tiled twice), a door, two windows, and a gable roof
   // piece, each cropped separately with margin on every side so nothing
-  // is clipped. 112x103 native, slightly wider than its 3x3 footprint —
-  // leans up-left over the tiles behind it like every other oversized
-  // building/prop.
+  // is clipped. The roof sits on a solid timber trim line sampled from
+  // the wall art's own post color, so it reads as resting on the wall
+  // instead of floating above a mismatched fill. 112x93 native, slightly
+  // wider than its 3x3 footprint — leans up-left over the tiles behind
+  // it like every other oversized building/prop.
   { textureKey: "building-tudor-house", footprintX: 33, footprintY: 33, footprintW: 3, footprintH: 3 },
   { textureKey: "building-log-cabin", footprintX: 40, footprintY: 33, footprintW: 3, footprintH: 3 },
   { textureKey: "building-house", footprintX: 47, footprintY: 33, footprintW: 3, footprintH: 3 },
