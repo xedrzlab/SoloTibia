@@ -76,8 +76,8 @@ export const ITEMS: Record<string, ItemDef> = {
     kind: "consumable",
     stackable: true,
     weight: 4,
-    regenSeconds: 90,
-    regenPercentOfMaxHp: 0.06,
+    regenSeconds: 180,
+    regenPercentOfMaxHp: 0.15,
   },
   ham: {
     id: "ham",
@@ -86,8 +86,8 @@ export const ITEMS: Record<string, ItemDef> = {
     kind: "consumable",
     stackable: true,
     weight: 8,
-    regenSeconds: 108,
-    regenPercentOfMaxHp: 0.1,
+    regenSeconds: 360,
+    regenPercentOfMaxHp: 0.3,
   },
   // Trophy drops for now (not food) — kind "trophy" didn't exist before
   // bear's loot table needed it.
