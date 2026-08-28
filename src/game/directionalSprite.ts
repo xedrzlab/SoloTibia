@@ -19,3 +19,12 @@ export function directionalFrameIndex(
 ): number {
   return DIRECTION_ORDER.indexOf(direction) * framesPerDirection + frameInDirection;
 }
+
+/**
+ * Key for a texture's per-direction walk-loop animation (BootScene
+ * registers it, Monster plays it) — a shared builder so the two sides can
+ * never drift into mismatched key strings.
+ */
+export function walkAnimKey(textureKey: string, direction: Direction): string {
+  return `${textureKey}-walk-${direction}`;
+}

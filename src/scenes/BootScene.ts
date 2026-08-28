@@ -1,5 +1,7 @@
 import Phaser from "phaser";
 import { IMAGE_ASSETS, SHEET_ASSETS, WATER_FRAME_COUNT, WATER_FRAME_MS } from "../data/assets";
+import { MONSTERS } from "../data/monsters";
+import { DIRECTION_ORDER, walkAnimKey } from "../game/directionalSprite";
 
 export class BootScene extends Phaser.Scene {
   constructor() {
@@ -46,6 +48,27 @@ export class BootScene extends Phaser.Scene {
       frameRate: 1000 / WATER_FRAME_MS,
       repeat: -1,
     });
+
+    // A monster whose directional sheet is only idle+move (no dedicated
+    // stepA/stepB art, e.g. cave_rat) gets a real looping walk animation
+    // per direction instead of a frame flipped once per tile-step — it
+    // plays continuously while moving and only restarts if the direction
+    // changes, rather than resetting (or freezing) on every step boundary.
+    const twoPoseTextures = new Set(
+      Object.values(MONSTERS)
+        .filter((m) => m.framesPerDirection === 2)
+        .map((m) => m.textureKey),
+    );
+    for (const textureKey of twoPoseTextures) {
+      DIRECTION_ORDER.forEach((direction, i) => {
+        this.anims.create({
+          key: walkAnimKey(textureKey, direction),
+          frames: this.anims.generateFrameNumbers(textureKey, { start: i * 2, end: i * 2 + 1 }),
+          frameRate: 5,
+          repeat: -1,
+        });
+      });
+    }
 
     this.scene.start("World");
     this.scene.launch("UI");

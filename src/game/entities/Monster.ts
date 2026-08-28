@@ -8,7 +8,7 @@ import {
 } from "../constants";
 import { MonsterDef } from "../../data/monsters";
 import { findPath, chebyshevDistance, TileCoord } from "../pathfinding";
-import { Direction, directionFromDelta, directionalFrameIndex } from "../directionalSprite";
+import { Direction, directionFromDelta, directionalFrameIndex, walkAnimKey } from "../directionalSprite";
 import { tileAnchorX, tileAnchorY, depthForTileY } from "../tileAnchor";
 
 const AI_TICK_MS = 400; // throttle pathfinding/decision-making for battery friendliness
@@ -123,21 +123,32 @@ export class Monster {
    * Directional sheets (framesPerDirection set) index by facing + idle/step;
    * simple 2-frame sheets just toggle frame 0/1, flipped horizontally for
    * movement direction. A 4-pose sheet (troll: idle/stepA/stepB/attack)
-   * alternates between the two dedicated step frames (1/2) while moving. A
-   * 2-pose sheet (idle/move only, no separate step-alternation art — e.g.
-   * cave_rat) has no frame 2 to alternate into; clamping to a single frame
-   * there froze the walk on one static pose every step, which reads as
-   * gliding rather than walking. Alternating between idle(0) and move(1)
-   * instead gives it a real two-beat cycle across consecutive steps.
+   * alternates between the two dedicated step frames (1/2) once per tile
+   * step, which is how that art was designed to read. A 2-pose sheet
+   * (idle/move only, no separate step-alternation art — e.g. cave_rat) has
+   * no frame 2 to alternate into and looks static/gliding if held on one
+   * frame per step; instead it plays a real, continuously looping idle<->move
+   * animation (registered in BootScene) that only restarts when the facing
+   * direction actually changes, not on every step boundary.
    */
   private applyFrame(idle: boolean) {
     const perDir = this.def.framesPerDirection;
-    if (perDir) {
-      let frameInDirection = 0;
-      if (!idle) {
-        const [a, b] = perDir >= 3 ? [1, 2] : [0, perDir - 1];
-        frameInDirection = this.stepToggle ? a : b;
+    if (perDir === 2) {
+      if (idle) {
+        this.sprite.anims.stop();
+        this.sprite.setFrame(directionalFrameIndex(this.facing, 0, perDir));
+      } else {
+        // Each step's completion stops the anim (idle, above) before the
+        // next one starts it again — same key, so also check isPlaying, or
+        // a same-direction restart after that stop would never fire and the
+        // sprite would sit frozen on the idle frame forever.
+        const key = walkAnimKey(this.def.textureKey, this.facing);
+        if (!this.sprite.anims.isPlaying || this.sprite.anims.currentAnim?.key !== key) this.sprite.play(key);
       }
+      return;
+    }
+    if (perDir) {
+      const frameInDirection = idle ? 0 : this.stepToggle ? 1 : 2;
       this.sprite.setFrame(directionalFrameIndex(this.facing, frameInDirection, perDir));
     } else {
       this.sprite.setFrame(idle ? 0 : 1 % this.def.frameCount);
