@@ -338,35 +338,3 @@ export const INTERIORS: Record<string, InteriorRoom> = {
 export function isFloorTile(ch: string): boolean {
   return ch === "." || ch === "S" || ch === "D" || ch === "U" || ch === "d" || ch === "X";
 }
-
-/** The "kind" of a tile, for tile-based visuals in InteriorScene. */
-export type TileKind =
-  | "wall"
-  | "wood-floor"
-  | "stone-floor"
-  | "counter"
-  | "door"
-  | "stairs-up"
-  | "stairs-down"
-  | "depot-access";
-
-export function tileKind(ch: string): TileKind {
-  switch (ch) {
-    case "W":
-      return "wall";
-    case "S":
-      return "stone-floor";
-    case "C":
-      return "counter";
-    case "D":
-      return "door";
-    case "U":
-      return "stairs-up";
-    case "d":
-      return "stairs-down";
-    case "X":
-      return "depot-access";
-    default:
-      return "wood-floor";
-  }
-}

@@ -112,6 +112,27 @@ export const IMAGE_ASSETS: ImageAsset[] = [
   // wooden interior now uses the shop-* set below instead.
   { key: "wood-floor", path: "terrain/wood_floor_01.png" },
 
+  // Real art (TempleFloorAndWalls.zip, not checked into the repo) for the
+  // church/temple interiors — replaces the flat generated temple-floor/
+  // stone-wall for those two rooms only (temple-floor/stone-wall themselves
+  // stay registered — the outdoor plaza and cave walls still use them). Six
+  // flagstone tiles are one cohesive set (a few carry a subtle crack) so
+  // they're picked per-cell like grass/wood; the wall pieces are a proper
+  // edge/corner set (see InteriorScene's templeWallTextureFor) — only one
+  // corner piece ships, so all four corners reuse it mirrored horizontally
+  // and/or vertically rather than a flat tile repeated on every side.
+  { key: "temple-stone-floor-1", path: "terrain/temple-stone-floor-1.png" },
+  { key: "temple-stone-floor-2", path: "terrain/temple-stone-floor-2.png" },
+  { key: "temple-stone-floor-3", path: "terrain/temple-stone-floor-3.png" },
+  { key: "temple-stone-floor-4", path: "terrain/temple-stone-floor-4.png" },
+  { key: "temple-stone-floor-5", path: "terrain/temple-stone-floor-5.png" },
+  { key: "temple-stone-floor-6", path: "terrain/temple-stone-floor-6.png" },
+  { key: "temple-wall-corner", path: "terrain/temple-wall-corner.png" },
+  { key: "temple-wall-top", path: "terrain/temple-wall-top.png" },
+  { key: "temple-wall-bottom", path: "terrain/temple-wall-bottom.png" },
+  { key: "temple-wall-left", path: "terrain/temple-wall-left.png" },
+  { key: "temple-wall-right", path: "terrain/temple-wall-right.png" },
+
   // Real art (WoodWallsAndFloorShops.zip, not checked into the repo) for the
   // shop/bank interiors — replaces the flat generated wood-floor/stone-wall
   // for those rooms. Five floor planks read as one cohesive set (same plank

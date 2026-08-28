@@ -1,7 +1,7 @@
 import Phaser from "phaser";
 import { TILE_SIZE, NPC_INTERACT_RANGE } from "../game/constants";
 import { tileAnchorX, tileAnchorY, depthForTileY } from "../game/tileAnchor";
-import { INTERIORS, InteriorRoom, isFloorTile, tileKind } from "../data/interiors";
+import { INTERIORS, InteriorRoom, isFloorTile } from "../data/interiors";
 import { chebyshevDistance, TileCoord } from "../game/pathfinding";
 import { Player } from "../game/entities/Player";
 import { bus, EVENTS, SetMoveDirectionPayload } from "../game/events";
@@ -42,7 +42,7 @@ const CH_STAIRS_UP = "U";
 const CH_STAIRS_DOWN = "d";
 const CH_DEPOT = "X";
 
-/** How a room's floor/walls are dressed. Only the four named shops + the bank got the real wood set. */
+/** How a room's floor/walls are dressed. Only the four named shops + the bank got the real wood set; only the temple got the real stone set. */
 type WallStyle = "stone" | "wood-panel" | "plain";
 
 // Five floor planks that are all the same style (only shade/wear differs), so
@@ -53,6 +53,30 @@ const SHOP_FLOOR_VARIANTS = [
   "shop-wood-floor-dark",
   "shop-wood-floor-staggered",
   "shop-wood-floor-worn",
+];
+
+// Six flagstone tiles, same shared-pool idea as the shop floor — but unlike
+// that set, two of these six (5 and 6) are noticeably darker/lighter than
+// the rest rather than just a different crack pattern, so picking all six
+// with equal odds read as a distracting checkerboard rather than a worn
+// stone floor. Entries are repeated to weight the pick instead: the four
+// even-toned tiles at 3x, the two standout ones at 1x, so 5/6 show up as an
+// occasional worn/lit flagstone rather than every few tiles.
+const TEMPLE_FLOOR_VARIANTS = [
+  "temple-stone-floor-1",
+  "temple-stone-floor-1",
+  "temple-stone-floor-1",
+  "temple-stone-floor-2",
+  "temple-stone-floor-2",
+  "temple-stone-floor-2",
+  "temple-stone-floor-3",
+  "temple-stone-floor-3",
+  "temple-stone-floor-3",
+  "temple-stone-floor-4",
+  "temple-stone-floor-4",
+  "temple-stone-floor-4",
+  "temple-stone-floor-5",
+  "temple-stone-floor-6",
 ];
 
 function interiorCellHash(x: number, y: number): number {
@@ -128,14 +152,14 @@ export class InteriorScene extends Phaser.Scene {
         const wx = this.tileWorldX(x);
         const wy = this.tileWorldY(y);
         const worldTileY = y + this.tileOffsetY;
-        const kind = tileKind(ch);
-        // Floor beneath every cell — stone in the church/temple, the new
-        // wood-plank set in the shops/bank, the old flat plank everywhere
-        // else (currently just the depot). Walls draw over their own base
-        // so the wall has something to hide under its silhouette.
+        // Floor beneath every cell — the real stone set in the church/
+        // temple, the real wood-plank set in the shops/bank, the old flat
+        // plank everywhere else (currently just the depot). Walls draw over
+        // their own base so the wall has something to hide under its
+        // silhouette.
         const floorKey =
-          kind === "stone-floor" || (ch === CH_WALL && wallStyle === "stone")
-            ? "temple-floor"
+          wallStyle === "stone"
+            ? this.templeFloorVariant(x, y)
             : wallStyle === "wood-panel"
               ? this.shopFloorVariant(x, y)
               : "wood-floor";
@@ -146,6 +170,14 @@ export class InteriorScene extends Phaser.Scene {
             this.add
               .image(wx, wy, wall.key)
               .setOrigin(0, 0)
+              .setFlipY(wall.flipY)
+              .setDepth(depthForTileY(worldTileY));
+          } else if (wallStyle === "stone") {
+            const wall = this.templeWallTextureFor(x, y);
+            this.add
+              .image(wx, wy, wall.key)
+              .setOrigin(0, 0)
+              .setFlipX(wall.flipX)
               .setFlipY(wall.flipY)
               .setDepth(depthForTileY(worldTileY));
           } else {
@@ -249,6 +281,33 @@ export class InteriorScene extends Phaser.Scene {
     if (isLeft) return { key: "shop-wall-left", flipY: false };
     if (isRight) return { key: "shop-wall-right", flipY: false };
     return { key: "shop-wall-basic", flipY: false };
+  }
+
+  /** One of six compatible flagstone tiles (a couple carry a subtle crack), picked per-cell like the shop floor. */
+  private templeFloorVariant(x: number, y: number): string {
+    return TEMPLE_FLOOR_VARIANTS[interiorCellHash(x, y) % TEMPLE_FLOOR_VARIANTS.length];
+  }
+
+  /**
+   * Same plain-rectangle-perimeter reasoning as shopWallTextureFor, but only
+   * one corner piece shipped this time (a top-left shape: trim across the
+   * top, trim down the left) — so the other three corners reuse it mirrored
+   * horizontally and/or vertically instead of needing four separate pieces.
+   */
+  private templeWallTextureFor(x: number, y: number): { key: string; flipX: boolean; flipY: boolean } {
+    const isTop = y === 0;
+    const isBottom = y === this.roomH - 1;
+    const isLeft = x === 0;
+    const isRight = x === this.roomW - 1;
+    if (isTop && isLeft) return { key: "temple-wall-corner", flipX: false, flipY: false };
+    if (isTop && isRight) return { key: "temple-wall-corner", flipX: true, flipY: false };
+    if (isBottom && isLeft) return { key: "temple-wall-corner", flipX: false, flipY: true };
+    if (isBottom && isRight) return { key: "temple-wall-corner", flipX: true, flipY: true };
+    if (isTop) return { key: "temple-wall-top", flipX: false, flipY: false };
+    if (isBottom) return { key: "temple-wall-bottom", flipX: false, flipY: false };
+    if (isLeft) return { key: "temple-wall-left", flipX: false, flipY: false };
+    if (isRight) return { key: "temple-wall-right", flipX: false, flipY: false };
+    return { key: "temple-wall-top", flipX: false, flipY: false };
   }
 
   private applyZoom(worldSize: { w: number; h: number }) {
