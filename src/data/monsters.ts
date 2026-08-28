@@ -152,6 +152,7 @@ export const MONSTERS: Record<string, MonsterDef> = {
     frameCount: 24,
     framesPerDirection: 6,
     continuousWalk: true,
+    scale: 1.5,
     hp: 25,
     xp: 0,
     minDamage: 0,
