@@ -42,6 +42,23 @@ const CH_STAIRS_UP = "U";
 const CH_STAIRS_DOWN = "d";
 const CH_DEPOT = "X";
 
+/** How a room's floor/walls are dressed. Only the four named shops + the bank got the real wood set. */
+type WallStyle = "stone" | "wood-panel" | "plain";
+
+// Five floor planks that are all the same style (only shade/wear differs), so
+// they're picked per-cell like an outdoor grass variant — never a jarring mix.
+const SHOP_FLOOR_VARIANTS = [
+  "shop-wood-floor-basic",
+  "shop-wood-floor-light",
+  "shop-wood-floor-dark",
+  "shop-wood-floor-staggered",
+  "shop-wood-floor-worn",
+];
+
+function interiorCellHash(x: number, y: number): number {
+  return Math.abs(Math.imul(x * 374761393 + y * 668265263, 1274126177)) >>> 0;
+}
+
 export class InteriorScene extends Phaser.Scene {
   private room!: InteriorRoom;
   private roomW = 0;
@@ -101,6 +118,8 @@ export class InteriorScene extends Phaser.Scene {
       .setDepth(-1000);
     this.scale.on("resize", () => backdrop.setSize(this.scale.width, this.scale.height));
 
+    const wallStyle = this.roomWallStyle();
+
     // Paint the room, tile by tile. Every cell gets a floor, then walls,
     // counter or stairs sit on top of it as their own sprites.
     for (let y = 0; y < this.roomH; y++) {
@@ -110,13 +129,28 @@ export class InteriorScene extends Phaser.Scene {
         const wy = this.tileWorldY(y);
         const worldTileY = y + this.tileOffsetY;
         const kind = tileKind(ch);
-        // Floor beneath every cell — stone in the church/temple, wooden
-        // planks in the shops. Walls draw over their own base so the wall
-        // has something to hide under its silhouette.
-        const floorKey = kind === "stone-floor" || ch === CH_WALL && this.roomLooksLikeTemple() ? "temple-floor" : "wood-floor";
+        // Floor beneath every cell — stone in the church/temple, the new
+        // wood-plank set in the shops/bank, the old flat plank everywhere
+        // else (currently just the depot). Walls draw over their own base
+        // so the wall has something to hide under its silhouette.
+        const floorKey =
+          kind === "stone-floor" || (ch === CH_WALL && wallStyle === "stone")
+            ? "temple-floor"
+            : wallStyle === "wood-panel"
+              ? this.shopFloorVariant(x, y)
+              : "wood-floor";
         this.add.image(wx, wy, floorKey).setOrigin(0, 0).setDepth(0);
         if (ch === CH_WALL) {
-          this.add.image(wx, wy, "stone-wall").setOrigin(0, 0).setDepth(depthForTileY(worldTileY));
+          if (wallStyle === "wood-panel") {
+            const wall = this.shopWallTextureFor(x, y);
+            this.add
+              .image(wx, wy, wall.key)
+              .setOrigin(0, 0)
+              .setFlipY(wall.flipY)
+              .setDepth(depthForTileY(worldTileY));
+          } else {
+            this.add.image(wx, wy, "stone-wall").setOrigin(0, 0).setDepth(depthForTileY(worldTileY));
+          }
         } else if (ch === CH_COUNTER) {
           this.add
             .image(tileAnchorX(x + this.tileOffsetX), tileAnchorY(worldTileY), "counter")
@@ -181,9 +215,40 @@ export class InteriorScene extends Phaser.Scene {
     this.scale.on("resize", () => this.applyZoom(worldSize));
   }
 
-  /** Very rough — the temple rooms use stone floor; shops use wood. */
-  private roomLooksLikeTemple(): boolean {
-    return this.room.id.startsWith("temple_");
+  /** Which floor/wall dressing a room gets: stone (temple), the new wood-panel set (shops + bank), or the old flat plank (everything else — currently just the depot). */
+  private roomWallStyle(): WallStyle {
+    if (this.room.id.startsWith("temple_")) return "stone";
+    if (["melee_shop", "ranged_shop", "bank", "magic_shop"].includes(this.room.id)) return "wood-panel";
+    return "plain";
+  }
+
+  /** One of five compatible plank shades, picked per-cell so the floor doesn't look like one tile stamped on repeat. */
+  private shopFloorVariant(x: number, y: number): string {
+    return SHOP_FLOOR_VARIANTS[interiorCellHash(x, y) % SHOP_FLOOR_VARIANTS.length];
+  }
+
+  /**
+   * The room's walls are always a plain rectangular perimeter, so every W
+   * cell is exactly one of: a corner, a top/bottom/left/right edge segment.
+   * Only two corner pieces ship (top-left, top-right) — the bottom corners
+   * reuse them flipped vertically, which moves the dark trim from the top
+   * edge to the bottom edge without disturbing which side the vertical
+   * beam sits on.
+   */
+  private shopWallTextureFor(x: number, y: number): { key: string; flipY: boolean } {
+    const isTop = y === 0;
+    const isBottom = y === this.roomH - 1;
+    const isLeft = x === 0;
+    const isRight = x === this.roomW - 1;
+    if (isTop && isLeft) return { key: "shop-wall-corner-tl", flipY: false };
+    if (isTop && isRight) return { key: "shop-wall-corner-tr", flipY: false };
+    if (isBottom && isLeft) return { key: "shop-wall-corner-tl", flipY: true };
+    if (isBottom && isRight) return { key: "shop-wall-corner-tr", flipY: true };
+    if (isTop) return { key: "shop-wall-top", flipY: false };
+    if (isBottom) return { key: "shop-wall-bottom", flipY: false };
+    if (isLeft) return { key: "shop-wall-left", flipY: false };
+    if (isRight) return { key: "shop-wall-right", flipY: false };
+    return { key: "shop-wall-basic", flipY: false };
   }
 
   private applyZoom(worldSize: { w: number; h: number }) {

@@ -108,7 +108,29 @@ export const IMAGE_ASSETS: ImageAsset[] = [
   { key: "cobble-mossy", path: "terrain/cobble-mossy.png" },
   { key: "cobble-road", path: "terrain/cobble-road.png" },
   { key: "cobble-town-street", path: "terrain/cobble-town-street.png" },
+  // Still used by the depot's plain back room — everything else with a
+  // wooden interior now uses the shop-* set below instead.
   { key: "wood-floor", path: "terrain/wood_floor_01.png" },
+
+  // Real art (WoodWallsAndFloorShops.zip, not checked into the repo) for the
+  // shop/bank interiors — replaces the flat generated wood-floor/stone-wall
+  // for those rooms. Five floor planks read as one cohesive set (same plank
+  // style, only shade/wear differs) so they're picked per-cell like grass;
+  // the wall pieces are a proper edge/corner set (see InteriorScene's
+  // shopWallTextureFor) so the room's perimeter reads as one built wall
+  // instead of a single tile repeated on every side.
+  { key: "shop-wood-floor-basic", path: "terrain/wood-floor-basic.png" },
+  { key: "shop-wood-floor-dark", path: "terrain/wood-floor-dark.png" },
+  { key: "shop-wood-floor-light", path: "terrain/wood-floor-light.png" },
+  { key: "shop-wood-floor-staggered", path: "terrain/wood-floor-staggered.png" },
+  { key: "shop-wood-floor-worn", path: "terrain/wood-floor-worn.png" },
+  { key: "shop-wall-corner-tl", path: "terrain/shop-wall-corner.png" },
+  { key: "shop-wall-corner-tr", path: "terrain/shop-wall-corner-tr.png" },
+  { key: "shop-wall-top", path: "terrain/shop-wall-top.png" },
+  { key: "shop-wall-bottom", path: "terrain/shop-wall-bottom.png" },
+  { key: "shop-wall-left", path: "terrain/shop-wall-left.png" },
+  { key: "shop-wall-right", path: "terrain/shop-wall-right.png" },
+  { key: "shop-wall-basic", path: "terrain/shop-wall-basic.png" },
 
   // --- environment ---
   { key: "bush", path: "environment/bush_01.png" },
