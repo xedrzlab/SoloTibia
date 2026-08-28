@@ -21,6 +21,8 @@ export interface MonsterDef {
    * in BootScene) rather than the troll's idle/stepA/stepB/attack poses.
    */
   continuousWalk?: boolean;
+  /** Sprite scale multiplier, for a monster whose art is bigger/smaller than the norm without needing its own larger source frames (cf. troll/cave_rat, which bake size into the sheet itself). Omit for 1x. */
+  scale?: number;
   hp: number;
   xp: number;
   minDamage: number;
@@ -174,6 +176,7 @@ export const MONSTERS: Record<string, MonsterDef> = {
     frameCount: 16,
     framesPerDirection: 4,
     continuousWalk: true,
+    scale: 2,
     hp: 80,
     xp: 23,
     minDamage: 0,

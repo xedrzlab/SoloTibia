@@ -599,22 +599,33 @@ export const NPC_SPAWNS: NpcSpawn[] = [
 // exception is curious_rat: harmless (hitChance 0, no damage), so letting
 // it wander near the temple doesn't actually break "peaceful". goblin's
 // spawn is a testing placement only — it's there to look at the new art
-// in-engine, not a real encounter yet. bear is defined in monsters.ts with
-// its real (non-zero) TibiaWiki stats and isn't spawned anywhere yet — it
-// would actually hurt the player, which doesn't belong on this peaceful
-// surface; see docs/monster-sources/bear/ for the source art it was built
-// from, ready to drop into a real hunting ground later.
+// in-engine, not a real encounter yet. bear's monsters.ts entry carries its
+// real (non-zero) TibiaWiki stats — its town spawn below uses `overrides`
+// to neuter combat for this art/scale check only, so the archived "complete
+// model" stays untouched; see docs/monster-sources/bear/ for the source art
+// it was built from, ready to drop into a real hunting ground later.
 // ---------------------------------------------------------------------------
 
 export interface MonsterSpawn {
   monsterId: string;
   x: number;
   y: number;
+  /** Per-spawn stat overrides layered onto MONSTERS[monsterId] — for a testing placement that shouldn't carry the monster's real combat stats (see bear below). */
+  overrides?: Partial<import("./monsters").MonsterDef>;
 }
 
 export const MONSTER_SPAWNS: MonsterSpawn[] = [
   { monsterId: "curious_rat", x: 36, y: 24 }, // near the temple, a few tiles from where a fresh character spawns
   { monsterId: "goblin", x: 38, y: 26 }, // testing spawn only: real goblin art just landed, 0 damage until it gets balanced stats and a real hunting-ground home
+  {
+    monsterId: "bear",
+    x: 40,
+    y: 26,
+    // Testing spawn only: checking the 2x scale bump reads right next to the
+    // other town monsters. Real stats live in monsters.ts (see comment
+    // above) — this override just keeps the town copy harmless to walk into.
+    overrides: { hitChance: 0, minDamage: 0, maxDamage: 0 },
+  },
   { monsterId: "rat", x: 21, y: 66 }, // room A
   { monsterId: "rat", x: 48, y: 66 }, // room B
   { monsterId: "rat", x: 11, y: 67 }, // dead-end side chamber

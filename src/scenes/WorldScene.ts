@@ -222,7 +222,7 @@ export class WorldScene extends Phaser.Scene {
     this.buildNpcs();
 
     this.monsters = MONSTER_SPAWNS.map((spawn) => {
-      const def = MONSTERS[spawn.monsterId];
+      const def = spawn.overrides ? { ...MONSTERS[spawn.monsterId], ...spawn.overrides } : MONSTERS[spawn.monsterId];
       return new Monster(this, def, spawn.x, spawn.y);
     });
 

@@ -46,6 +46,7 @@ export class Monster {
 
     this.sprite = scene.add.sprite(tileAnchorX(spawnX), tileAnchorY(spawnY), def.textureKey, 0);
     this.sprite.setOrigin(1, 1);
+    if (def.scale) this.sprite.setScale(def.scale);
     this.sprite.setDepth(depthForTileY(spawnY));
 
     const barY = this.barY();
