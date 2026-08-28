@@ -109,7 +109,6 @@ export const IMAGE_ASSETS: ImageAsset[] = [
   // dirt-underground and dirt-clean) so the debris still reads clearly
   // without breaking the floor's overall tone. See the "K" LEGEND entry.
   { key: "dirt-underground", path: "terrain/dirt-underground.png" },
-  { key: "dirt-dark-patches-underground", path: "terrain/dirt-dark-patches-underground.png" },
   { key: "dirt-pebbles-underground", path: "terrain/dirt-pebbles-underground.png" },
   { key: "dirt-small-rock-underground", path: "terrain/dirt-small-rock-underground.png" },
   { key: "dirt-twigs-underground", path: "terrain/dirt-twigs-underground.png" },

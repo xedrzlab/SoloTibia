@@ -703,7 +703,9 @@ const LEGEND: Record<string, TileInfo> = {
   // trick) so they read as occasional detail, not a busy checkerboard.
   // Weeds are left out — a live plant sprouting underground with no
   // sunlight reads as wrong for a cave floor even though the tile itself
-  // is fine.
+  // is fine. dark-patches-underground is out too — its soft radial
+  // vignette reads as a blur artifact rather than a stain, unlike the
+  // pebbles/rock/twigs which read as discrete objects.
   K: {
     walkable: true,
     textureKey: "dirt-underground",
@@ -716,8 +718,8 @@ const LEGEND: Record<string, TileInfo> = {
       "dirt-underground",
       "dirt-underground",
       "dirt-underground",
-      "dirt-dark-patches-underground",
-      "dirt-dark-patches-underground",
+      "dirt-underground",
+      "dirt-underground",
       "dirt-pebbles-underground",
       "dirt-small-rock-underground",
       "dirt-twigs-underground",
