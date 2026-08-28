@@ -197,13 +197,13 @@ export const IMAGE_ASSETS: ImageAsset[] = [
   { key: "building-house5", path: "buildings/house5_01.png", smooth: true },
   { key: "building-house6", path: "buildings/house6_01.png", smooth: true },
   { key: "building-house7", path: "buildings/house7_01.png", smooth: true },
-  // The five named service buildings the user supplied (bankhouse/temple/
-  // distanceshop/meleeshop/potionmagicshop, not checked into the repo) —
-  // four already had real alpha; only temple.png needed the checkerboard
-  // conversion the houses above use. Same crop-to-bbox + Lanczos downscale
-  // treatment, sized a notch larger (6 tiles wide) than the plain houses
-  // since these read as grander storefronts with their own signage baked
-  // in. Replaces the old procedural building-church for temple_main.
+  // The five named service buildings — currently the user's second matched
+  // set (Bank/Church/DistanceShop/MeleeShop/MagicPotion.png, not checked
+  // into the repo), replacing an earlier mismatched set the same way. Same
+  // crop-to-bbox + Lanczos downscale treatment as the houses (checkerboard
+  // conversion for the two that needed it), sized a notch larger (6 tiles
+  // wide) since these read as grander storefronts with their own signage
+  // baked in. building-temple is used for temple_main.
   { key: "building-bank", path: "buildings/bank_01.png", smooth: true },
   { key: "building-melee-shop", path: "buildings/melee_shop_01.png", smooth: true },
   { key: "building-ranged-shop", path: "buildings/ranged_shop_01.png", smooth: true },
