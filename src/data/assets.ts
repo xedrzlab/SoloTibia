@@ -39,6 +39,26 @@ export const IMAGE_ASSETS: ImageAsset[] = [
   { key: "grass", path: "terrain/grass_01.png" },
   { key: "grass-2", path: "terrain/grass_02.png" },
   { key: "grass-3", path: "terrain/grass_03.png" },
+  // 15 more ground variants cropped from the user's GrassTiles.png (not
+  // checked into the repo) — a 5x3 sheet of pre-tiled 32x32-ish swatches,
+  // cropped to each cell's bounding box and resized to exactly 32x32. Real
+  // pixel art at native tile resolution already, so no smooth flag needed
+  // (unlike the AI-generated buildings).
+  { key: "grass-plain-1", path: "terrain/grass-plain-1.png" },
+  { key: "grass-plain-2", path: "terrain/grass-plain-2.png" },
+  { key: "grass-clover", path: "terrain/grass-clover.png" },
+  { key: "grass-autumn", path: "terrain/grass-autumn.png" },
+  { key: "grass-mossy", path: "terrain/grass-mossy.png" },
+  { key: "grass-sparse-1", path: "terrain/grass-sparse-1.png" },
+  { key: "grass-sparse-2", path: "terrain/grass-sparse-2.png" },
+  { key: "grass-flowers-white", path: "terrain/grass-flowers-white.png" },
+  { key: "grass-flowers-yellow", path: "terrain/grass-flowers-yellow.png" },
+  { key: "grass-flowers-red", path: "terrain/grass-flowers-red.png" },
+  { key: "grass-flowers-blue", path: "terrain/grass-flowers-blue.png" },
+  { key: "grass-flowers-pink", path: "terrain/grass-flowers-pink.png" },
+  { key: "grass-flowers-purple", path: "terrain/grass-flowers-purple.png" },
+  { key: "grass-flowers-orange", path: "terrain/grass-flowers-orange.png" },
+  { key: "grass-flowers-mixed", path: "terrain/grass-flowers-mixed.png" },
   { key: "dirt", path: "terrain/dirt_01.png" },
   { key: "dirt-2", path: "terrain/dirt_02.png" },
   { key: "cave-floor", path: "terrain/cave_floor_01.png" },
@@ -72,6 +92,38 @@ export const IMAGE_ASSETS: ImageAsset[] = [
   { key: "stump", path: "environment/stump_01.png" },
   { key: "mushrooms", path: "environment/mushrooms_01.png" },
   { key: "flowers", path: "environment/flowers_01.png" },
+  // 24 single-sprite trees (trunk+foliage baked into one image, unlike the
+  // split trunk/canopy pairs above) cropped from the user's Trees.png (not
+  // checked into the repo) — a 6x4 sheet on a solid-black background,
+  // chroma-keyed to real alpha, cropped to each tree's bounding box with
+  // margin, then downscaled (Lanczos) by a uniform factor so relative size
+  // differences between trees survive. Real pixel art, but soft-shaded
+  // (not hard-edged like the procedural sheets) — smooth-filtered for the
+  // same reason the AI-generated buildings are.
+  { key: "tree-oak-round-1", path: "environment/tree-oak-round-1.png", smooth: true },
+  { key: "tree-oak-round-2", path: "environment/tree-oak-round-2.png", smooth: true },
+  { key: "tree-oak-round-3", path: "environment/tree-oak-round-3.png", smooth: true },
+  { key: "tree-oak-round-4", path: "environment/tree-oak-round-4.png", smooth: true },
+  { key: "tree-oak-round-5", path: "environment/tree-oak-round-5.png", smooth: true },
+  { key: "tree-oak-cluster", path: "environment/tree-oak-cluster.png", smooth: true },
+  { key: "tree-spruce", path: "environment/tree-spruce.png", smooth: true },
+  { key: "tree-spruce-teal", path: "environment/tree-spruce-teal.png", smooth: true },
+  { key: "tree-spruce-dark", path: "environment/tree-spruce-dark.png", smooth: true },
+  { key: "tree-pine-small", path: "environment/tree-pine-small.png", smooth: true },
+  { key: "tree-cypress", path: "environment/tree-cypress.png", smooth: true },
+  { key: "tree-cypress-slim", path: "environment/tree-cypress-slim.png", smooth: true },
+  { key: "tree-willow", path: "environment/tree-willow.png", smooth: true },
+  { key: "tree-cherry-white", path: "environment/tree-cherry-white.png", smooth: true },
+  { key: "tree-cherry-pink", path: "environment/tree-cherry-pink.png", smooth: true },
+  { key: "tree-maple-red", path: "environment/tree-maple-red.png", smooth: true },
+  { key: "tree-maple-orange", path: "environment/tree-maple-orange.png", smooth: true },
+  { key: "tree-maple-yellow", path: "environment/tree-maple-yellow.png", smooth: true },
+  { key: "tree-birch", path: "environment/tree-birch.png", smooth: true },
+  { key: "tree-dead-bare", path: "environment/tree-dead-bare.png", smooth: true },
+  { key: "tree-apple", path: "environment/tree-apple.png", smooth: true },
+  { key: "tree-orange-fruit", path: "environment/tree-orange-fruit.png", smooth: true },
+  { key: "tree-bush-small", path: "environment/tree-bush-small.png", smooth: true },
+  { key: "tree-palm", path: "environment/tree-palm.png", smooth: true },
 
   // --- props ---
   { key: "barrel", path: "props/barrel_01.png" },

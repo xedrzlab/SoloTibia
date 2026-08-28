@@ -16,6 +16,7 @@ import {
   PROPS,
   variantForCell,
   overlayForCell,
+  wholeTreeForCell,
   entryPointAt,
   sewerLinkAtSurface,
   sewerLinkAtSewer,
@@ -360,6 +361,7 @@ export class WorldScene extends Phaser.Scene {
 
     const animatedCells: { x: number; y: number; key: string }[] = [];
     const treeCells: { x: number; y: number; species: TreeSpecies }[] = [];
+    const wholeTreeCells: { x: number; y: number; textureKey: string }[] = [];
     forEachTile((x, y, tile) => {
       if (tile.animated) {
         animatedCells.push({ x, y, key: tile.textureKey });
@@ -368,6 +370,8 @@ export class WorldScene extends Phaser.Scene {
       // A tree's ground still bakes; only its trunk and canopy stand apart.
       rt.draw(variantForCell(tile, x, y), x * TILE_SIZE, y * TILE_SIZE);
       if (tile.tree) treeCells.push({ x, y, species: tile.tree });
+      const wholeTree = wholeTreeForCell(tile, x, y);
+      if (wholeTree) wholeTreeCells.push({ x, y, textureKey: wholeTree });
       const overlay = overlayForCell(tile, x, y);
       if (overlay) rt.draw(overlay, x * TILE_SIZE, y * TILE_SIZE);
     });
@@ -381,6 +385,16 @@ export class WorldScene extends Phaser.Scene {
     }
 
     for (const cell of treeCells) this.buildTree(cell.x, cell.y, cell.species);
+
+    // Single-sprite trees (trunk+foliage baked into one image) — anchored
+    // and depth-sorted the same way a building is, so the player is
+    // properly hidden walking behind one.
+    for (const cell of wholeTreeCells) {
+      this.add
+        .image(tileAnchorX(cell.x), tileAnchorY(cell.y), cell.textureKey)
+        .setOrigin(1, 1)
+        .setDepth(depthForTileY(cell.y));
+    }
   }
 
   /**

@@ -313,10 +313,14 @@ export function sewerLinkAtSewer(x: number, y: number): SewerLink | null {
 b.scatter(2, 4, 18, 20, "t", ["."], 0.14, 700);
 b.scatter(2, 4, 18, 20, "b", ["."], 0.05, 701);
 b.scatter(2, 4, 18, 20, "f", ["."], 0.04, 702);
+b.scatter(2, 4, 18, 20, "e", ["."], 0.06, 703);
+b.scatter(2, 4, 18, 20, "z", ["."], 0.02, 704);
 
 b.scatter(50, 4, 18, 20, "p", ["."], 0.14, 720);
 b.scatter(50, 4, 18, 20, "m", ["."], 0.05, 721);
 b.scatter(50, 4, 18, 20, "f", ["."], 0.03, 722);
+b.scatter(50, 4, 18, 20, "e", ["."], 0.06, 723);
+b.scatter(50, 4, 18, 20, "z", ["."], 0.02, 724);
 
 b.scatter(TOWN.x - 3, TOWN.y - 3, TOWN.w + 6, TOWN.h + 6, "f", ["."], 0.03, 730);
 b.scatter(TOWN.x - 3, TOWN.y - 3, TOWN.w + 6, TOWN.h + 6, "n", ["."], 0.02, 731);
@@ -324,6 +328,8 @@ b.scatter(TOWN.x - 3, TOWN.y - 3, TOWN.w + 6, TOWN.h + 6, "n", ["."], 0.02, 731)
 b.scatter(2, 32, MAP_WIDTH - 4, 24, "t", ["."], 0.05, 740);
 b.scatter(2, 32, MAP_WIDTH - 4, 24, "b", ["."], 0.02, 741);
 b.scatter(2, 32, MAP_WIDTH - 4, 24, "f", ["."], 0.04, 742);
+b.scatter(2, 32, MAP_WIDTH - 4, 24, "e", ["."], 0.04, 743);
+b.scatter(2, 32, MAP_WIDTH - 4, 24, "z", ["."], 0.015, 744);
 
 // ---------------------------------------------------------------------------
 // Props
@@ -536,6 +542,14 @@ export interface TileInfo {
   overlayVariants?: string[];
   animated?: boolean;
   tree?: TreeSpecies;
+  /**
+   * A single-sprite tree (trunk+foliage baked into one image, unlike the
+   * split-layer TREE_LAYERS species) — picked per-tile from this list the
+   * same way overlayVariants works. Rendered as one leaning sprite like a
+   * building, not baked into the ground layer like overlayKey, so it gets
+   * proper occlusion when the player walks behind it.
+   */
+  wholeTree?: string[];
   safe: boolean;
   /**
    * Old-Tibia "ground speed" divisor. Higher = slower to walk on. Reference
@@ -568,9 +582,61 @@ export function overlayForCell(tile: TileInfo, x: number, y: number): string | u
   return tile.overlayKey;
 }
 
+export function wholeTreeForCell(tile: TileInfo, x: number, y: number): string | undefined {
+  if (!tile.wholeTree || tile.wholeTree.length === 0) return undefined;
+  return tile.wholeTree[cellHash(x + 29, y + 31) % tile.wholeTree.length];
+}
+
+// Single-sprite trees (see TileInfo.wholeTree) — real art the user supplied
+// (Trees.png, not checked into the repo), cropped into individual images.
+// Picked randomly per tile the same way TREE_LAYERS canopy variety works.
+const WHOLE_TREE_KEYS = [
+  "tree-oak-round-1",
+  "tree-oak-round-2",
+  "tree-oak-round-3",
+  "tree-oak-round-4",
+  "tree-oak-round-5",
+  "tree-oak-cluster",
+  "tree-spruce",
+  "tree-spruce-teal",
+  "tree-spruce-dark",
+  "tree-pine-small",
+  "tree-cypress",
+  "tree-cypress-slim",
+  "tree-willow",
+  "tree-cherry-white",
+  "tree-cherry-pink",
+  "tree-maple-red",
+  "tree-maple-orange",
+  "tree-maple-yellow",
+  "tree-birch",
+  "tree-dead-bare",
+  "tree-apple",
+  "tree-orange-fruit",
+  "tree-bush-small",
+  "tree-palm",
+];
+
 const LEGEND: Record<string, TileInfo> = {
   "#": { walkable: false, textureKey: "void-wall", safe: false },
-  ".": { walkable: true, textureKey: "grass", variants: ["grass", "grass-2", "grass-3"], safe: false, groundFriction: 150 },
+  ".": {
+    walkable: true,
+    textureKey: "grass",
+    variants: [
+      "grass",
+      "grass-2",
+      "grass-3",
+      "grass-plain-1",
+      "grass-plain-2",
+      "grass-clover",
+      "grass-sparse-1",
+      "grass-sparse-2",
+      "grass-autumn",
+      "grass-mossy",
+    ],
+    safe: false,
+    groundFriction: 150,
+  },
   T: { walkable: true, textureKey: "temple-floor", safe: true, groundFriction: 100 },
   S: { walkable: true, textureKey: "grass", variants: ["grass", "grass-2", "grass-3"], safe: true, groundFriction: 150 },
   D: { walkable: true, textureKey: "dirt", variants: ["dirt", "dirt-2"], safe: false, groundFriction: 130 },
@@ -589,6 +655,13 @@ const LEGEND: Record<string, TileInfo> = {
   t: { walkable: false, textureKey: "grass", variants: ["grass", "grass-2"], tree: "oak", safe: false },
   p: { walkable: false, textureKey: "grass", variants: ["grass", "grass-2"], tree: "pine", safe: false },
   y: { walkable: false, textureKey: "rocky-ground", tree: "dead", safe: false },
+  e: {
+    walkable: false,
+    textureKey: "grass",
+    variants: ["grass", "grass-2", "grass-plain-2", "grass-clover"],
+    wholeTree: WHOLE_TREE_KEYS,
+    safe: false,
+  },
   b: { walkable: false, textureKey: "grass", variants: ["grass", "grass-2"], overlayKey: "bush", safe: false },
   o: {
     walkable: false,
@@ -601,6 +674,25 @@ const LEGEND: Record<string, TileInfo> = {
   u: { walkable: false, textureKey: "grass", overlayKey: "stump", safe: false },
 
   f: { walkable: true, textureKey: "grass", variants: ["grass", "grass-2"], overlayKey: "flowers", safe: false, groundFriction: 150 },
+  // A patch of solid colour from GrassTiles.png (a single flower species
+  // covering the whole tile) rather than the single small clump "f" overlays
+  // onto plain grass — reads as a proper wildflower meadow when scattered.
+  z: {
+    walkable: true,
+    textureKey: "grass",
+    variants: [
+      "grass-flowers-white",
+      "grass-flowers-yellow",
+      "grass-flowers-red",
+      "grass-flowers-blue",
+      "grass-flowers-pink",
+      "grass-flowers-purple",
+      "grass-flowers-orange",
+      "grass-flowers-mixed",
+    ],
+    safe: false,
+    groundFriction: 150,
+  },
   m: { walkable: true, textureKey: "grass", overlayKey: "mushrooms", safe: false, groundFriction: 150 },
   n: { walkable: true, textureKey: "grass", variants: ["grass", "grass-3"], overlayKey: "rock-small", safe: false, groundFriction: 150 },
   N: { walkable: true, textureKey: "cave-floor", overlayKey: "rock-small", safe: false, groundFriction: 140 },
