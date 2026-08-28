@@ -92,6 +92,14 @@ export const IMAGE_ASSETS: ImageAsset[] = [
   { key: "dirt-twigs", path: "terrain/dirt-twigs.png" },
   { key: "dirt-weeds", path: "terrain/dirt-weeds.png" },
   { key: "dirt-mixed", path: "terrain/dirt-mixed.png" },
+  // Real art (UnderGroundWalkDirtTiles.zip, not checked into the repo) for
+  // the cave's walkable floor ("K"). Six of its seven tiles are pixel-
+  // identical to the surface dirt set above and reuse those same keys; the
+  // one new tile is "dirt_light" — despite the name it's noticeably darker/
+  // muted than dirt-clean, which is exactly why it exists: the surface
+  // dirt-clean/dirt-dark pair read as too bright and sunlit once used
+  // underground. See the "K" LEGEND entry for the mix.
+  { key: "dirt-underground", path: "terrain/dirt-underground.png" },
   // Real art (UndergroundWallsOutofBound.zip, not checked into the repo) —
   // the earthen out-of-bounds fill for the cave under the town, replacing
   // the old procedural wall-sewer. Same "walkable-looking but isn't" trick

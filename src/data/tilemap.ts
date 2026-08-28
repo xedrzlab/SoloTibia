@@ -690,12 +690,33 @@ const LEGEND: Record<string, TileInfo> = {
     groundFriction: 110,
   },
   F: { walkable: true, textureKey: "wood-floor", safe: true, groundFriction: 100 },
-  // Cave floor: the same dirt pair used for the surface paths ("D" above) —
-  // it's the same packed-earth ground, just underground.
+  // Cave floor: dirt-clean/dirt-dark (the surface "D" pair) read as too
+  // bright and sunlit once used underground, so the dominant tile here is
+  // "dirt-underground" instead — a genuinely darker, more muted dirt made
+  // for this. It's weighted well above the debris accents (entries repeat
+  // to weight the pick — see the temple floor's TEMPLE_FLOOR_VARIANTS in
+  // InteriorScene for the same trick) so pebbles/rock/twigs/shadow patches
+  // read as occasional cave-floor detail, not a busy checkerboard. Weeds
+  // are left out — a live plant sprouting underground with no sunlight
+  // reads as wrong for a cave floor even though the tile itself is fine.
   K: {
     walkable: true,
-    textureKey: "dirt-clean",
-    variants: ["dirt-clean", "dirt-dark"],
+    textureKey: "dirt-underground",
+    variants: [
+      "dirt-underground",
+      "dirt-underground",
+      "dirt-underground",
+      "dirt-underground",
+      "dirt-underground",
+      "dirt-underground",
+      "dirt-underground",
+      "dirt-underground",
+      "dirt-dark-patches",
+      "dirt-dark-patches",
+      "dirt-pebbles",
+      "dirt-small-rock",
+      "dirt-twigs",
+    ],
     safe: false,
     groundFriction: 130,
   },
