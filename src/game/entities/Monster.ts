@@ -90,7 +90,7 @@ export class Monster {
 
   /** Above the HP bar's row, whether or not the bar itself is currently shown. */
   private nameY(): number {
-    return this.barY() - 8;
+    return this.barY() - 4;
   }
 
   /** Green full health down through yellow/red/deep-red at lower thresholds — a glance should tell how much danger the fight still has left. */
