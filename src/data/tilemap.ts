@@ -693,12 +693,17 @@ const LEGEND: Record<string, TileInfo> = {
   // Cave floor: dirt-clean/dirt-dark (the surface "D" pair) read as too
   // bright and sunlit once used underground, so the dominant tile here is
   // "dirt-underground" instead — a genuinely darker, more muted dirt made
-  // for this. It's weighted well above the debris accents (entries repeat
-  // to weight the pick — see the temple floor's TEMPLE_FLOOR_VARIANTS in
-  // InteriorScene for the same trick) so pebbles/rock/twigs/shadow patches
-  // read as occasional cave-floor detail, not a busy checkerboard. Weeds
-  // are left out — a live plant sprouting underground with no sunlight
-  // reads as wrong for a cave floor even though the tile itself is fine.
+  // for this. The debris accents are the "-underground" tone-matched
+  // copies (see the ASSETS comment) rather than the surface debris tiles —
+  // those are built on the brighter dirt-clean base, so dropping them in
+  // as-is just moved the too-bright problem from "the whole floor" to "a
+  // handful of oddly light tiles scattered across a dark floor". Weighted
+  // well above the accents (entries repeat to weight the pick — see the
+  // temple floor's TEMPLE_FLOOR_VARIANTS in InteriorScene for the same
+  // trick) so they read as occasional detail, not a busy checkerboard.
+  // Weeds are left out — a live plant sprouting underground with no
+  // sunlight reads as wrong for a cave floor even though the tile itself
+  // is fine.
   K: {
     walkable: true,
     textureKey: "dirt-underground",
@@ -711,11 +716,11 @@ const LEGEND: Record<string, TileInfo> = {
       "dirt-underground",
       "dirt-underground",
       "dirt-underground",
-      "dirt-dark-patches",
-      "dirt-dark-patches",
-      "dirt-pebbles",
-      "dirt-small-rock",
-      "dirt-twigs",
+      "dirt-dark-patches-underground",
+      "dirt-dark-patches-underground",
+      "dirt-pebbles-underground",
+      "dirt-small-rock-underground",
+      "dirt-twigs-underground",
     ],
     safe: false,
     groundFriction: 130,

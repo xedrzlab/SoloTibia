@@ -94,12 +94,25 @@ export const IMAGE_ASSETS: ImageAsset[] = [
   { key: "dirt-mixed", path: "terrain/dirt-mixed.png" },
   // Real art (UnderGroundWalkDirtTiles.zip, not checked into the repo) for
   // the cave's walkable floor ("K"). Six of its seven tiles are pixel-
-  // identical to the surface dirt set above and reuse those same keys; the
-  // one new tile is "dirt_light" — despite the name it's noticeably darker/
-  // muted than dirt-clean, which is exactly why it exists: the surface
-  // dirt-clean/dirt-dark pair read as too bright and sunlit once used
-  // underground. See the "K" LEGEND entry for the mix.
+  // identical to the surface dirt set above; the one new tile is
+  // "dirt_light" (renamed "dirt-underground" here) — despite the name it's
+  // noticeably darker/muted than dirt-clean, which is exactly why it
+  // exists: the surface dirt-clean/dirt-dark pair read as too bright and
+  // sunlit once used underground.
+  //
+  // The debris accents (dirt-pebbles etc.) were drawn on the brighter
+  // dirt-clean base, so dropping them into the K mix as-is produced the
+  // same too-bright clash, just patchy instead of uniform — a handful of
+  // noticeably lighter tiles scattered across the darker floor. The
+  // "-underground" copies below are those same tiles color-matched to
+  // dirt-underground's tone (scaled by the exact per-channel ratio between
+  // dirt-underground and dirt-clean) so the debris still reads clearly
+  // without breaking the floor's overall tone. See the "K" LEGEND entry.
   { key: "dirt-underground", path: "terrain/dirt-underground.png" },
+  { key: "dirt-dark-patches-underground", path: "terrain/dirt-dark-patches-underground.png" },
+  { key: "dirt-pebbles-underground", path: "terrain/dirt-pebbles-underground.png" },
+  { key: "dirt-small-rock-underground", path: "terrain/dirt-small-rock-underground.png" },
+  { key: "dirt-twigs-underground", path: "terrain/dirt-twigs-underground.png" },
   // Real art (UndergroundWallsOutofBound.zip, not checked into the repo) —
   // the earthen out-of-bounds fill for the cave under the town, replacing
   // the old procedural wall-sewer. Same "walkable-looking but isn't" trick
