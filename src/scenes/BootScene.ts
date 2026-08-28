@@ -71,6 +71,24 @@ export class BootScene extends Phaser.Scene {
       });
     }
 
+    // The player's own walk cycle — same "real looping animation instead of
+    // a frame held for the whole tile-step" fix as the continuousWalk
+    // monsters above (see Player.ts's applyFrame). Frame 0 is reserved for
+    // the idle pose, so unlike the monsters' loop above, the player's loop
+    // starts at frame 1 and excludes it.
+    const PLAYER_FRAMES_PER_DIRECTION = 4;
+    DIRECTION_ORDER.forEach((direction, i) => {
+      this.anims.create({
+        key: walkAnimKey("player", direction),
+        frames: this.anims.generateFrameNumbers("player", {
+          start: i * PLAYER_FRAMES_PER_DIRECTION + 1,
+          end: i * PLAYER_FRAMES_PER_DIRECTION + PLAYER_FRAMES_PER_DIRECTION - 1,
+        }),
+        frameRate: 5,
+        repeat: -1,
+      });
+    });
+
     this.scene.start("World");
     this.scene.launch("UI");
   }

@@ -13,12 +13,15 @@ import {
 import { CombatStance, SkillSet } from "../skills";
 import { Equipment } from "../equipment";
 import { Container, createStack } from "../containers";
-import { Direction, directionFromDelta, directionalFrameIndex } from "../directionalSprite";
+import { Direction, directionFromDelta, directionalFrameIndex, walkAnimKey } from "../directionalSprite";
 
 // player_base_sheet.png is real art: a 4-frame walk cycle per direction with
 // no dedicated standing-still or weapon-swing pose — frame 0 is used as the
-// idle/rest pose, frames 1-3 cycle while moving, same treatment as the
-// goblin/bear's continuousWalk monsters.
+// idle/rest pose, frames 1-3 play as a real looping animation (registered in
+// BootScene) while moving, same treatment as the goblin/bear's
+// continuousWalk monsters — holding a single frame for the whole tile-step
+// tween reads as gliding with no leg motion, especially at low move speed
+// where a step tween can take several hundred ms.
 const PLAYER_FRAMES_PER_DIRECTION = 4;
 /** Sprite scale multiplier — same knob Monster.ts uses per-monster, applied here for the player's own bump in size. */
 const PLAYER_SCALE = 1.5;
@@ -34,8 +37,6 @@ export class Player {
   tileY: number;
   facing: Direction = "down";
   moving = false;
-  /** Cycles 1,2,3 across successive steps — frame 0 is reserved for idle. */
-  private walkFrame = 0;
 
   vocation: Vocation = "none";
   /** Full Attack/Balanced/Full Defense — scales only the skill x weapon-attack term of the damage formula. */
@@ -160,8 +161,16 @@ export class Player {
   }
 
   private applyFrame(idle: boolean) {
-    const frameInDirection = idle ? 0 : this.walkFrame;
-    this.sprite.setFrame(directionalFrameIndex(this.facing, frameInDirection, PLAYER_FRAMES_PER_DIRECTION));
+    if (idle) {
+      this.sprite.anims.stop();
+      this.sprite.setFrame(directionalFrameIndex(this.facing, 0, PLAYER_FRAMES_PER_DIRECTION));
+    } else {
+      // Each step's completion stops the anim (the idle branch above) before
+      // the next one starts it again — same key, so also check isPlaying, or
+      // a same-direction restart after that stop would never fire.
+      const key = walkAnimKey("player", this.facing);
+      if (!this.sprite.anims.isPlaying || this.sprite.anims.currentAnim?.key !== key) this.sprite.play(key);
+    }
     this.syncSilhouette();
   }
 
@@ -217,7 +226,6 @@ export class Player {
       this.tileX = x;
       this.tileY = y;
       this.moving = true;
-      this.walkFrame = (this.walkFrame % (PLAYER_FRAMES_PER_DIRECTION - 1)) + 1;
       this.applyFrame(false);
       this.sprite.setDepth(depthForTileY(y));
       this.scene.tweens.add({
