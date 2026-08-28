@@ -20,6 +20,23 @@ import { initOrientationLock } from "./game/orientationLock";
 // that never backgrounds.
 const UPDATE_CHECK_INTERVAL_MS = 30 * 60 * 1000;
 
+// registerType: "autoUpdate" is supposed to reload the page on its own once
+// a new service worker takes control, but that's an implicit behavior this
+// team has already been burned by relying on — force it explicitly instead
+// of trusting it: whichever mechanism (Workbox's own, or the update checks
+// below) ends up installing a new worker, the moment it actually takes
+// control this fires unconditionally and the page reloads. That's the one
+// signal that actually means "the new build is live," as opposed to
+// registration.update() merely finding one.
+if ("serviceWorker" in navigator) {
+  let reloading = false;
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (reloading) return;
+    reloading = true;
+    window.location.reload();
+  });
+}
+
 registerSW({
   immediate: true,
   onRegisteredSW(_swUrl, registration) {
