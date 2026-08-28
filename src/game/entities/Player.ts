@@ -15,15 +15,10 @@ import { Equipment } from "../equipment";
 import { Container, createStack } from "../containers";
 import { Direction, directionFromDelta, directionalFrameIndex } from "../directionalSprite";
 
-// player_base_sheet.png (docs/monster-sources-style real art, see
-// scripts/generate-assets.mjs's PLAYER_LAYERS comment) is a 4-frame walk
-// cycle per direction with no dedicated standing-still or weapon-swing pose
-// — frame 0 is used as the idle/rest pose, frames 1-3 cycle while moving,
-// same treatment as the goblin/bear's continuousWalk monsters. Unlike those,
-// the player drives paper-doll equipment layers that must stay in exact
-// per-frame lockstep with the body every render, so this uses explicit
-// frame-index stepping (syncLayers() after every change) rather than a
-// Phaser animation running on its own clock.
+// player_base_sheet.png is real art: a 4-frame walk cycle per direction with
+// no dedicated standing-still or weapon-swing pose — frame 0 is used as the
+// idle/rest pose, frames 1-3 cycle while moving, same treatment as the
+// goblin/bear's continuousWalk monsters.
 const PLAYER_FRAMES_PER_DIRECTION = 4;
 /** How long the attack lunge is held — no swing pose to hold instead (see comment above). */
 const ATTACK_POSE_MS = 180;
@@ -66,8 +61,6 @@ export class Player {
    * it to the character profile so it survives logout.
    */
   readonly depot = new Container("Depot", "chest", 24);
-  /** Worn layers drawn over the base body, rebuilt when equipment changes. */
-  private equipLayers: Phaser.GameObjects.Sprite[] = [];
   private silhouette!: Phaser.GameObjects.Sprite;
 
   attackIntervalMs = BASE_ATTACK_INTERVAL_MS;
@@ -121,39 +114,17 @@ export class Player {
       .setTint(0x000000)
       .setAlpha(0.4)
       .setDepth(this.sprite.depth - 0.05);
-
-    this.refreshAppearance();
   }
 
   /**
-   * Rebuild the worn layers from what's equipped. Called whenever equipment
-   * changes, so armour and weapons are visible on the character rather than
-   * only in the stat readout.
-   *
-   * Temporarily disabled: the equipment layer art was drawn to match the
-   * old (smaller, flatter) body and visibly misaligns on the new one —
-   * floating/offset armor reads worse than no armor at all. Equipment
-   * still fully works mechanically (stats, inventory, stacking); this only
-   * stops drawing it on the character until those layers get redrawn.
+   * Keep the silhouette shadow on the body: same position, frame and sort
+   * order. Equipment doesn't render on the character (see items.ts), so
+   * this is the only thing that needs to ride along with the body sprite.
    */
-  refreshAppearance() {
-    for (const layer of this.equipLayers) layer.destroy();
-    this.equipLayers = [];
-  }
-
-  /** Keep the worn layers on the body: same position, frame and sort order. */
-  private syncLayers() {
+  private syncSilhouette() {
     this.silhouette.setPosition(this.sprite.x + 1, this.sprite.y + 1);
     this.silhouette.setFrame(this.sprite.frame.name);
     this.silhouette.setDepth(this.sprite.depth - 0.05);
-
-    let depthStep = 0.1;
-    for (const layer of this.equipLayers) {
-      layer.setPosition(this.sprite.x, this.sprite.y);
-      layer.setFrame(this.sprite.frame.name);
-      layer.setDepth(this.sprite.depth + depthStep);
-      depthStep += 0.1;
-    }
   }
 
   private equipStartingGear() {
@@ -187,14 +158,13 @@ export class Player {
   private applyFrame(idle: boolean) {
     const frameInDirection = idle ? 0 : this.walkFrame;
     this.sprite.setFrame(directionalFrameIndex(this.facing, frameInDirection, PLAYER_FRAMES_PER_DIRECTION));
-    this.syncLayers();
+    this.syncSilhouette();
   }
 
   /**
    * No dedicated swing pose exists (see the frame-layout comment up top), so
    * an attack lunges forward and back instead — same fallback Monster.ts
-   * uses for creatures without an attack frame. The lunge tween drives
-   * syncLayers() on every update so worn gear rides along with the body.
+   * uses for creatures without an attack frame.
    */
   playAttack() {
     const restX = this.sprite.x;
@@ -203,10 +173,10 @@ export class Player {
       x: restX + (this.facing === "left" ? -4 : 4),
       duration: ATTACK_POSE_MS / 2,
       yoyo: true,
-      onUpdate: () => this.syncLayers(),
+      onUpdate: () => this.syncSilhouette(),
       onComplete: () => {
         this.sprite.x = restX;
-        this.syncLayers();
+        this.syncSilhouette();
       },
     });
   }
@@ -251,7 +221,7 @@ export class Player {
         x: tileAnchorX(x),
         y: tileAnchorY(y),
         duration,
-        onUpdate: () => this.syncLayers(), // layers ride the tween with the body
+        onUpdate: () => this.syncSilhouette(), // shadow rides the tween with the body
         onComplete: () => {
           this.moving = false;
           this.applyFrame(true);
@@ -357,6 +327,6 @@ export class Player {
     this.sprite.x = tileAnchorX(x);
     this.sprite.y = tileAnchorY(y);
     this.sprite.setDepth(depthForTileY(y));
-    this.syncLayers();
+    this.syncSilhouette();
   }
 }

@@ -9,7 +9,7 @@
 import { ITEMS, FIST_ATTACK } from "../src/data/items";
 import { MONSTERS } from "../src/data/monsters";
 import { SPELLS, SPELL_BAR } from "../src/data/spells";
-import { IMAGE_ASSETS, SHEET_ASSETS, paperDollKey } from "../src/data/assets";
+import { IMAGE_ASSETS, SHEET_ASSETS } from "../src/data/assets";
 
 const errors: string[] = [];
 const fail = (msg: string) => errors.push(msg);
@@ -50,9 +50,6 @@ for (const [id, item] of Object.entries(ITEMS)) {
   }
   if (!imageKeys.has(item.textureKey)) {
     fail(`${tag}: textureKey "${item.textureKey}" is not registered in IMAGE_ASSETS`);
-  }
-  if (item.paperDoll && !sheetKeys.has(paperDollKey(item.paperDoll))) {
-    fail(`${tag}: paperDoll "${item.paperDoll}" has no matching "${paperDollKey(item.paperDoll)}" in SHEET_ASSETS`);
   }
 }
 if (FIST_ATTACK < 0) fail("FIST_ATTACK must not be negative");

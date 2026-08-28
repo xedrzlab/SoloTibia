@@ -1009,342 +1009,19 @@ function wellSprite() {
 }
 
 // ---------------------------------------------------------------------------
-// Player and troll — original directional sheets, drawn at the same pixel
-// density as everything else here (16px-grid art doubled to 32px tiles).
+// Troll — original directional sheet, drawn at the same pixel density as
+// everything else here (16px-grid art doubled to 32px tiles).
 //
 // Sheet layout must match DIRECTION_ORDER in src/game/directionalSprite.ts:
-// three frames per direction, in the order down, left, right, up. Frame 0 is
-// idle; frames 1 and 2 are the alternating walk steps.
+// four frames per direction, in the order down, left, right, up.
+//
+// The player's own body used to be generated here too (plus paper-doll
+// equipment layers stacked on top — armor/helmet/weapon/shield/backpack).
+// Both are gone: the body is real art now (player_base_sheet.png, see
+// BootScene/assets.ts), and worn equipment didn't read well stacked onto
+// it, so the project moved to icon-only equipment (item icons in the
+// inventory/equip slots, nothing rendered on the character).
 // ---------------------------------------------------------------------------
-
-const PC = {
-  skinHi: "#e0a877",
-  skin: "#c98a5c",
-  skinDark: "#a06b42",
-  hair: "#7a4a22",
-  hairHi: "#96612e",
-  // The base body wears a plain shirt. Armour layers cover it, so it stays
-  // muted — the red used to be the character's identity, and that job now
-  // belongs to whatever they are actually wearing.
-  shirtHi: "#c4b8a4",
-  shirt: "#9a8f7c",
-  shirtDark: "#6f6759",
-  belt: "#4a2f1a",
-  gold: "#e6c34a",
-  legs: "#4a3d5a",
-  legsDark: "#362c42",
-  boot: "#3a2717",
-  eye: "#1a1a1e",
-};
-
-/** Ground contact shadow shared by every character frame. */
-function footShadow(s, cx, y, rx) {
-  s.fillEllipse(cx, y, rx, 1, "#1a2412");
-}
-
-/**
- * One player frame. The palette is deliberately the warmest thing on screen:
- * against green grass and grey stone the player stays the easiest figure to
- * find, which matters more than costume detail at this size.
- */
-// --- Shared player geometry -------------------------------------------------
-// Every layer reads these rather than repeating numbers, because a layer that
-// disagrees with the base by one pixel is instantly obvious in motion.
-
-const PG = { legY: 11, shoulderY: 6, torsoY: 7, beltY: 10, neckY: 5, headY: 1, headH: 4 };
-
-const isSide = (direction) => direction === "left" || direction === "right";
-
-function pgBody(direction) {
-  return isSide(direction) ? { x: 5, w: 6 } : { x: 4, w: 8 };
-}
-
-function pgHeadX(direction) {
-  return isSide(direction) ? (direction === "right" ? 6 : 5) : 5;
-}
-
-/** Where the weapon hand sits, and whether the arm is thrust out. */
-function pgWeaponHand(direction, pose) {
-  if (pose === "attack") {
-    if (isSide(direction)) return { x: 13, y: 6, extended: true };
-    if (direction === "up") return { x: 12, y: 5, extended: true };
-    return { x: 13, y: 8, extended: true };
-  }
-  if (isSide(direction)) {
-    return { x: pose === "stepA" ? 10 : pose === "stepB" ? 4 : 9, y: 10, extended: false };
-  }
-  const swing = pose === "idle" ? 0 : pose === "stepA" ? 1 : -1;
-  return { x: 12, y: 10 + Math.max(0, -swing), extended: false };
-}
-
-/** Where the off hand sits — the shield arm. */
-function pgOffHand(direction, pose) {
-  if (isSide(direction)) return { x: 5, y: 8 };
-  const swing = pose === "idle" ? 0 : pose === "stepA" ? 1 : -1;
-  return { x: 2, y: 7 + Math.max(0, swing) };
-}
-
-/**
- * The unclothed character: legs, boots, a plain undershirt, arms, head. Every
- * other layer stacks on top of this, so it carries no equipment of its own —
- * what the player is wearing has to be able to change without redrawing them.
- */
-function playerBaseFrame(direction, pose) {
-  const s = new Sprite(16, 16);
-  const facingSide = isSide(direction);
-  const back = direction === "up";
-  const attacking = pose === "attack";
-  const body = pgBody(direction);
-
-  footShadow(s, 8, 15, 4);
-
-  // --- Legs: the walk cycle lives here, not in a whole-sprite bob ---
-  const legs = facingSide ? { near: 6, far: 8 } : { near: 5, far: 9 };
-  // Boots stop at row 14 so the contact shadow on row 15 stays visible —
-  // without it the character reads as hovering rather than standing.
-  if (pose === "idle" || attacking) {
-    for (const x of [legs.near, legs.far]) {
-      s.fillRect(x, PG.legY, 2, 2, PC.legs);
-      s.fillRect(x, PG.legY + 2, 2, 2, PC.boot);
-    }
-    s.fillRect(legs.far, PG.legY, 1, 2, PC.legsDark); // shaded inner edge
-  } else {
-    const lead = pose === "stepA" ? legs.near : legs.far;
-    const trail = pose === "stepA" ? legs.far : legs.near;
-    s.fillRect(lead, PG.legY, 2, 2, PC.legs);
-    s.fillRect(lead - (facingSide && direction === "right" ? 0 : 1), PG.legY + 2, 3, 2, PC.boot);
-    s.fillRect(trail, PG.legY, 2, 1, PC.legsDark); // lifted, so shorter and shaded
-    s.fillRect(trail, PG.legY + 1, 2, 2, PC.boot);
-  }
-
-  // --- Torso: a plain shirt, wide at the shoulders, tapering to the belt ---
-  s.fillRect(body.x, PG.shoulderY, body.w, 1, PC.shirtHi);
-  s.fillRect(body.x, PG.torsoY, body.w, 2, PC.shirt);
-  s.fillRect(body.x + 1, 9, body.w - 2, 1, PC.shirt);
-  s.fillRect(body.x, PG.torsoY, 1, 2, PC.shirtHi); // lit left flank
-  s.fillRect(body.x + body.w - 1, PG.torsoY, 1, 2, PC.shirtDark);
-  s.fillRect(body.x + 1, PG.beltY, body.w - 2, 1, PC.belt);
-
-  // --- Arms: swing opposite the legs, and stay clear of the torso ---
-  const swing = pose === "idle" ? 0 : pose === "stepA" ? 1 : -1;
-  if (attacking) {
-    // The striking arm reaches out in the direction faced. The weapon layer
-    // puts a blade past the fist; the silhouette has to read without one too.
-    const hand = pgWeaponHand(direction, pose);
-    if (facingSide) {
-      s.fillRect(10, 6, 3, 2, PC.shirtDark);
-      s.fillRect(hand.x, hand.y, 1, 2, PC.skin);
-    } else if (back) {
-      s.fillRect(12, 5, 2, 2, PC.shirtDark);
-      s.fillRect(3, 8, 1, 3, PC.shirtHi);
-    } else {
-      s.fillRect(12, 6, 2, 2, PC.shirtDark);
-      s.setPixel(hand.x, hand.y, PC.skin);
-      s.fillRect(3, 8, 1, 3, PC.shirtHi); // off arm braces back
-      s.setPixel(3, 11, PC.skin);
-    }
-  } else if (facingSide) {
-    const ax = pose === "stepA" ? 10 : pose === "stepB" ? 4 : 9;
-    s.fillRect(ax, PG.torsoY, 2, 3, PC.shirtDark);
-    s.fillRect(ax, PG.beltY, 2, 1, PC.skin); // hand
-  } else {
-    const leftY = PG.torsoY + Math.max(0, swing);
-    const rightY = PG.torsoY + Math.max(0, -swing);
-    s.fillRect(3, leftY, 1, 3, PC.shirtHi);
-    s.setPixel(3, leftY + 3, PC.skin);
-    s.fillRect(12, rightY, 1, 3, PC.shirtDark);
-    s.setPixel(12, rightY + 3, PC.skinDark);
-  }
-
-  // --- Neck: one pixel of separation stops the head reading as a box ---
-  s.fillRect(7, PG.neckY, 2, 1, PC.skinDark);
-
-  // --- Head ---
-  const headX = pgHeadX(direction);
-  s.fillRect(headX, PG.headY, 6, PG.headH, PC.skin);
-  s.fillRect(headX + 1, PG.headY, 4, 1, PC.skinHi); // lit crown
-  s.fillRect(headX + 5, 2, 1, 3, PC.skinDark); // shaded right cheek
-
-  if (back) {
-    s.fillRect(headX, PG.headY, 6, PG.headH, PC.hair); // no face from behind
-    s.fillRect(headX + 1, PG.headY, 4, 1, PC.hairHi);
-    s.fillRect(headX, 4, 6, 1, PC.hair);
-  } else if (facingSide) {
-    s.fillRect(headX, PG.headY, 6, 2, PC.hair); // fringe
-    s.fillRect(headX + 1, PG.headY, 3, 1, PC.hairHi);
-    s.fillRect(headX + 4, PG.headY, 2, 4, PC.hair); // hair down the back
-    s.setPixel(headX + 1, 3, PC.eye);
-    s.setPixel(headX, 3, PC.skinHi); // brow catching the light
-  } else {
-    s.fillRect(headX, PG.headY, 6, 2, PC.hair);
-    s.fillRect(headX + 1, PG.headY, 3, 1, PC.hairHi);
-    s.setPixel(headX, 2, PC.hair); // sideburns
-    s.setPixel(headX + 5, 2, PC.hair);
-    s.setPixel(headX + 1, 3, PC.eye);
-    s.setPixel(headX + 4, 3, PC.eye);
-    s.fillRect(headX + 2, 4, 2, 1, PC.skinDark); // mouth
-  }
-
-  return direction === "left" ? s.flippedHorizontal() : s;
-}
-
-/** Body armour, drawn over the base torso. Heavy adds pauldrons. */
-function playerArmorFrame(direction, pose, heavy) {
-  const s = new Sprite(16, 16);
-  const body = pgBody(direction);
-  const tone = heavy
-    ? { hi: "#d5dae0", mid: "#9aa0a8", dark: "#5c6068" }
-    : { hi: "#96683c", mid: "#7a5230", dark: "#4a2f1a" };
-
-  s.fillRect(body.x, PG.shoulderY, body.w, 1, tone.hi);
-  s.fillRect(body.x, PG.torsoY, body.w, 2, tone.mid);
-  s.fillRect(body.x + 1, 9, body.w - 2, 1, tone.mid);
-  s.fillRect(body.x, PG.torsoY, 1, 2, tone.hi); // lit left flank
-  s.fillRect(body.x + body.w - 1, PG.torsoY, 1, 2, tone.dark);
-
-  if (heavy) {
-    // Pauldrons: the one thing that makes heavy armour read at this size.
-    s.fillRect(body.x - 1, PG.shoulderY, 2, 2, tone.mid);
-    s.fillRect(body.x + body.w - 1, PG.shoulderY, 2, 2, tone.dark);
-    s.fillRect(body.x - 1, PG.shoulderY, 2, 1, tone.hi);
-    s.fillRect(body.x + 2, PG.torsoY + 1, body.w - 4, 1, tone.dark); // chest seam
-  } else {
-    s.fillRect(body.x + 1, PG.torsoY + 1, body.w - 2, 1, tone.dark); // strap
-  }
-  s.fillRect(body.x + 1, PG.beltY, body.w - 2, 1, PC.belt);
-  if (!isSide(direction) && direction !== "up") s.setPixel(8, PG.beltY, PC.gold);
-
-  return direction === "left" ? s.flippedHorizontal() : s;
-}
-
-/** Headgear, drawn over the base head. Heavy covers more of the face. */
-function playerHelmetFrame(direction, heavy) {
-  const s = new Sprite(16, 16);
-  const headX = pgHeadX(direction);
-  const tone = heavy
-    ? { hi: "#c9ccd1", mid: "#9aa0a8", dark: "#5c6068" }
-    : { hi: "#96683c", mid: "#7a5230", dark: "#4a2f1a" };
-
-  s.fillRect(headX, PG.headY, 6, 2, tone.mid);
-  s.fillRect(headX + 1, PG.headY, 4, 1, tone.hi); // lit crown
-  s.fillRect(headX, PG.headY, 1, 2, tone.hi);
-  s.fillRect(headX + 5, PG.headY, 1, 2, tone.dark);
-
-  if (heavy) {
-    s.fillRect(headX, PG.headY + 2, 6, 1, tone.mid); // brow band
-    s.fillRect(headX, PG.headY + 2, 1, 2, tone.mid); // cheek guards
-    s.fillRect(headX + 5, PG.headY + 2, 1, 2, tone.dark);
-    if (direction !== "up") s.fillRect(headX + 2, PG.headY + 2, 2, 2, tone.dark); // nose guard
-  } else {
-    s.fillRect(headX, PG.headY + 2, 6, 1, tone.dark); // brim
-  }
-  return direction === "left" ? s.flippedHorizontal() : s;
-}
-
-/** The weapon in hand. Idle it hangs; on the swing it extends past the fist. */
-function playerWeaponFrame(direction, pose, kind) {
-  const s = new Sprite(16, 16);
-  const hand = pgWeaponHand(direction, pose);
-  const STEEL = { edge: "#eef0f3", mid: "#c9ccd1", dark: "#9aa0a8" };
-
-  if (kind === "wand") {
-    s.fillRect(hand.x, hand.y - 3, 1, 4, "#3a2717");
-    s.fillCircle(hand.x, hand.y - 4, 1.6, "#4a2f6b");
-    s.setPixel(hand.x, hand.y - 4, "#8a5cc9");
-    return direction === "left" ? s.flippedHorizontal() : s;
-  }
-
-  if (kind === "bow") {
-    // A C of limbs with the string closing it, held upright at the side.
-    const bx = hand.x;
-    for (let i = -3; i <= 3; i++) {
-      const bulge = 3 - Math.abs(i);
-      s.setPixel(bx + Math.round(bulge * 0.4), hand.y - 3 + i + 3, "#6b4a2a");
-    }
-    s.fillRect(bx, hand.y - 3, 1, 7, "#d8d2c0"); // string
-    return direction === "left" ? s.flippedHorizontal() : s;
-  }
-
-  // Blade: swords and axes share the silhouette at this size.
-  if (hand.extended) {
-    s.fillRect(hand.x - 1, hand.y - 4, 1, 4, STEEL.mid);
-    s.fillRect(hand.x, hand.y - 5, 1, 4, STEEL.edge);
-    s.fillRect(hand.x - 1, hand.y, 2, 1, "#5a3d22"); // guard
-  } else {
-    s.fillRect(hand.x, hand.y, 1, 4, STEEL.mid);
-    s.fillRect(hand.x, hand.y, 1, 1, "#5a3d22");
-    s.setPixel(hand.x, hand.y + 4, STEEL.dark);
-  }
-  return direction === "left" ? s.flippedHorizontal() : s;
-}
-
-/** A shield on the off arm. In profile only its edge shows. */
-function playerShieldFrame(direction, pose) {
-  const s = new Sprite(16, 16);
-  const off = pgOffHand(direction, pose);
-
-  if (isSide(direction)) {
-    // Held on the far arm, so only a sliver is visible past the body.
-    s.fillRect(off.x, off.y, 1, 4, "#7a5230");
-    s.fillRect(off.x, off.y, 1, 1, "#96683c");
-    return direction === "left" ? s.flippedHorizontal() : s;
-  }
-
-  s.fillEllipse(off.x + 1, off.y + 2, 2, 2.6, "#4a2f1a");
-  s.fillEllipse(off.x + 1, off.y + 2, 1.4, 2, "#7a5230");
-  s.setPixel(off.x + 1, off.y + 1, "#96683c");
-  s.setPixel(off.x + 1, off.y + 3, "#c9a24a"); // boss
-  return direction === "left" ? s.flippedHorizontal() : s;
-}
-
-/**
- * The worn backpack. Drawn on top for every facing, with per-direction art:
- * from the front you see only the straps, from behind the whole pack.
- */
-function playerBackpackFrame(direction) {
-  const s = new Sprite(16, 16);
-  const body = pgBody(direction);
-
-  if (direction === "up") {
-    s.fillRect(body.x + 1, PG.shoulderY, body.w - 2, 5, "#7a5230");
-    s.fillRect(body.x + 1, PG.shoulderY, body.w - 2, 1, "#96683c");
-    s.fillRect(body.x + 1, PG.shoulderY, 1, 5, "#96683c");
-    s.fillRect(body.x + body.w - 2, PG.shoulderY, 1, 5, "#4a2f1a");
-    s.fillRect(body.x + 2, PG.torsoY + 1, body.w - 4, 1, "#4a2f1a"); // flap seam
-    return s;
-  }
-
-  if (isSide(direction)) {
-    // Slung behind the shoulder: a slab at the character's back edge.
-    s.fillRect(body.x - 1, PG.shoulderY, 2, 4, "#7a5230");
-    s.fillRect(body.x - 1, PG.shoulderY, 2, 1, "#96683c");
-    return direction === "left" ? s.flippedHorizontal() : s;
-  }
-
-  // From the front, two shoulder straps crossing the chest.
-  s.fillRect(body.x + 1, PG.shoulderY, 1, 4, "#5c3c22");
-  s.fillRect(body.x + body.w - 2, PG.shoulderY, 1, 4, "#5c3c22");
-  return s;
-}
-
-/** Every paper-doll layer, keyed by the name ItemDef.paperDoll refers to. */
-// "base" is deliberately not generated here anymore — the player's body is
-// now real/hand-authored art (public/assets/characters/player_base_sheet.png,
-// assembled by a one-off import script), same treatment as cave_rat_sheet.png.
-// playerBaseFrame() is kept only as a reference for the equipment layers
-// below, which were drawn to match its proportions and are now visually out
-// of sync with the new body until they get redrawn too.
-const PLAYER_LAYERS = {
-  "armor-light": (d, p) => playerArmorFrame(d, p, false),
-  "armor-heavy": (d, p) => playerArmorFrame(d, p, true),
-  "helmet-light": (d) => playerHelmetFrame(d, false),
-  "helmet-heavy": (d) => playerHelmetFrame(d, true),
-  "weapon-blade": (d, p) => playerWeaponFrame(d, p, "blade"),
-  "weapon-bow": (d, p) => playerWeaponFrame(d, p, "bow"),
-  "weapon-wand": (d, p) => playerWeaponFrame(d, p, "wand"),
-  shield: (d, p) => playerShieldFrame(d, p),
-  backpack: (d) => playerBackpackFrame(d),
-};
 
 const TROLL = {
   skinHi: "#8a9a63",
@@ -3027,16 +2704,6 @@ function slimeFrame({ squish = false } = {}) {
 // Items (small icons, drawn centered in a 16x16 canvas)
 // ---------------------------------------------------------------------------
 
-function swordIcon() {
-  const s = new Sprite(16, 16);
-  s.fillRect(7, 2, 2, 8, "#c9ccd1"); // blade
-  s.fillRect(7, 2, 2, 1, "#eef0f3"); // tip highlight
-  s.fillRect(5, 10, 6, 1, "#8a6a3d"); // crossguard
-  s.fillRect(7, 11, 2, 3, "#5a3d22"); // hilt
-  s.fillRect(6, 14, 4, 1, "#3a2717"); // pommel
-  return s;
-}
-
 function healthPotionIcon() {
   const s = new Sprite(16, 16);
   s.fillRect(6, 2, 4, 2, "#8a6a3d");
@@ -3247,10 +2914,6 @@ function shieldIcon({ dark, mid, light, boss }) {
   return s;
 }
 
-function woodenShieldIcon() {
-  return shieldIcon({ dark: "#4a2f1a", mid: "#7a5230", light: "#96683c", boss: "#c9a24a" });
-}
-
 function steelShieldIcon() {
   return shieldIcon({ dark: "#5c6068", mid: "#9aa0a8", light: "#d5dae0", boss: "#e6c34a" });
 }
@@ -3269,10 +2932,6 @@ function helmetIcon({ dark, mid, light, full }) {
   return s;
 }
 
-function leatherHelmetIcon() {
-  return helmetIcon({ dark: "#4a2f1a", mid: "#7a5230", light: "#96683c", full: false });
-}
-
 function steelHelmetIcon() {
   return helmetIcon({ dark: "#5c6068", mid: "#9aa0a8", light: "#c9ccd1", full: true });
 }
@@ -3289,10 +2948,6 @@ function armorIcon({ dark, mid, light, trim }) {
   s.fillRect(6, 3, 4, 2, "#1a1a1e"); // neck opening
   s.fillRect(7, 7, 2, 4, trim); // centre seam
   return s;
-}
-
-function leatherArmorIcon() {
-  return armorIcon({ dark: "#4a2f1a", mid: "#7a5230", light: "#96683c", trim: "#5c3c22" });
 }
 
 function plateArmorIcon() {
@@ -3492,13 +3147,9 @@ saveSprite(buildingFarmhouse(), SCALE, `${OUT}/buildings/farmhouse_01.png`);
 saveSprite(buildingLHouse(), SCALE, `${OUT}/buildings/l_house_01.png`);
 
 // --- characters ----------------------------------------------------------
-// The player is a paper doll: one sheet per layer, all sharing frame indices
-// so the game can stack whichever ones the character is currently wearing.
-// player_base_sheet.png is real art now (see PLAYER_LAYERS comment above) —
-// not generated here, so it's not in this loop.
-for (const [layer, makeFrame] of Object.entries(PLAYER_LAYERS)) {
-  saveSpriteSheet(directionalFrames(makeFrame), SCALE, `${OUT}/characters/player_${layer.replace(/-/g, "_")}_sheet.png`);
-}
+// player_base_sheet.png is real art, not generated here (see the comment
+// above the troll section) — no paper-doll equipment layers to generate
+// alongside it any more either.
 saveSprite(borinFrame(), SCALE, `${OUT}/characters/npc_borin.png`);
 saveSprite(wrenFrame(), SCALE, `${OUT}/characters/npc_wren.png`);
 saveSprite(elderFrame(), SCALE, `${OUT}/characters/npc_corwin.png`);
@@ -3526,16 +3177,16 @@ saveSprite(sparkleSprite(), SCALE, `${OUT}/effects/sparkle_01.png`);
 saveSprite(smokePuffSprite(), SCALE, `${OUT}/effects/smoke_puff.png`);
 
 // --- items ---------------------------------------------------------------
-saveSprite(swordIcon(), SCALE, `${OUT}/items/weapon_sword.png`);
+// weapon_sword.png, shield_wooden.png, armor_helmet_leather.png and
+// armor_body_leather.png are real art now (cropped from the user's icon
+// sheet), not generated here — not in this list, same treatment as
+// player_base_sheet.png etc.
 saveSprite(axeIcon(), SCALE, `${OUT}/items/weapon_axe.png`);
 saveSprite(bowIcon(), SCALE, `${OUT}/items/weapon_bow.png`);
 saveSprite(wandIcon(), SCALE, `${OUT}/items/weapon_wand.png`);
 saveSprite(arrowIcon(), SCALE, `${OUT}/items/ammo_arrow.png`);
-saveSprite(woodenShieldIcon(), SCALE, `${OUT}/items/shield_wooden.png`);
 saveSprite(steelShieldIcon(), SCALE, `${OUT}/items/shield_steel.png`);
-saveSprite(leatherHelmetIcon(), SCALE, `${OUT}/items/armor_helmet_leather.png`);
 saveSprite(steelHelmetIcon(), SCALE, `${OUT}/items/armor_helmet_steel.png`);
-saveSprite(leatherArmorIcon(), SCALE, `${OUT}/items/armor_body_leather.png`);
 saveSprite(plateArmorIcon(), SCALE, `${OUT}/items/armor_body_plate.png`);
 saveSprite(leatherLegsIcon(), SCALE, `${OUT}/items/armor_legs_leather.png`);
 saveSprite(plateLegsIcon(), SCALE, `${OUT}/items/armor_legs_plate.png`);
@@ -3560,6 +3211,6 @@ savePNG(appIcon(512).toPNG(1), `${ICONS}/icon-512.png`);
 
 console.log("Generated every game asset: terrain, environment, props, buildings, characters, creatures, effects, items, app icons.");
 console.log("water sheet meta:", waterMeta);
-console.log("PLAYER_SHEET (real art, not generated) must be 32x32 x16 frames to match the equipment layers above.");
+console.log("PLAYER_SHEET (real art, not generated) is 32x32 x16 frames.");
 console.log("TROLL_SHEET must match:", trollMeta);
 console.log("rat sheet meta:", ratMeta);

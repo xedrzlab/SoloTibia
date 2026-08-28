@@ -8,8 +8,6 @@
 // Paths are relative to public/assets/ and are written by
 // scripts/generate-assets.mjs.
 
-import type { EquipSlot } from "./items";
-
 export interface ImageAsset {
   key: string;
   path: string;
@@ -182,19 +180,10 @@ export const IMAGE_ASSETS: ImageAsset[] = [
 export const SHEET_ASSETS: SheetAsset[] = [
   { key: "water", path: "terrain/water_sheet.png", ...TILE_FRAME },
 
-  // The player is a paper doll. Every layer shares the base sheet's frame
-  // indices, so the game stacks whichever ones the character is wearing and
-  // sets the same frame on all of them.
+  // Equipment doesn't render on the character any more (see items.ts) — the
+  // player is just this one body sheet now, no paper-doll layers stacked on
+  // top of it.
   { key: "player", path: "characters/player_base_sheet.png", ...TILE_FRAME },
-  { key: "player-armor-light", path: "characters/player_armor_light_sheet.png", ...TILE_FRAME },
-  { key: "player-armor-heavy", path: "characters/player_armor_heavy_sheet.png", ...TILE_FRAME },
-  { key: "player-helmet-light", path: "characters/player_helmet_light_sheet.png", ...TILE_FRAME },
-  { key: "player-helmet-heavy", path: "characters/player_helmet_heavy_sheet.png", ...TILE_FRAME },
-  { key: "player-weapon-blade", path: "characters/player_weapon_blade_sheet.png", ...TILE_FRAME },
-  { key: "player-weapon-bow", path: "characters/player_weapon_bow_sheet.png", ...TILE_FRAME },
-  { key: "player-weapon-wand", path: "characters/player_weapon_wand_sheet.png", ...TILE_FRAME },
-  { key: "player-shield", path: "characters/player_shield_sheet.png", ...TILE_FRAME },
-  { key: "player-backpack", path: "characters/player_backpack_sheet.png", ...TILE_FRAME },
   { key: "rat", path: "creatures/rat_sheet.png", ...TILE_FRAME },
   { key: "cave-rat", path: "creatures/cave_rat_sheet.png", frameWidth: 40, frameHeight: 40, smooth: true },
   { key: "slime", path: "creatures/slime_sheet.png", ...TILE_FRAME },
@@ -223,16 +212,4 @@ export const TREE_LAYERS: Record<TreeSpecies, TreeLayers> = {
 
 /** Accents layered over a canopy on some trees, chosen per position. */
 export const TREE_DETAILS = ["tree-detail-fruit", "tree-detail-vine", "tree-detail-moss"];
-
-/**
- * Paper-doll draw order, back to front. Equipment slots are listed rather
- * than layer names because what is worn decides which sheet is used, via
- * ItemDef.paperDoll. Every layer draws over the base body.
- */
-export const PAPER_DOLL_ORDER: EquipSlot[] = ["armor", "back", "head", "right", "left"];
-
-/** Texture key for a paper-doll layer name. */
-export function paperDollKey(layer: string): string {
-  return `player-${layer}`;
-}
 
