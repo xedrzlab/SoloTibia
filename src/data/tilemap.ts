@@ -198,6 +198,9 @@ export const BUILDINGS: BuildingPlacement[] = [
   { textureKey: "building-house", footprintX: 20, footprintY: 33, footprintW: 3, footprintH: 3 },
   // L-shaped brick house — 4x4 footprint with courtyard.
   { textureKey: "building-l-house", footprintX: 26, footprintY: 32, footprintW: 4, footprintH: 4 },
+  // Testing placement: the first real (non-procedural) building, in the
+  // open gap between the l-house and the log cabin.
+  { textureKey: "building-tudor-house", footprintX: 33, footprintY: 33, footprintW: 4, footprintH: 3 },
   { textureKey: "building-log-cabin", footprintX: 40, footprintY: 33, footprintW: 3, footprintH: 3 },
   { textureKey: "building-house", footprintX: 47, footprintY: 33, footprintW: 3, footprintH: 3 },
 
@@ -417,6 +420,11 @@ export const PROPS: PropPlacement[] = [
   // check the animated smoke (WorldScene.spawnSmoke) reads right before
   // this becomes a real roof piece on an actual building.
   { textureKey: "chimney-brick", x: 41, y: 26 },
+  // On the tudor house's roof (footprint at 33,33 4x3 above) — position
+  // tuned by eye against a live screenshot, not derived from the building
+  // image's pixel layout (the two assets aren't tile-grid-aligned to begin
+  // with).
+  { textureKey: "chimney-brick", x: 35, y: 32 },
 
   // Town cats.
   { textureKey: "cat", x: 22, y: 20 },
