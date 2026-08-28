@@ -134,30 +134,38 @@ export interface BuildingPlacement {
 // Every building sits north of the road its door opens onto, because the
 // sprite always draws its door on the south face.
 //
-// Stripped down to just the church and the new House1-7 buildings for now
-// — every decorative house, shop, guardpost, bank, depot and the
-// farmhouses are gone (their interiors, entry points and shop-sign/
-// backyard props went with them; see the ENTRY_POINTS and PROPS sections
-// below). All of these front either the main E-W spine (road y=24-25) or
-// the upper street (road y=13), the same convention the church always
-// used: footprint bottom row = door row = one tile north of the road.
-// The upper-street group leaves x=31-38 clear — that's where the N-S
-// spine's vertical run sits at that latitude (it doesn't jog east to
-// x=37 until y=20), so a building there would collide with the road.
+// The plain decorative houses (House1-7) plus five named service buildings
+// (bank, temple, and the melee/ranged/magic shops — all real art, see
+// assets.ts) now fill the town's four E-W streets, all using the same
+// footprint-bottom-row-is-the-door-row convention the church always used.
+// Two collision zones to keep clear of: the upper street (y=10-12) leaves
+// x=31-38 open, and the main spine + lower street (y=21-23 and y=27-29)
+// leave x=36-39 open — both are where the N-S spine's vertical run sits
+// at that latitude before/after it jogs east to x=37 at y=20 and jogs
+// back to x=34 at y=30. The southernmost row (y=33-35) leaves x=33-36
+// open for that same jog-back column.
 export const BUILDINGS: BuildingPlacement[] = [
   // --- Main spine (footprints y=21-23, doors y=23, road y=24-25) ---
   { textureKey: "building-house4", footprintX: 15, footprintY: 21, footprintW: 5, footprintH: 3 },
-  // House1 — west of the church, same row and door alignment.
+  // House1 — west of the temple, same row and door alignment.
   { textureKey: "building-tudor-house", footprintX: 25, footprintY: 21, footprintW: 4, footprintH: 3 },
-  // The church.
-  { textureKey: "building-church", footprintX: 32, footprintY: 21, footprintW: 4, footprintH: 3 },
-  { textureKey: "building-house2", footprintX: 39, footprintY: 21, footprintW: 4, footprintH: 3 },
-  { textureKey: "building-house3", footprintX: 47, footprintY: 21, footprintW: 4, footprintH: 3 },
+  // The temple — replaces the old procedural church art; same interior/entry.
+  { textureKey: "building-temple", footprintX: 30, footprintY: 21, footprintW: 6, footprintH: 3 },
+  { textureKey: "building-house2", footprintX: 40, footprintY: 21, footprintW: 4, footprintH: 3 },
+  { textureKey: "building-house3", footprintX: 48, footprintY: 21, footprintW: 4, footprintH: 3 },
 
   // --- Upper street (footprints y=10-12, doors y=12, road y=13) ---
   { textureKey: "building-house5", footprintX: 18, footprintY: 10, footprintW: 5, footprintH: 3 },
   { textureKey: "building-house6", footprintX: 40, footprintY: 10, footprintW: 5, footprintH: 3 },
   { textureKey: "building-house7", footprintX: 47, footprintY: 10, footprintW: 5, footprintH: 3 },
+
+  // --- Lower street (footprints y=27-29, doors y=29, road y=30) ---
+  { textureKey: "building-bank", footprintX: 15, footprintY: 27, footprintW: 6, footprintH: 3 },
+  { textureKey: "building-melee-shop", footprintX: 24, footprintY: 27, footprintW: 6, footprintH: 3 },
+  { textureKey: "building-ranged-shop", footprintX: 40, footprintY: 27, footprintW: 6, footprintH: 3 },
+
+  // --- Southernmost row (footprints y=33-35, doors y=35, road y=36) ---
+  { textureKey: "building-magic-shop", footprintX: 24, footprintY: 33, footprintW: 6, footprintH: 3 },
 ];
 for (const building of BUILDINGS) {
   b.rect(building.footprintX, building.footprintY, building.footprintW, building.footprintH, "B");
@@ -179,12 +187,20 @@ export interface EntryPoint {
   exitY?: number;
 }
 
-// Only the church is left reachable — its shop/bank/depot/elder-house
-// counterparts in interiors.ts still exist but are unreachable dead
-// content now that their buildings and doors are gone (easy to revive
-// alongside them later).
+// The bank/melee/ranged/magic shops are reachable again now that their
+// buildings are back (their interiors.ts rooms and NPCs were never
+// touched). The depot and elder's house still have no building standing,
+// so they stay unreachable dead content for now — easy to revive
+// alongside a building later. Door x tiles are the real-art buildings'
+// visual center — eyeballed against each cropped image, not derived
+// from exact pixel measurement (same caveat as every other real-art
+// building in this file).
 export const ENTRY_POINTS: EntryPoint[] = [
-  { x: 34, y: 23, interiorId: "temple_main" }, // church arched doors
+  { x: 33, y: 23, interiorId: "temple_main" }, // temple arched doors
+  { x: 18, y: 29, interiorId: "bank" },
+  { x: 27, y: 29, interiorId: "melee_shop" },
+  { x: 43, y: 29, interiorId: "ranged_shop" },
+  { x: 27, y: 35, interiorId: "magic_shop" },
 ];
 // Punch each door tile out of the wall paint above, so the player can
 // actually step onto it. The building sprite still draws over the tile —
@@ -369,21 +385,22 @@ export const PROPS: PropPlacement[] = [
 
   // --- Small pieces of street furniture along the roads. Kept sparse — the
   // --- plaza is gone on purpose, so nothing here should read as one. ---
-  // A well on the grass, north-west of the church.
-  { textureKey: "well", x: 30, y: 22, blocks: true },
-  // A planter tucked between the well and the church's north-west corner.
-  { textureKey: "planter", x: 31, y: 22, blocks: true },
+  // A well and a planter on the plaza grass south of the temple door,
+  // moved here (was north-west of the old procedural church) once the
+  // wider temple building's footprint grew to cover their old spot.
+  { textureKey: "well", x: 29, y: 26, blocks: true },
+  { textureKey: "planter", x: 37, y: 26, blocks: true },
   // A bench on the grass at (39,22) — one tile east of (clear of) the N-S
-  // spine's jog past the church at x=37-38 (verified against the actual
+  // spine's jog past the temple at x=37-38 (verified against the actual
   // tile grid, not just the surrounding comments: tileAt(37,22) and
   // tileAt(38,22) are road). Rotated 90°: the sprite's legs/shadow (open
   // seat side) land on its west edge after rotation, so it faces the road.
   { textureKey: "bench", x: 39, y: 22, blocks: true, angle: 90 },
-  // Two torches on the grass strip immediately south of the church door,
+  // Two torches on the grass strip immediately south of the temple door,
   // one either side of the doorway. They light the safe zone at night
   // without blocking the E-W spine.
-  { textureKey: "torch", x: 33, y: 26, blocks: true },
-  { textureKey: "torch", x: 36, y: 26, blocks: true },
+  { textureKey: "torch", x: 32, y: 26, blocks: true },
+  { textureKey: "torch", x: 35, y: 26, blocks: true },
 
   // --- Sewer entrances on the surface — one per SEWER_LINKS pair. Each
   // --- hatch draws right on top of its (walkable) tile; stepping on it is
