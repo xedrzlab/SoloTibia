@@ -3063,6 +3063,68 @@ function cheeseIcon() {
   return s;
 }
 
+/** Raw meat: a red cut with darker marbling and a bone stub. */
+function meatIcon() {
+  const s = new Sprite(16, 16);
+  s.fillEllipse(9, 9, 5.5, 4.5, "#a8402f");
+  s.fillEllipse(8, 7.5, 4.2, 3, "#c9584a");
+  s.fillRect(3, 8, 3, 2, "#e8dcc2"); // bone stub
+  s.fillRect(3, 8, 3, 1, "#f5eeda");
+  s.setPixel(9, 8, "#8a2f20"); // marbling
+  s.setPixel(11, 10, "#8a2f20");
+  s.setPixel(7, 10, "#8a2f20");
+  return s;
+}
+
+/** Cooked ham: a browner, glazed cut with a fat cap and a bone knob. */
+function hamIcon() {
+  const s = new Sprite(16, 16);
+  s.fillEllipse(9, 9, 5.5, 4.5, "#8a5230");
+  s.fillEllipse(8, 7.5, 4.2, 3, "#b5754a");
+  s.fillEllipse(8, 6.5, 3, 1.6, "#d9a86a"); // fat cap
+  s.fillRect(3, 8, 3, 2, "#e8dcc2"); // bone knob
+  s.fillRect(3, 8, 3, 1, "#f5eeda");
+  s.setPixel(10, 10, "#5c3218"); // glaze lines
+  s.setPixel(9, 11, "#5c3218");
+  return s;
+}
+
+/** Bear paw: a rounded pad with claw tips, the trophy-drop look. */
+function bearPawIcon() {
+  const s = new Sprite(16, 16);
+  s.fillEllipse(8, 10, 5, 4, "#6b4a2e"); // pad
+  s.fillEllipse(7, 9, 3.4, 2.6, "#8a6440");
+  for (const [x, y] of [
+    [4, 5],
+    [7, 4],
+    [10, 4],
+    [12, 5.5],
+  ]) {
+    s.fillRect(x, y, 1.5, 3, "#5a3d22"); // claw/toe
+    s.setPixel(Math.round(x), Math.round(y), "#e8dcc2"); // claw tip
+  }
+  return s;
+}
+
+/** Honeycomb: hexagonal amber cells, a small chunk broken off the comb. */
+function honeycombIcon() {
+  const s = new Sprite(16, 16);
+  s.fillEllipse(8, 8, 6, 5.5, "#c9942f");
+  s.fillEllipse(8, 8, 5.2, 4.7, "#e6b13f");
+  for (const [x, y] of [
+    [5, 6],
+    [8, 5],
+    [11, 6],
+    [6, 9],
+    [9, 9],
+    [7, 11],
+  ]) {
+    s.fillCircle(x, y, 1.1, "#f5cf6a");
+    s.setPixel(x, y, "#a8781f");
+  }
+  return s;
+}
+
 // --- Containers ---
 
 /** Shared body for the bag/backpack icons, parameterised by size and leather tone. */
@@ -3470,6 +3532,10 @@ saveSprite(healthPotionIcon(), SCALE, `${OUT}/items/potion_health.png`);
 saveSprite(manaPotionIcon(), SCALE, `${OUT}/items/potion_mana.png`);
 saveSprite(goldCoinIcon(), SCALE, `${OUT}/items/coin_gold.png`);
 saveSprite(cheeseIcon(), SCALE, `${OUT}/items/food_cheese.png`);
+saveSprite(meatIcon(), SCALE, `${OUT}/items/food_meat.png`);
+saveSprite(hamIcon(), SCALE, `${OUT}/items/food_ham.png`);
+saveSprite(bearPawIcon(), SCALE, `${OUT}/items/trophy_bear_paw.png`);
+saveSprite(honeycombIcon(), SCALE, `${OUT}/items/food_honeycomb.png`);
 saveSprite(healSpellIcon(), SCALE, `${OUT}/items/spell_heal.png`);
 saveSprite(flameSpellIcon(), SCALE, `${OUT}/items/spell_flame.png`);
 

@@ -3,7 +3,7 @@
 // attack/defense/armor, how much they weigh against carry capacity, and (for
 // bags and backpacks) how many slots they hold.
 
-export type ItemKind = "consumable" | "currency" | "equipment" | "container" | "ammo";
+export type ItemKind = "consumable" | "currency" | "equipment" | "container" | "ammo" | "trophy";
 
 /** The ten Tibia paper-doll slots, laid out 3-wide in the sidebar. */
 export type EquipSlot = "head" | "neck" | "back" | "armor" | "left" | "right" | "legs" | "feet" | "ring" | "ammo";
@@ -66,6 +66,48 @@ export const ITEMS: Record<string, ItemDef> = {
     weight: 4,
     regenSeconds: 108,
     regenPercentOfMaxHp: 0.09,
+  },
+  // Bear's TibiaWiki loot table: Meat, Ham, Bear Paw, Honeycomb — added so
+  // that loot table has real items to drop instead of an empty one.
+  meat: {
+    id: "meat",
+    name: "Meat",
+    textureKey: "meat",
+    kind: "consumable",
+    stackable: true,
+    weight: 4,
+    regenSeconds: 90,
+    regenPercentOfMaxHp: 0.06,
+  },
+  ham: {
+    id: "ham",
+    name: "Ham",
+    textureKey: "ham",
+    kind: "consumable",
+    stackable: true,
+    weight: 8,
+    regenSeconds: 108,
+    regenPercentOfMaxHp: 0.1,
+  },
+  honeycomb: {
+    id: "honeycomb",
+    name: "Honeycomb",
+    textureKey: "honeycomb",
+    kind: "consumable",
+    stackable: true,
+    weight: 6,
+    regenSeconds: 96,
+    regenPercentOfMaxHp: 0.12,
+  },
+  // Not food — a trophy drop, doesn't fit any existing ItemKind, so it's
+  // its own kind rather than misclassified as a consumable.
+  bear_paw: {
+    id: "bear_paw",
+    name: "Bear Paw",
+    textureKey: "bear-paw",
+    kind: "trophy",
+    stackable: false,
+    weight: 8,
   },
   health_potion: {
     id: "health_potion",

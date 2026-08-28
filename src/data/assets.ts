@@ -161,6 +161,10 @@ export const IMAGE_ASSETS: ImageAsset[] = [
   { key: "mana-potion", path: "items/potion_mana.png" },
   { key: "gold-coin", path: "items/coin_gold.png" },
   { key: "cheese", path: "items/food_cheese.png" },
+  { key: "meat", path: "items/food_meat.png" },
+  { key: "ham", path: "items/food_ham.png" },
+  { key: "bear-paw", path: "items/trophy_bear_paw.png" },
+  { key: "honeycomb", path: "items/food_honeycomb.png" },
   { key: "spell-heal", path: "items/spell_heal.png" },
   { key: "spell-flame", path: "items/spell_flame.png" },
 ];

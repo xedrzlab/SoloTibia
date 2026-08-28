@@ -161,9 +161,12 @@ export const MONSTERS: Record<string, MonsterDef> = {
     fleeAtHpPct: 0,
     loot: [],
   },
-  // Same deal as goblin above: real isolated bear art (4-frame walk cycle x
-  // 4 directions) just landed, dropped into town with 0 damage/hitChance
-  // for a look-and-walk-into test, not a balanced encounter yet.
+  // Real isolated bear art (4-frame walk cycle x 4 directions) plus real
+  // TibiaWiki stats (Bear page: HP 80, exp 23, speed 78, armor 6, physical
+  // melee 0-25, flees at 15 hp = 18.75%). Not currently spawned anywhere —
+  // this is the complete monster model, ready for a real hunting-ground
+  // spot later; see docs/monster-sources/bear/ for the source art + the
+  // stats writeup this was built from.
   bear: {
     id: "bear",
     name: "Bear",
@@ -171,15 +174,20 @@ export const MONSTERS: Record<string, MonsterDef> = {
     frameCount: 16,
     framesPerDirection: 4,
     continuousWalk: true,
-    hp: 60,
-    xp: 0,
+    hp: 80,
+    xp: 23,
     minDamage: 0,
-    maxDamage: 0,
+    maxDamage: 25,
     attackIntervalMs: 2200,
-    hitChance: 0,
-    armor: 0,
-    speed: 65,
-    fleeAtHpPct: 0,
-    loot: [],
+    hitChance: 85,
+    armor: 6,
+    speed: 78,
+    fleeAtHpPct: 0.1875,
+    loot: [
+      { itemId: "meat", chance: 0.4, min: 1, max: 1 },
+      { itemId: "ham", chance: 0.2, min: 1, max: 1 },
+      { itemId: "bear_paw", chance: 0.02, min: 1, max: 1 },
+      { itemId: "honeycomb", chance: 0.005, min: 1, max: 1 },
+    ],
   },
 };
