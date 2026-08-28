@@ -106,11 +106,6 @@ b.rect(TOWN.x, 13, TOWN.w, 1, "R"); // upper street
 b.rect(TOWN.x, 30, TOWN.w, 1, "R"); // lower street
 b.rect(TOWN.x, 36, TOWN.w, 1, "R"); // southernmost
 
-// Approach lanes for the northern shops — the N-S spine no longer runs
-// straight past them (it jogs east at y=20), so each shop gets a short
-// cobble spur back to the spine.
-b.rect(26, 20, 9, 1, "R"); // Borin's approach
-b.rect(35, 20, 9, 1, "R"); // Fenn's approach
 // A short dirt alley between the north and middle rows on each side, so
 // the two rows aren't hermetically separated.
 b.rect(24, 14, 1, 3, "D"); // west side alley — through grass gap
@@ -123,9 +118,6 @@ b.rect(45, 14, 1, 3, "D"); // east side mirror
 // street reaching the church door instead of a patch cut out of it.
 b.rect(34, 24, 2, 2, "P");
 export const TEMPLE_SPAWN = { x: 34, y: 26 }; // one tile south of the church door
-
-// Short spur north connecting the forge street to the upper road.
-b.rect(30, 18, 5, 1, "R");
 
 // ---------------------------------------------------------------------------
 // Buildings — drawn as roofed sprites. Doors are entry points into interiors.
@@ -140,74 +132,20 @@ export interface BuildingPlacement {
 }
 
 // Every building sits north of the road its door opens onto, because the
-// sprite always draws its door on the south face. Rows of houses line each
-// E-W street, with irregular gaps so the town reads as grown rather than
-// planned. The named services (shops, church, guardpost, bank, depot) mix
-// in with the decorative houses on the same rows.
+// sprite always draws its door on the south face.
+//
+// Stripped down to just the church and the new House1 building for now —
+// every decorative house, shop, guardpost, bank, depot and the farmhouses
+// are gone (their interiors, entry points and shop-sign/backyard props
+// went with them; see the ENTRY_POINTS and PROPS sections below). Both
+// remaining buildings front the same E-W spine (road at y=24-25), the
+// same convention the church always used: footprint bottom row = door
+// row = one tile north of the road.
 export const BUILDINGS: BuildingPlacement[] = [
-  // --- Upper row (footprints y=10..12, doors y=12, road y=13) ---
-  // Narrow stone tower on the far west — 2 tiles wide.
-  { textureKey: "building-tower", footprintX: 16, footprintY: 10, footprintW: 2, footprintH: 3 },
-  { textureKey: "building-cottage", footprintX: 20, footprintY: 10, footprintW: 3, footprintH: 3 },
-  // Wide timber-frame hall — 4 tiles across.
-  { textureKey: "building-timber-hall", footprintX: 27, footprintY: 10, footprintW: 4, footprintH: 3 },
-  // Log cabin with steep A-frame roof.
-  { textureKey: "building-log-cabin", footprintX: 38, footprintY: 10, footprintW: 3, footprintH: 3 },
-  { textureKey: "building-cottage", footprintX: 45, footprintY: 10, footprintW: 3, footprintH: 3 },
-  { textureKey: "building-house", footprintX: 49, footprintY: 10, footprintW: 3, footprintH: 3 },
-
-  // --- Northern shops row (footprints y=17..19, doors y=19, road y=20) ---
-  // Borin's forge — melee shop.
-  { textureKey: "building-forge", footprintX: 25, footprintY: 17, footprintW: 3, footprintH: 3 },
-  // Fenn's fletchery — ranged shop.
-  { textureKey: "building-cottage", footprintX: 42, footprintY: 17, footprintW: 3, footprintH: 3 },
-  // Guardposts flank the town gates from outside the wall.
-  { textureKey: "building-guardpost", footprintX: 36, footprintY: 5, footprintW: 3, footprintH: 3 },  // north gate, east side
-  { textureKey: "building-guardpost", footprintX: 36, footprintY: 40, footprintW: 3, footprintH: 3 }, // south gate, east side
-  // Flat-roof stone workshop beside the forge.
-  { textureKey: "building-workshop", footprintX: 20, footprintY: 17, footprintW: 3, footprintH: 3 },
-  // Another tower on the east side.
-  { textureKey: "building-tower", footprintX: 47, footprintY: 17, footprintW: 2, footprintH: 3 },
-  { textureKey: "building-house", footprintX: 51, footprintY: 17, footprintW: 3, footprintH: 3 },
-
-  // --- Middle band (footprints y=21..23, doors y=23, road y=24-25) ---
-  // Bank at the far west.
-  { textureKey: "building-house", footprintX: 14, footprintY: 21, footprintW: 3, footprintH: 3 }, // bank
-  { textureKey: "building-log-cabin", footprintX: 18, footprintY: 21, footprintW: 3, footprintH: 3 },
-  // Wren's apothecary.
-  { textureKey: "building-house", footprintX: 25, footprintY: 21, footprintW: 3, footprintH: 3 },
+  // House1 — west of the church, same row and door alignment.
+  { textureKey: "building-tudor-house", footprintX: 25, footprintY: 21, footprintW: 4, footprintH: 3 },
   // The church.
   { textureKey: "building-church", footprintX: 32, footprintY: 21, footprintW: 4, footprintH: 3 },
-  // Elder Corwin's cottage.
-  { textureKey: "building-cottage", footprintX: 42, footprintY: 21, footprintW: 3, footprintH: 3 },
-  { textureKey: "building-house", footprintX: 47, footprintY: 21, footprintW: 3, footprintH: 3 },
-  { textureKey: "building-cottage", footprintX: 51, footprintY: 21, footprintW: 3, footprintH: 3 }, // depot
-
-  // --- Lower row (footprints y=27..29, doors y=29, road y=30) ---
-  // Wide farmhouse on the west end — 5 tiles across.
-  { textureKey: "building-farmhouse", footprintX: 15, footprintY: 27, footprintW: 5, footprintH: 3 },
-  { textureKey: "building-house", footprintX: 21, footprintY: 27, footprintW: 3, footprintH: 3 },
-  // Timber hall in the middle of the lower row.
-  { textureKey: "building-timber-hall", footprintX: 28, footprintY: 27, footprintW: 4, footprintH: 3 },
-  { textureKey: "building-house", footprintX: 38, footprintY: 27, footprintW: 3, footprintH: 3 },
-  { textureKey: "building-cottage", footprintX: 45, footprintY: 27, footprintW: 3, footprintH: 3 },
-  // Workshop on the east end.
-  { textureKey: "building-workshop", footprintX: 49, footprintY: 27, footprintW: 3, footprintH: 3 },
-
-  // --- Southernmost row (footprints y=33..35, doors y=35, road y=36) ---
-  { textureKey: "building-house", footprintX: 20, footprintY: 33, footprintW: 3, footprintH: 3 },
-  // L-shaped brick house — 4x4 footprint with courtyard.
-  { textureKey: "building-l-house", footprintX: 26, footprintY: 32, footprintW: 4, footprintH: 4 },
-  // Composited from real art cropped from the user's props sheet
-  // A single AI-generated house icon (see assets.ts) — 128x141, so this
-  // is one of the few buildings taller than its footprint width; the
-  // extra height is roof overhang, same convention as the church/tower.
-  { textureKey: "building-tudor-house", footprintX: 33, footprintY: 33, footprintW: 4, footprintH: 4 },
-  { textureKey: "building-log-cabin", footprintX: 40, footprintY: 33, footprintW: 3, footprintH: 3 },
-  { textureKey: "building-house", footprintX: 47, footprintY: 33, footprintW: 3, footprintH: 3 },
-
-  // --- Farmer's farmhouse southwest of the south gate ---
-  { textureKey: "building-farmhouse", footprintX: 22, footprintY: 43, footprintW: 5, footprintH: 3 },
 ];
 for (const building of BUILDINGS) {
   b.rect(building.footprintX, building.footprintY, building.footprintW, building.footprintH, "B");
@@ -229,18 +167,12 @@ export interface EntryPoint {
   exitY?: number;
 }
 
-// Every entry now sits on its building's south-face door tile, and every
-// door tile is adjacent to a real road — the northern shops open onto the
-// y=20 branch street, and the middle-band shops open onto the E-W spine at
-// y=24. No more "walk into the back wall" moments.
+// Only the church is left reachable — its shop/bank/depot/elder-house
+// counterparts in interiors.ts still exist but are unreachable dead
+// content now that their buildings and doors are gone (easy to revive
+// alongside them later).
 export const ENTRY_POINTS: EntryPoint[] = [
-  { x: 26, y: 19, interiorId: "melee_shop" }, // Borin's forge
-  { x: 43, y: 19, interiorId: "ranged_shop" }, // Fenn's fletchery
-  { x: 26, y: 23, interiorId: "magic_shop" }, // Wren's apothecary
-  { x: 43, y: 23, interiorId: "elder_house" }, // Elder Corwin's cottage
   { x: 34, y: 23, interiorId: "temple_main" }, // church arched doors
-  { x: 15, y: 23, interiorId: "bank" }, // bank
-  { x: 52, y: 23, interiorId: "depot" }, // depot
 ];
 // Punch each door tile out of the wall paint above, so the player can
 // actually step onto it. The building sprite still draws over the tile —
@@ -423,16 +355,6 @@ export const PROPS: PropPlacement[] = [
   { textureKey: "cat", x: 38, y: 30 },
   { textureKey: "cat", x: 30, y: 26 },
 
-  // --- Icon shop-signs sit on the corner tile immediately adjacent to each
-  // --- shop's door — same row as the door on the road side, one tile east
-  // --- of the door itself. On the corner, over the roof-line edge, so the
-  // --- sign hangs "on the shop" visually rather than floating on the road.
-  { textureKey: "shop-sign-melee", x: 28, y: 19 }, // Borin — sword + shield
-  { textureKey: "shop-sign-ranged", x: 45, y: 19 }, // Fenn — bow + arrow
-  { textureKey: "shop-sign-magic", x: 28, y: 23 }, // Wren — potion + wand
-  { textureKey: "shop-sign-bank", x: 17, y: 23 }, // Bank — coin with green $
-  { textureKey: "shop-sign-depot", x: 54, y: 23 }, // Depot — metal box
-
   // --- Small pieces of street furniture along the roads. Kept sparse — the
   // --- plaza is gone on purpose, so nothing here should read as one. ---
   // A well on the grass, north-west of the church.
@@ -450,70 +372,6 @@ export const PROPS: PropPlacement[] = [
   // without blocking the E-W spine.
   { textureKey: "torch", x: 33, y: 26, blocks: true },
   { textureKey: "torch", x: 36, y: 26, blocks: true },
-
-  // --- Backyards: fenced patches behind selected houses with small props,
-  // so each corner of town has its own character. ---
-
-  // Tower (x:16, y:10) — side yard to the west with barrels.
-  { textureKey: "fence-v", x: 14, y: 10, blocks: true },
-  { textureKey: "fence-v", x: 14, y: 11, blocks: true },
-  { textureKey: "fence", x: 14, y: 9, blocks: true },
-  { textureKey: "fence", x: 15, y: 9, blocks: true },
-  { textureKey: "fence", x: 14, y: 12, blocks: true },
-  { textureKey: "fence", x: 15, y: 12, blocks: true },
-  { textureKey: "barrel", x: 15, y: 10, blocks: true },
-  { textureKey: "crate", x: 15, y: 11, blocks: true },
-
-  // Log cabin (x:38, y:10) — garden to the east with planters.
-  { textureKey: "fence", x: 41, y: 9, blocks: true },
-  { textureKey: "fence", x: 42, y: 9, blocks: true },
-  { textureKey: "fence", x: 43, y: 9, blocks: true },
-  { textureKey: "fence-v", x: 43, y: 10, blocks: true },
-  { textureKey: "fence-v", x: 43, y: 11, blocks: true },
-  { textureKey: "fence", x: 41, y: 12, blocks: true },
-  { textureKey: "fence", x: 42, y: 12, blocks: true },
-  { textureKey: "fence", x: 43, y: 12, blocks: true },
-  { textureKey: "planter", x: 41, y: 10, blocks: true },
-  { textureKey: "planter", x: 42, y: 11, blocks: true },
-
-  // Farmhouse (x:15, y:27) — large yard to the south matching its 5-wide footprint.
-  { textureKey: "fence", x: 15, y: 31, blocks: true },
-  { textureKey: "fence", x: 16, y: 31, blocks: true },
-  { textureKey: "fence", x: 17, y: 31, blocks: true },
-  { textureKey: "fence", x: 18, y: 31, blocks: true },
-  { textureKey: "fence", x: 19, y: 31, blocks: true },
-  { textureKey: "fence-v", x: 15, y: 32, blocks: true },
-  { textureKey: "fence-v", x: 19, y: 32, blocks: true },
-  { textureKey: "barrel", x: 16, y: 32, blocks: true },
-  { textureKey: "sack", x: 17, y: 32, blocks: true },
-  { textureKey: "crate", x: 18, y: 32, blocks: true },
-
-  // Timber hall (x:28, y:27) — yard to the south with a cart.
-  { textureKey: "fence", x: 28, y: 31, blocks: true },
-  { textureKey: "fence", x: 29, y: 31, blocks: true },
-  { textureKey: "fence", x: 30, y: 31, blocks: true },
-  { textureKey: "fence", x: 31, y: 31, blocks: true },
-  { textureKey: "fence-v", x: 31, y: 32, blocks: true },
-  { textureKey: "fence-v", x: 28, y: 32, blocks: true },
-  { textureKey: "cart", x: 29, y: 32, blocks: true },
-  { textureKey: "barrel", x: 30, y: 32, blocks: true },
-
-  // Log cabin south row (x:40, y:33) — woodsy backyard to the south.
-  { textureKey: "fence", x: 40, y: 37, blocks: true },
-  { textureKey: "fence", x: 41, y: 37, blocks: true },
-  { textureKey: "fence", x: 42, y: 37, blocks: true },
-  { textureKey: "fence", x: 43, y: 37, blocks: true },
-  { textureKey: "fence-v", x: 43, y: 38, blocks: true },
-  { textureKey: "fence-v", x: 40, y: 38, blocks: true },
-  { textureKey: "barrel", x: 41, y: 38, blocks: true },
-  { textureKey: "sack", x: 42, y: 38, blocks: true },
-
-  // Farm yard dressing around the farmhouse (footprint 22,43 5x3).
-  { textureKey: "barrel", x: 21, y: 44, blocks: true },
-  { textureKey: "sack", x: 28, y: 44, blocks: true },
-  { textureKey: "crate", x: 28, y: 45, blocks: true },
-  { textureKey: "cart", x: 19, y: 45, blocks: true },
-  { textureKey: "well", x: 30, y: 45, blocks: true },
 
   // --- Sewer entrances on the surface — one per SEWER_LINKS pair. Each
   // --- hatch draws right on top of its (walkable) tile; stepping on it is
@@ -572,31 +430,10 @@ export interface NpcSpawn {
   y: number;
 }
 
-export const NPC_SPAWNS: NpcSpawn[] = [
-  // Every shopkeeper and the elder live inside their buildings now; the
-  // outdoor NPC list is just ambient farm dressing.
-  // Ambient farmers standing in the yard — no dialogue attached.
-  {
-    id: "farmer_gil",
-    name: "Farmer",
-    textureKey: "npc-farmer-01",
-    role: "ambient",
-    greeting: "",
-    about: "",
-    x: 24,
-    y: 45,
-  },
-  {
-    id: "farmer_ana",
-    name: "Farmhand",
-    textureKey: "npc-farmer-02",
-    role: "ambient",
-    greeting: "",
-    about: "",
-    x: 27,
-    y: 47,
-  },
-];
+// Stripped of every world-map NPC for now (the ambient farmers included)
+// — the temple's own priest lives in interiors.ts, untouched, since the
+// church stays.
+export const NPC_SPAWNS: NpcSpawn[] = [];
 
 // ---------------------------------------------------------------------------
 // Monsters — the surface stays peaceful (tutorial area); rats live in the
@@ -657,14 +494,6 @@ for (const npc of NPC_SPAWNS) {
   }
 }
 b.set(TEMPLE_SPAWN.x, TEMPLE_SPAWN.y, "S");
-
-// Three houses ended up stranded off the road network — the workshop's row
-// only has an approach lane as far as Borin's shop, and the eastern tower +
-// house sit past where Fenn's approach ends, behind trees the scatter above
-// happened to drop right in front of their doors. Short spurs (after the
-// scatter, so they win over any tree there) close both gaps.
-b.rect(20, 20, 6, 1, "R"); // workshop (20,17) — links up to Borin's approach at x26
-b.rect(44, 20, 10, 1, "R"); // tower (47,17) + house (51,17) — links up to Fenn's approach at x43
 
 // ---------------------------------------------------------------------------
 // Tile legend and lookup helpers
