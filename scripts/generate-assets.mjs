@@ -36,7 +36,6 @@ const SCALE = 2; // 16x16 source canvas -> 32x32 tiles, matching the 1-tile-per-
 const P_GRASS = { deep: "#25451c", dark: "#2f5620", mid: "#3d6b2a", light: "#4f8034", hi: "#61944a" };
 const P_STONE = { deep: "#1f1d24", dark: "#2c2832", mid: "#4a4650", light: "#615c6b", hi: "#7d7887" };
 const P_COBBLE = { deep: "#2a2730", dark: "#45414d", mid: "#6d6875", light: "#8a8592", hi: "#a29cac" };
-const P_WATER = { deep: "#12304a", dark: "#1a3f5e", mid: "#245a7d", light: "#3a7fa3", hi: "#6fb2c9" };
 
 /**
  * Lay down small rectangular patches rather than loose pixels. Ground texture
@@ -92,45 +91,6 @@ function cobbleTile() {
   s.speckleRect(0, 0, 16, 16, 16, P_COBBLE.dark, 480);
   return s;
 }
-
-/** Still water: darker with depth, with a few surface highlights. */
-/**
- * One frame of the water cycle. The body of the water never moves — only the
- * ripple crests drift and fade, which is enough to read as a living surface
- * without the ground appearing to slide underneath the player.
- */
-function waterTile(frame = 0) {
-  const s = new Sprite(16, 16);
-  s.fillRect(0, 0, 16, 16, P_WATER.mid);
-
-  // Depth pooling in broad bands rather than per-pixel noise. Static across
-  // the cycle, so the water keeps its shape.
-  clusters(s, [[0, 0, 6, 3], [9, 2, 7, 2], [2, 7, 5, 3], [11, 9, 5, 3], [0, 13, 7, 3]], P_WATER.dark);
-  clusters(s, [[3, 1, 3, 1], [12, 3, 3, 1], [4, 8, 3, 1], [13, 10, 3, 1]], P_WATER.deep);
-
-  // Ripple crests: a bright leading edge over a darker trough. Each drifts one
-  // pixel per frame and the set wraps, so frame 4 lands back on frame 0.
-  const ripples = [
-    [2, 4, 5],
-    [9, 6, 4],
-    [4, 11, 4],
-    [10, 14, 5],
-  ];
-  ripples.forEach(([x, y, w], i) => {
-    // Alternate drift direction so the surface churns rather than scrolls.
-    const drift = i % 2 === 0 ? frame : WATER_FRAMES - frame;
-    const rx = (x + drift) % 16;
-    for (let dx = 0; dx < w; dx++) {
-      const px = (rx + dx) % 16;
-      s.setPixel(px, y, P_WATER.light);
-      s.setPixel(px, y + 1, P_WATER.dark);
-      if (dx > 0 && dx < w - 1) s.setPixel(px, y - 1, P_WATER.hi);
-    }
-  });
-  return s;
-}
-
-const WATER_FRAMES = 4;
 
 const P_BARK = { deep: "#241609", dark: "#3a2312", mid: "#4a2e18", light: "#5f3d22" };
 
@@ -2806,12 +2766,7 @@ saveSprite(voidWallTile(), SCALE, `${OUT}/terrain/void_01.png`);
 saveSprite(mountainTile(), SCALE, `${OUT}/terrain/mountain_01.png`);
 saveSprite(woodFloorTile(), SCALE, `${OUT}/terrain/wood_floor_01.png`);
 
-// Water is animated, so its frames ship as one sheet rather than a tile.
-const waterMeta = saveSpriteSheet(
-  Array.from({ length: WATER_FRAMES }, (_, i) => waterTile(i)),
-  SCALE,
-  `${OUT}/terrain/water_sheet.png`,
-);
+// Water is real art now (see assets.ts) — nothing to generate here.
 
 // --- environment ---------------------------------------------------------
 // Trees are real art now (see assets.ts) — nothing to generate here.
@@ -2936,7 +2891,6 @@ savePNG(appIcon(192).toPNG(1), `${ICONS}/icon-192.png`);
 savePNG(appIcon(512).toPNG(1), `${ICONS}/icon-512.png`);
 
 console.log("Generated every game asset: terrain, environment, props, buildings, characters, creatures, effects, items, app icons.");
-console.log("water sheet meta:", waterMeta);
 console.log("PLAYER_SHEET (real art, not generated) is 32x32 x16 frames.");
 console.log("TROLL_SHEET must match:", trollMeta);
 console.log("rat sheet meta:", ratMeta);
