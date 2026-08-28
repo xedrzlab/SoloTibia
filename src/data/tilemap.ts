@@ -690,8 +690,32 @@ const LEGEND: Record<string, TileInfo> = {
     groundFriction: 110,
   },
   F: { walkable: true, textureKey: "wood-floor", safe: true, groundFriction: 100 },
-  K: { walkable: true, textureKey: "sewer-floor", safe: false, groundFriction: 145 },
-  V: { walkable: false, textureKey: "wall-sewer", safe: false },
+  // Cave floor: the same dirt pair used for the surface paths ("D" above) —
+  // it's the same packed-earth ground, just underground.
+  K: {
+    walkable: true,
+    textureKey: "dirt-clean",
+    variants: ["dirt-clean", "dirt-dark"],
+    safe: false,
+    groundFriction: 130,
+  },
+  // Cave out-of-bounds fill: reads as more dirt (Tibia's own trick), but
+  // isn't walkable — see the "cave-wall-earth-*" ASSETS comment.
+  V: {
+    walkable: false,
+    textureKey: "cave-wall-earth-1",
+    variants: [
+      "cave-wall-earth-1",
+      "cave-wall-earth-2",
+      "cave-wall-earth-3",
+      "cave-wall-earth-4",
+      "cave-wall-earth-5",
+      "cave-wall-earth-6",
+      "cave-wall-earth-7",
+      "cave-wall-earth-8",
+    ],
+    safe: false,
+  },
 
   // Third tree pass — six distinct species (Trees.zip, see assets.ts), each
   // its own letter with a single-species wholeTree list so a forest patch

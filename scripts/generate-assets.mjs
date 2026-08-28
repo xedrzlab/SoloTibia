@@ -186,57 +186,6 @@ function rockyGroundTile() {
   return s;
 }
 
-// Sewer palette: dark, mossy, wetter than the surface cave — a distinct
-// underground identity rather than a re-tint of cave-floor/stone-wall.
-const P_SEWER_FLOOR = { deep: "#241d14", dark: "#332818", mid: "#493823", light: "#5e4a2e", hi: "#726055" };
-const P_SEWER_WALL = { deep: "#141a14", dark: "#1e2a1e", mid: "#2c3d2a", light: "#3d523a", hi: "#527052" };
-
-/** Sewer floor: packed wet earth, darker and grimier than the surface cave. */
-function sewerFloorTile() {
-  const s = new Sprite(16, 16);
-  s.fillRect(0, 0, 16, 16, P_SEWER_FLOOR.mid);
-
-  clusters(s, [[0, 1, 4, 2], [7, 0, 4, 2], [11, 5, 4, 2], [2, 6, 4, 2], [9, 9, 4, 2], [0, 12, 4, 2], [12, 12, 3, 2]], P_SEWER_FLOOR.dark);
-  clusters(s, [[4, 3, 3, 1], [10, 2, 3, 1], [5, 9, 3, 1], [1, 10, 3, 1]], P_SEWER_FLOOR.light);
-
-  // A couple of shallow puddles — flat dark patches with a thin lit rim
-  // catching whatever light reaches down here.
-  for (const [x, y, w, h] of [[3, 8, 3, 2], [11, 3, 3, 2]]) {
-    s.fillEllipse(x + w / 2, y + h / 2, w / 2, h / 2, P_SEWER_FLOOR.deep);
-    s.setPixel(x, y, "#3d5a63");
-    s.setPixel(x + w - 1, y + h - 1, "#2a4550");
-  }
-  return s;
-}
-
-/** Sewer wall: mossy stone blocks, darker and cooler than the town's stone-wall. */
-function sewerWallTile() {
-  const s = new Sprite(16, 16);
-  s.fillRect(0, 0, 16, 16, P_SEWER_WALL.deep);
-
-  const courses = [
-    { y: 0, h: 8, offset: 0 },
-    { y: 8, h: 8, offset: 4 },
-  ];
-  for (const course of courses) {
-    for (let x = -course.offset; x < 16; x += 8) {
-      const bx = Math.max(0, x);
-      const bw = Math.min(16, x + 8) - bx - 1;
-      if (bw <= 0) continue;
-      s.fillRect(bx, course.y, bw, course.h - 1, P_SEWER_WALL.mid);
-      s.fillRect(bx, course.y, bw, 1, P_SEWER_WALL.hi);
-      s.fillRect(bx, course.y, 1, course.h - 1, P_SEWER_WALL.light);
-      s.fillRect(bx + bw - 1, course.y, 1, course.h - 1, P_SEWER_WALL.dark);
-      s.fillRect(bx, course.y + course.h - 2, bw, 1, P_SEWER_WALL.dark);
-    }
-  }
-  // Moss streaks running down from the seams — the thing that says "sewer"
-  // rather than "cellar".
-  clusters(s, [[2, 0, 2, 4], [9, 8, 2, 5], [13, 2, 2, 3]], "#3f5c34");
-  clusters(s, [[3, 1, 1, 2], [10, 10, 1, 2]], "#5a7a4a");
-  return s;
-}
-
 /**
  * Wooden ladder rising out of a dark pit — the "up" exit from a sewer room.
  * Drawn two tiles tall (16x32 source, i.e. one tile wide, two tall) so it
@@ -2757,8 +2706,6 @@ function appIcon(size) {
 
 // --- terrain -------------------------------------------------------------
 saveSprite(caveFloorTile(), SCALE, `${OUT}/terrain/cave_floor_01.png`);
-saveSprite(sewerFloorTile(), SCALE, `${OUT}/terrain/sewer_floor_01.png`);
-saveSprite(sewerWallTile(), SCALE, `${OUT}/terrain/wall_sewer_01.png`);
 saveSprite(cobbleTile(), SCALE, `${OUT}/terrain/cobble_01.png`);
 saveSprite(stoneWallTile(), SCALE, `${OUT}/terrain/wall_stone_01.png`);
 saveSprite(rockyGroundTile(), SCALE, `${OUT}/terrain/ground_rocky_01.png`);

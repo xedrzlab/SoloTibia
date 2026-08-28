@@ -92,9 +92,21 @@ export const IMAGE_ASSETS: ImageAsset[] = [
   { key: "dirt-twigs", path: "terrain/dirt-twigs.png" },
   { key: "dirt-weeds", path: "terrain/dirt-weeds.png" },
   { key: "dirt-mixed", path: "terrain/dirt-mixed.png" },
+  // Real art (UndergroundWallsOutofBound.zip, not checked into the repo) —
+  // the earthen out-of-bounds fill for the cave under the town, replacing
+  // the old procedural wall-sewer. Same "walkable-looking but isn't" trick
+  // Tibia uses: it reads as more dirt, but the "K"/"V" LEGEND split still
+  // makes it solid. Eight near-identical speckle variants, picked per-cell
+  // like grass/dirt — no bold accent among them, so no tiering needed.
+  { key: "cave-wall-earth-1", path: "terrain/cave-wall-earth-1.png" },
+  { key: "cave-wall-earth-2", path: "terrain/cave-wall-earth-2.png" },
+  { key: "cave-wall-earth-3", path: "terrain/cave-wall-earth-3.png" },
+  { key: "cave-wall-earth-4", path: "terrain/cave-wall-earth-4.png" },
+  { key: "cave-wall-earth-5", path: "terrain/cave-wall-earth-5.png" },
+  { key: "cave-wall-earth-6", path: "terrain/cave-wall-earth-6.png" },
+  { key: "cave-wall-earth-7", path: "terrain/cave-wall-earth-7.png" },
+  { key: "cave-wall-earth-8", path: "terrain/cave-wall-earth-8.png" },
   { key: "cave-floor", path: "terrain/cave_floor_01.png" },
-  { key: "sewer-floor", path: "terrain/sewer_floor_01.png" },
-  { key: "wall-sewer", path: "terrain/wall_sewer_01.png" },
   { key: "temple-floor", path: "terrain/cobble_01.png" },
   { key: "stone-wall", path: "terrain/wall_stone_01.png" },
   { key: "rocky-ground", path: "terrain/ground_rocky_01.png" },
