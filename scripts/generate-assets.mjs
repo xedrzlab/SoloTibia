@@ -34,7 +34,6 @@ const SCALE = 2; // 16x16 source canvas -> 32x32 tiles, matching the 1-tile-per-
 // Terrain palettes. Every tile draws from these families so the ground reads
 // as one continuous world rather than a set of unrelated textures.
 const P_GRASS = { deep: "#25451c", dark: "#2f5620", mid: "#3d6b2a", light: "#4f8034", hi: "#61944a" };
-const P_DIRT = { deep: "#3a2717", dark: "#4f351f", mid: "#6b4a2a", light: "#82603a", hi: "#9a774d" };
 const P_STONE = { deep: "#1f1d24", dark: "#2c2832", mid: "#4a4650", light: "#615c6b", hi: "#7d7887" };
 const P_COBBLE = { deep: "#2a2730", dark: "#45414d", mid: "#6d6875", light: "#8a8592", hi: "#a29cac" };
 const P_WATER = { deep: "#12304a", dark: "#1a3f5e", mid: "#245a7d", light: "#3a7fa3", hi: "#6fb2c9" };
@@ -47,30 +46,6 @@ const P_WATER = { deep: "#12304a", dark: "#1a3f5e", mid: "#245a7d", light: "#3a7
  */
 function clusters(s, spots, hex) {
   for (const [x, y, w = 2, h = 1] of spots) s.fillRect(x, y, w, h, hex);
-}
-
-/** Bare earth: packed dirt with small embedded stones. */
-function dirtTile(variant = 0) {
-  const s = new Sprite(16, 16);
-  s.fillRect(0, 0, 16, 16, P_DIRT.mid);
-
-  clusters(
-    s,
-    variant === 1
-      ? [[2, 1, 4, 2], [9, 3, 4, 2], [0, 7, 3, 2], [6, 9, 5, 2], [12, 12, 4, 2]]
-      : [[0, 2, 3, 2], [7, 0, 4, 2], [11, 5, 5, 2], [3, 8, 4, 2], [9, 11, 4, 2], [0, 13, 4, 2]],
-    P_DIRT.dark,
-  );
-  clusters(s, [[5, 3, 3, 1], [1, 6, 2, 1], [12, 9, 3, 1], [6, 13, 3, 1]], P_DIRT.light);
-  clusters(s, [[4, 5, 2, 1], [13, 2, 2, 1], [8, 14, 2, 1]], P_DIRT.deep);
-
-  // Small stones: a lit top edge over a shadowed base, per the global light.
-  const stones = variant === 1 ? [[4, 6], [11, 12]] : [[3, 4], [12, 7], [7, 12]];
-  for (const [x, y] of stones) {
-    s.fillRect(x, y, 2, 1, "#8a8175");
-    s.fillRect(x, y + 1, 2, 1, "#3f382c");
-  }
-  return s;
 }
 
 /** Cave floor: cold, dark stone, worn smooth with a few short fractures. */
@@ -3006,8 +2981,6 @@ function appIcon(size) {
 // ---------------------------------------------------------------------------
 
 // --- terrain -------------------------------------------------------------
-saveSprite(dirtTile(0), SCALE, `${OUT}/terrain/dirt_01.png`);
-saveSprite(dirtTile(1), SCALE, `${OUT}/terrain/dirt_02.png`);
 saveSprite(caveFloorTile(), SCALE, `${OUT}/terrain/cave_floor_01.png`);
 saveSprite(sewerFloorTile(), SCALE, `${OUT}/terrain/sewer_floor_01.png`);
 saveSprite(sewerWallTile(), SCALE, `${OUT}/terrain/wall_sewer_01.png`);

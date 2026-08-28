@@ -80,8 +80,18 @@ export const IMAGE_ASSETS: ImageAsset[] = [
   { key: "grass-flower-blue", path: "terrain/grass-flower-blue.png" },
   { key: "grass-flower-purple", path: "terrain/grass-flower-purple.png" },
   { key: "grass-mixed-flowers", path: "terrain/grass-mixed-flowers.png" },
-  { key: "dirt", path: "terrain/dirt_01.png" },
-  { key: "dirt-2", path: "terrain/dirt_02.png" },
+  // Real art the user supplied (DirtTiles.zip, not checked into the repo),
+  // replacing the old procedural dirt_01/02 the same way the cobble set
+  // replaced "road" — see the "D" LEGEND entry for the base pair and
+  // q/s/v for the low-density accent tiers (patches/debris/vegetation).
+  { key: "dirt-clean", path: "terrain/dirt-clean.png" },
+  { key: "dirt-dark", path: "terrain/dirt-dark.png" },
+  { key: "dirt-dark-patches", path: "terrain/dirt-dark-patches.png" },
+  { key: "dirt-pebbles", path: "terrain/dirt-pebbles.png" },
+  { key: "dirt-small-rock", path: "terrain/dirt-small-rock.png" },
+  { key: "dirt-twigs", path: "terrain/dirt-twigs.png" },
+  { key: "dirt-weeds", path: "terrain/dirt-weeds.png" },
+  { key: "dirt-mixed", path: "terrain/dirt-mixed.png" },
   { key: "cave-floor", path: "terrain/cave_floor_01.png" },
   { key: "sewer-floor", path: "terrain/sewer_floor_01.png" },
   { key: "wall-sewer", path: "terrain/wall_sewer_01.png" },

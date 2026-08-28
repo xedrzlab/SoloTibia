@@ -347,6 +347,14 @@ b.scatter(2, 32, MAP_WIDTH - 4, 24, "h", ["."], 0.025, 746);
 b.scatter(2, 32, MAP_WIDTH - 4, 24, "j", ["."], 0.015, 747);
 b.scatter(2, 32, MAP_WIDTH - 4, 24, "l", ["."], 0.01, 748);
 
+// Dirt accents ("D" cells: the island's shoreline ring, farm paths, and the
+// road stretch just outside the south gate) — same low-density tiering as
+// the grass accents above, scattered over the whole surface at once since
+// "D" isn't confined to a single rect the way the forest zones are.
+b.scatter(0, 0, MAP_WIDTH, SURFACE_HEIGHT, "s", ["D"], 0.05, 750);
+b.scatter(0, 0, MAP_WIDTH, SURFACE_HEIGHT, "q", ["D"], 0.03, 751);
+b.scatter(0, 0, MAP_WIDTH, SURFACE_HEIGHT, "v", ["D"], 0.03, 752);
+
 // ---------------------------------------------------------------------------
 // Props
 // ---------------------------------------------------------------------------
@@ -650,7 +658,13 @@ const LEGEND: Record<string, TileInfo> = {
     safe: true,
     groundFriction: 150,
   },
-  D: { walkable: true, textureKey: "dirt", variants: ["dirt", "dirt-2"], safe: false, groundFriction: 130 },
+  D: {
+    walkable: true,
+    textureKey: "dirt-clean",
+    variants: ["dirt-clean", "dirt-dark"],
+    safe: false,
+    groundFriction: 130,
+  },
   C: { walkable: true, textureKey: "cave-floor", safe: false, groundFriction: 140 },
   W: { walkable: false, textureKey: "stone-wall", safe: false },
   B: {
@@ -790,6 +804,32 @@ const LEGEND: Record<string, TileInfo> = {
     ],
     safe: false,
     groundFriction: 150,
+  },
+  // Same tiered treatment for dirt (DirtTiles.zip, see assets.ts) — q/s/v
+  // scattered onto "D" cells at low density below, same reasoning as h/i/j/l.
+  q: {
+    // Ground patches.
+    walkable: true,
+    textureKey: "dirt-clean",
+    variants: ["dirt-dark-patches"],
+    safe: false,
+    groundFriction: 130,
+  },
+  s: {
+    // Small debris.
+    walkable: true,
+    textureKey: "dirt-clean",
+    variants: ["dirt-pebbles", "dirt-small-rock", "dirt-twigs"],
+    safe: false,
+    groundFriction: 130,
+  },
+  v: {
+    // Weeds pushing through the dirt.
+    walkable: true,
+    textureKey: "dirt-clean",
+    variants: ["dirt-weeds", "dirt-mixed"],
+    safe: false,
+    groundFriction: 130,
   },
   m: { walkable: true, textureKey: "grass-clean", overlayKey: "mushrooms", safe: false, groundFriction: 150 },
   n: {
