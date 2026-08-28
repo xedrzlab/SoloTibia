@@ -972,6 +972,16 @@ function dustSprite() {
   return s;
 }
 
+/** A single soft puff, animated in code (WorldScene's spawnSmoke) rather than as drawn frames — same idea as dustSprite but paler/softer for chimney smoke. */
+function smokePuffSprite() {
+  const s = new Sprite(16, 16);
+  for (const [x, y, r] of [[7, 9, 3], [10, 7, 2.2], [5, 8, 2]]) {
+    s.fillCircle(x, y, r, "#8f8f96");
+  }
+  s.fillCircle(6.5, 7.5, 1.6, "#c4c4cc");
+  return s;
+}
+
 /** Arcane mote for spell impacts and level-ups. */
 function sparkleSprite() {
   const s = new Sprite(16, 16);
@@ -3513,6 +3523,7 @@ saveSprite(hitSparkSprite(), SCALE, `${OUT}/effects/hit_spark_01.png`);
 saveSprite(bloodSprite(), SCALE, `${OUT}/effects/blood_01.png`);
 saveSprite(dustSprite(), SCALE, `${OUT}/effects/dust_01.png`);
 saveSprite(sparkleSprite(), SCALE, `${OUT}/effects/sparkle_01.png`);
+saveSprite(smokePuffSprite(), SCALE, `${OUT}/effects/smoke_puff.png`);
 
 // --- items ---------------------------------------------------------------
 saveSprite(swordIcon(), SCALE, `${OUT}/items/weapon_sword.png`);

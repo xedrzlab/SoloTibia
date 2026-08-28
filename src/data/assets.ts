@@ -86,6 +86,9 @@ export const IMAGE_ASSETS: ImageAsset[] = [
   { key: "campfire", path: "props/campfire_01.png" },
   { key: "torch", path: "props/torch_01.png" },
   { key: "gravestone", path: "props/gravestone_01.png" },
+  // Real art cropped from the user's transparent props sheet (not procedural
+  // like the rest of this list) — a testing placement, see tilemap.ts PROPS.
+  { key: "chimney-brick", path: "props/chimney_brick.png" },
   { key: "chest", path: "props/chest_01.png" },
   { key: "ladder-up", path: "props/ladder_up_01.png" },
   { key: "sewer-entrance", path: "props/sewer_entrance_01.png" },
@@ -137,6 +140,7 @@ export const IMAGE_ASSETS: ImageAsset[] = [
   { key: "fx-blood", path: "effects/blood_01.png" },
   { key: "fx-dust", path: "effects/dust_01.png" },
   { key: "fx-sparkle", path: "effects/sparkle_01.png" },
+  { key: "fx-smoke", path: "effects/smoke_puff.png" },
 
   // --- item icons; keys match ItemDef.textureKey in src/data/items.ts ---
   { key: "sword", path: "items/weapon_sword.png" },

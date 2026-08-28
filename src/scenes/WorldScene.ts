@@ -451,6 +451,9 @@ export class WorldScene extends Phaser.Scene {
       if (prop.textureKey === "ladder-up") {
         this.ladders.push({ sprite, tileX: prop.x, tileY: prop.y });
       }
+      if (prop.textureKey === "chimney-brick") {
+        this.startChimneySmoke(sprite);
+      }
     }
 
     for (const sign of SIGNS) {
@@ -461,6 +464,41 @@ export class WorldScene extends Phaser.Scene {
         .setInteractive({ useHandCursor: true });
       sprite.on("pointerdown", () => this.log("info", sign.text));
     }
+  }
+
+  /**
+   * Loops a drifting smoke puff above a chimney for as long as the scene
+   * runs. The source art only has a static wisp baked in — this is what
+   * actually gives it motion, same tween-and-destroy idiom as burst() below,
+   * just repeating on a timer instead of firing once.
+   */
+  private startChimneySmoke(chimneySprite: Phaser.GameObjects.Image) {
+    const topX = chimneySprite.x - chimneySprite.displayWidth / 2;
+    const topY = chimneySprite.y - chimneySprite.displayHeight;
+    const spawnPuff = () => {
+      const puff = this.add
+        .image(topX + (Math.random() * 6 - 3), topY, "fx-smoke")
+        .setDepth(chimneySprite.depth + 0.1)
+        .setAlpha(0.55)
+        .setScale(0.5 + Math.random() * 0.15);
+      this.tweens.add({
+        targets: puff,
+        x: puff.x + (Math.random() * 16 - 8),
+        y: puff.y - 26 - Math.random() * 10,
+        scale: puff.scaleX + 0.6,
+        alpha: 0,
+        duration: 2200 + Math.random() * 800,
+        ease: "Sine.Out",
+        onComplete: () => puff.destroy(),
+      });
+    };
+    // Staggered start (not all chimneys puffing in lockstep) plus a steady
+    // repeat — a new puff every ~900ms-1.3s reads as a light, continuous
+    // trickle rather than a smoke machine.
+    this.time.delayedCall(Math.random() * 900, () => {
+      spawnPuff();
+      this.time.addEvent({ delay: 900 + Math.random() * 400, loop: true, callback: spawnPuff });
+    });
   }
 
   /**
