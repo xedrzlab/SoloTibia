@@ -417,12 +417,6 @@ export const PROPS: PropPlacement[] = [
   { textureKey: "chicken", x: 31, y: 48 },
   { textureKey: "chicken", x: 30, y: 49 },
 
-  // Testing placement only: real chimney art cropped from the user's props
-  // sheet, standing alone on the ground rather than on a roof — here to
-  // check the animated smoke (WorldScene.spawnSmoke) reads right before
-  // this becomes a real roof piece on an actual building.
-  { textureKey: "chimney-brick", x: 41, y: 26 },
-
   // Town cats.
   { textureKey: "cat", x: 22, y: 20 },
   { textureKey: "cat", x: 47, y: 20 },
