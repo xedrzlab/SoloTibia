@@ -58,10 +58,9 @@ None of Meat/Ham/Bear Paw/Honeycomb existed as items before this — they were a
 `meatIcon`/`hamIcon`/`bearPawIcon`/`honeycombIcon`, `npm run gen:assets` to regenerate).
 
 - **Meat** and **Ham** are stackable consumable food, same pattern as `cheese`
-  (`regenSeconds`/`regenPercentOfMaxHp`). Regen numbers are TibiaWiki's real ones — Meat
-  180s/15%, Ham 360s/30% ("Regeneration ... (N% full)" on each item's page) — mapped
-  directly onto this game's regen fields. Weight (4/8 oz) is still an estimate fit to
-  this game's existing scale, not read off the wiki.
+  (`regenSeconds`/`regenPercentOfMaxHp`). All figures are TibiaWiki's real ones: regen
+  Meat 180s/15%, Ham 360s/30% ("Regeneration ... (N% full)" on each item's page); weight
+  Meat 13 oz, Ham 20 oz.
 - **Honeycomb** and **Bear Paw** are stackable/non-stackable `"trophy"` items
   respectively (a new `ItemKind` — didn't fit consumable/currency/equipment/container/
   ammo) rather than food, per the user's call — real Tibia's Honeycomb is actually a
