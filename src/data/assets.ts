@@ -11,23 +11,24 @@
 export interface ImageAsset {
   key: string;
   path: string;
+  /**
+   * Everything else here is procedurally-drawn hard-edged pixel art, where
+   * the renderer's global nearest-neighbor filtering (pixelArt: true in
+   * main.ts) is exactly right. A handful of images are smooth/shaded
+   * external art instead (e.g. AI-generated creature frames, the Tudor
+   * house cropped from a real art sheet) — nearest-neighbor scaling those
+   * turns fine detail into a muddy, jagged blob (confirmed: it looked
+   * correct at desktop test zoom but wrong on an actual phone, where the
+   * same texture renders at a different size). Setting this flag switches
+   * just that texture to linear filtering in BootScene, leaving every real
+   * pixel-art image untouched.
+   */
+  smooth?: boolean;
 }
 
 export interface SheetAsset extends ImageAsset {
   frameWidth: number;
   frameHeight: number;
-  /**
-   * Everything else here is procedurally-drawn hard-edged pixel art, where
-   * the renderer's global nearest-neighbor filtering (pixelArt: true in
-   * main.ts) is exactly right. A handful of sheets are smooth/shaded
-   * external art instead (e.g. AI-generated creature frames) — nearest-
-   * neighbor downscaling those to a small on-screen size turns fine detail
-   * into a muddy blob (confirmed: it looked correct at desktop test zoom
-   * but wrong on an actual phone, where the same texture renders smaller).
-   * Setting this flag switches just that texture to linear filtering in
-   * BootScene, leaving every real pixel-art sheet untouched.
-   */
-  smooth?: boolean;
 }
 
 /** Frame size shared by everything drawn on the standard one-tile canvas. */
@@ -126,7 +127,7 @@ export const IMAGE_ASSETS: ImageAsset[] = [
   // user's transparent props sheet, not procedurally generated like the
   // rest of this list. Its chimney is a separate animated "chimney-brick"
   // prop placed on the roof, not baked into this image.
-  { key: "building-tudor-house", path: "buildings/tudor_house_01.png" },
+  { key: "building-tudor-house", path: "buildings/tudor_house_01.png", smooth: true },
 
   // --- npcs ---
   { key: "npc-borin", path: "characters/npc_borin.png" },

@@ -35,9 +35,9 @@ export class BootScene extends Phaser.Scene {
     // turns a smooth/shaded sheet into a muddy blob once it's downscaled to
     // a small on-screen size (confirmed: looked fine at a desktop test zoom,
     // wrong on an actual phone where the same texture renders smaller).
-    // Switch just those sheets to linear filtering.
-    for (const sheet of SHEET_ASSETS) {
-      if (sheet.smooth) this.textures.get(sheet.key).setFilter(Phaser.Textures.FilterMode.LINEAR);
+    // Switch just those images/sheets to linear filtering.
+    for (const asset of [...IMAGE_ASSETS, ...SHEET_ASSETS]) {
+      if (asset.smooth) this.textures.get(asset.key).setFilter(Phaser.Textures.FilterMode.LINEAR);
     }
 
     // Water is the one terrain that moves. Registering it here keeps the
