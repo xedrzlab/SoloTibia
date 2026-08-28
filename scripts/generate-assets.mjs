@@ -587,17 +587,6 @@ function mountainTile() {
   return s;
 }
 
-/** A worn travel path, distinct from raw dirt — lighter, more uniform, with faint wheel-rut lines. */
-function roadTile() {
-  const s = new Sprite(16, 16);
-  s.fillRect(0, 0, 16, 16, "#8a7860");
-  s.speckle(50, "#7d6c56", 301);
-  s.speckle(20, "#96856c", 302);
-  s.fillRect(3, 0, 1, 16, "#7d6c56");
-  s.fillRect(12, 0, 1, 16, "#7d6c56");
-  return s;
-}
-
 // ---------------------------------------------------------------------------
 // Environment props (standalone, transparent, collidable decoration)
 // ---------------------------------------------------------------------------
@@ -3027,7 +3016,6 @@ saveSprite(stoneWallTile(), SCALE, `${OUT}/terrain/wall_stone_01.png`);
 saveSprite(rockyGroundTile(), SCALE, `${OUT}/terrain/ground_rocky_01.png`);
 saveSprite(voidWallTile(), SCALE, `${OUT}/terrain/void_01.png`);
 saveSprite(mountainTile(), SCALE, `${OUT}/terrain/mountain_01.png`);
-saveSprite(roadTile(), SCALE, `${OUT}/terrain/road_01.png`);
 saveSprite(woodFloorTile(), SCALE, `${OUT}/terrain/wood_floor_01.png`);
 
 // Water is animated, so its frames ship as one sheet rather than a tile.

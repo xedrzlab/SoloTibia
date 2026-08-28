@@ -90,7 +90,14 @@ export const IMAGE_ASSETS: ImageAsset[] = [
   { key: "rocky-ground", path: "terrain/ground_rocky_01.png" },
   { key: "void-wall", path: "terrain/void_01.png" },
   { key: "mountain", path: "terrain/mountain_01.png" },
-  { key: "road", path: "terrain/road_01.png" },
+  // Real art the user supplied (cobble_road_.zip, not checked into the
+  // repo), replacing the old procedural "road" (a dirt/tan travel-path
+  // texture) for the town's streets — see the "R"/"P" LEGEND entries.
+  { key: "cobble-clean", path: "terrain/cobble-clean.png" },
+  { key: "cobble-cracked", path: "terrain/cobble-cracked.png" },
+  { key: "cobble-mossy", path: "terrain/cobble-mossy.png" },
+  { key: "cobble-road", path: "terrain/cobble-road.png" },
+  { key: "cobble-town-street", path: "terrain/cobble-town-street.png" },
   { key: "wood-floor", path: "terrain/wood_floor_01.png" },
 
   // --- environment ---

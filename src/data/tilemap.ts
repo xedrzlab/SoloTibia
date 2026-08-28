@@ -214,8 +214,10 @@ for (const entry of ENTRY_POINTS) {
 // Farm areas — southwest of the south gate
 // ---------------------------------------------------------------------------
 
-// Road from the south gate heads south, then a dirt path forks west to the farm.
-b.rect(34, TOWN.y + TOWN.h, 2, 6, "R");
+// The stretch just outside the south gate stays dirt, matching the farm
+// path it joins — only the streets *inside* the wall got the cobble
+// upgrade below.
+b.rect(34, TOWN.y + TOWN.h, 2, 6, "D");
 b.rect(22, 45, 14, 1, "D");
 b.rect(22, 46, 1, 3, "D");
 
@@ -660,8 +662,23 @@ const LEGEND: Record<string, TileInfo> = {
   "~": { walkable: false, textureKey: "water", animated: true, safe: false, groundFriction: 250 },
   g: { walkable: true, textureKey: "rocky-ground", safe: false, groundFriction: 160 },
   M: { walkable: false, textureKey: "mountain", safe: false },
-  R: { walkable: true, textureKey: "road", safe: false, groundFriction: 110 },
-  P: { walkable: true, textureKey: "road", safe: true, groundFriction: 110 },
+  R: {
+    walkable: true,
+    textureKey: "cobble-clean",
+    variants: ["cobble-clean", "cobble-cracked", "cobble-mossy", "cobble-road", "cobble-town-street"],
+    safe: false,
+    groundFriction: 110,
+  },
+  // The safe-zone plaza gets the tidier half of the set — cracked/mossy
+  // cobble would read oddly for the one patch of ground meant to feel
+  // cared-for (the respawn spot right at the church door).
+  P: {
+    walkable: true,
+    textureKey: "cobble-clean",
+    variants: ["cobble-clean", "cobble-town-street"],
+    safe: true,
+    groundFriction: 110,
+  },
   F: { walkable: true, textureKey: "wood-floor", safe: true, groundFriction: 100 },
   K: { walkable: true, textureKey: "sewer-floor", safe: false, groundFriction: 145 },
   V: { walkable: false, textureKey: "wall-sewer", safe: false },
