@@ -33,6 +33,30 @@ registerSW({
   },
 });
 
+// Chrome only offers "Install app" in its own menu when it feels like it,
+// and hides the entry entirely once it thinks an install already exists
+// (even a stale/incomplete one) — so give the player an explicit button
+// tied to the same underlying event, as a reliable fallback path.
+let deferredInstallPrompt: Event & { prompt(): Promise<void>; userChoice: Promise<{ outcome: string }> };
+const installBtn = document.getElementById("install-btn") as HTMLButtonElement | null;
+
+window.addEventListener("beforeinstallprompt", (event) => {
+  event.preventDefault();
+  deferredInstallPrompt = event as typeof deferredInstallPrompt;
+  installBtn?.classList.add("visible");
+});
+
+installBtn?.addEventListener("click", async () => {
+  if (!deferredInstallPrompt) return;
+  installBtn.classList.remove("visible");
+  await deferredInstallPrompt.prompt();
+  await deferredInstallPrompt.userChoice;
+});
+
+window.addEventListener("appinstalled", () => {
+  installBtn?.classList.remove("visible");
+});
+
 const game = new Phaser.Game({
   // Real users always get Phaser.AUTO (WebGL where available — better perf).
   // A `?renderer=canvas` override exists purely so this can be visually
