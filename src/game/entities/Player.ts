@@ -17,11 +17,17 @@ import { ITEMS } from "../../data/items";
 import { PAPER_DOLL_ORDER, paperDollKey } from "../../data/assets";
 import { Direction, directionFromDelta, directionalFrameIndex } from "../directionalSprite";
 
-// Matches the player sheet built by scripts/generate-assets.mjs:
-// 4 frames per direction (0 = idle, 1/2 = alternating walk steps, 3 = attack).
+// player_base_sheet.png (docs/monster-sources-style real art, see
+// scripts/generate-assets.mjs's PLAYER_LAYERS comment) is a 4-frame walk
+// cycle per direction with no dedicated standing-still or weapon-swing pose
+// — frame 0 is used as the idle/rest pose, frames 1-3 cycle while moving,
+// same treatment as the goblin/bear's continuousWalk monsters. Unlike those,
+// the player drives paper-doll equipment layers that must stay in exact
+// per-frame lockstep with the body every render, so this uses explicit
+// frame-index stepping (syncLayers() after every change) rather than a
+// Phaser animation running on its own clock.
 const PLAYER_FRAMES_PER_DIRECTION = 4;
-const ATTACK_FRAME = 3;
-/** How long the swing pose is held. Short enough not to fight the walk cycle. */
+/** How long the attack lunge is held — no swing pose to hold instead (see comment above). */
 const ATTACK_POSE_MS = 180;
 
 /** Base swing/shot interval in ms, before any gear or skill adjustment. */
@@ -33,7 +39,8 @@ export class Player {
   tileY: number;
   facing: Direction = "down";
   moving = false;
-  private stepToggle = false;
+  /** Cycles 1,2,3 across successive steps — frame 0 is reserved for idle. */
+  private walkFrame = 0;
 
   vocation: Vocation = "none";
   /** Full Attack/Balanced/Full Defense — scales only the skill x weapon-attack term of the damage formula. */
@@ -189,18 +196,29 @@ export class Player {
   }
 
   private applyFrame(idle: boolean) {
-    const frameInDirection = idle ? 0 : this.stepToggle ? 1 : 2;
+    const frameInDirection = idle ? 0 : this.walkFrame;
     this.sprite.setFrame(directionalFrameIndex(this.facing, frameInDirection, PLAYER_FRAMES_PER_DIRECTION));
     this.syncLayers();
   }
 
-  /** Hold the swing pose briefly, so a blow reads as an action. */
+  /**
+   * No dedicated swing pose exists (see the frame-layout comment up top), so
+   * an attack lunges forward and back instead — same fallback Monster.ts
+   * uses for creatures without an attack frame. The lunge tween drives
+   * syncLayers() on every update so worn gear rides along with the body.
+   */
   playAttack() {
-    this.sprite.setFrame(directionalFrameIndex(this.facing, ATTACK_FRAME, PLAYER_FRAMES_PER_DIRECTION));
-    this.syncLayers();
-    this.scene.time.delayedCall(ATTACK_POSE_MS, () => {
-      // Walking takes priority: stepTo drives the frame itself while moving.
-      if (!this.moving) this.applyFrame(true);
+    const restX = this.sprite.x;
+    this.scene.tweens.add({
+      targets: this.sprite,
+      x: restX + (this.facing === "left" ? -4 : 4),
+      duration: ATTACK_POSE_MS / 2,
+      yoyo: true,
+      onUpdate: () => this.syncLayers(),
+      onComplete: () => {
+        this.sprite.x = restX;
+        this.syncLayers();
+      },
     });
   }
 
@@ -236,7 +254,7 @@ export class Player {
       this.tileX = x;
       this.tileY = y;
       this.moving = true;
-      this.stepToggle = !this.stepToggle;
+      this.walkFrame = (this.walkFrame % (PLAYER_FRAMES_PER_DIRECTION - 1)) + 1;
       this.applyFrame(false);
       this.sprite.setDepth(depthForTileY(y));
       this.scene.tweens.add({

@@ -1318,8 +1318,13 @@ function playerBackpackFrame(direction) {
 }
 
 /** Every paper-doll layer, keyed by the name ItemDef.paperDoll refers to. */
+// "base" is deliberately not generated here anymore — the player's body is
+// now real/hand-authored art (public/assets/characters/player_base_sheet.png,
+// assembled by a one-off import script), same treatment as cave_rat_sheet.png.
+// playerBaseFrame() is kept only as a reference for the equipment layers
+// below, which were drawn to match its proportions and are now visually out
+// of sync with the new body until they get redrawn too.
 const PLAYER_LAYERS = {
-  base: (d, p) => playerBaseFrame(d, p),
   "armor-light": (d, p) => playerArmorFrame(d, p, false),
   "armor-heavy": (d, p) => playerArmorFrame(d, p, true),
   "helmet-light": (d) => playerHelmetFrame(d, false),
@@ -3479,10 +3484,10 @@ saveSprite(buildingLHouse(), SCALE, `${OUT}/buildings/l_house_01.png`);
 // --- characters ----------------------------------------------------------
 // The player is a paper doll: one sheet per layer, all sharing frame indices
 // so the game can stack whichever ones the character is currently wearing.
-let playerMeta;
+// player_base_sheet.png is real art now (see PLAYER_LAYERS comment above) —
+// not generated here, so it's not in this loop.
 for (const [layer, makeFrame] of Object.entries(PLAYER_LAYERS)) {
-  const meta = saveSpriteSheet(directionalFrames(makeFrame), SCALE, `${OUT}/characters/player_${layer.replace(/-/g, "_")}_sheet.png`);
-  if (layer === "base") playerMeta = meta;
+  saveSpriteSheet(directionalFrames(makeFrame), SCALE, `${OUT}/characters/player_${layer.replace(/-/g, "_")}_sheet.png`);
 }
 saveSprite(borinFrame(), SCALE, `${OUT}/characters/npc_borin.png`);
 saveSprite(wrenFrame(), SCALE, `${OUT}/characters/npc_wren.png`);
@@ -3544,6 +3549,6 @@ savePNG(appIcon(512).toPNG(1), `${ICONS}/icon-512.png`);
 
 console.log("Generated every game asset: terrain, environment, props, buildings, characters, creatures, effects, items, app icons.");
 console.log("water sheet meta:", waterMeta);
-console.log("PLAYER_SHEET must match:", playerMeta);
+console.log("PLAYER_SHEET (real art, not generated) must be 32x32 x16 frames to match the equipment layers above.");
 console.log("TROLL_SHEET must match:", trollMeta);
 console.log("rat sheet meta:", ratMeta);
