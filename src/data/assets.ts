@@ -236,6 +236,13 @@ export const IMAGE_ASSETS: ImageAsset[] = [
   // old procedural single-tile "counter". Three pieces so a multi-tile
   // counter reads as one built bar with proper end caps rather than a flat
   // texture repeated across the row — see InteriorScene's shopCounterFor.
+  // Each source tile had a few px of transparent margin plus its own
+  // dark plank-seam border on BOTH edges (a leftover from being drawn as
+  // a standalone piece), so placed side by side they read as separate
+  // boxes rather than one bar. Edited: the seam/border along whichever
+  // edge touches a neighbor is replaced with the plain body fill (sampled
+  // from the piece's own clean center column) so only the two true end
+  // posts (the outer edges of "left" and "right") still show a border.
   { key: "shop-counter-left", path: "props/shop-counter-left.png" },
   { key: "shop-counter-center", path: "props/shop-counter-center.png" },
   { key: "shop-counter-right", path: "props/shop-counter-right.png" },
