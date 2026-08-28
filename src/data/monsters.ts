@@ -15,6 +15,12 @@ export interface MonsterDef {
   frameCount: number;
   /** Set for sheets built by scripts/generate-assets.mjs (4 directions x N frames). Omit for simple non-directional 2-frame sheets. */
   framesPerDirection?: number;
+  /**
+   * Directional sheet has no dedicated step-alternation/attack art — just a
+   * looping walk cycle (frame 0 idle, the rest a walk animation registered
+   * in BootScene) rather than the troll's idle/stepA/stepB/attack poses.
+   */
+  continuousWalk?: boolean;
   hp: number;
   xp: number;
   minDamage: number;
@@ -56,6 +62,7 @@ export const MONSTERS: Record<string, MonsterDef> = {
     textureKey: "cave-rat",
     frameCount: 8,
     framesPerDirection: 2,
+    continuousWalk: true,
     hp: 30,
     xp: 10,
     minDamage: 1,
@@ -120,6 +127,7 @@ export const MONSTERS: Record<string, MonsterDef> = {
     textureKey: "cave-rat",
     frameCount: 8,
     framesPerDirection: 2,
+    continuousWalk: true,
     hp: 20,
     xp: 0,
     minDamage: 0,
@@ -128,6 +136,28 @@ export const MONSTERS: Record<string, MonsterDef> = {
     hitChance: 0,
     armor: 0,
     speed: 90,
+    fleeAtHpPct: 0,
+    loot: [],
+  },
+  // Testing spawn only: real isolated goblin art (6-frame walk cycle x 4
+  // directions) just landed, dropped into town with 0 damage/hitChance so
+  // it can be looked at and walked into safely before it gets balanced
+  // stats and a proper hunting-ground spawn.
+  goblin: {
+    id: "goblin",
+    name: "Goblin",
+    textureKey: "goblin",
+    frameCount: 24,
+    framesPerDirection: 6,
+    continuousWalk: true,
+    hp: 25,
+    xp: 0,
+    minDamage: 0,
+    maxDamage: 0,
+    attackIntervalMs: 2000,
+    hitChance: 0,
+    armor: 0,
+    speed: 70,
     fleeAtHpPct: 0,
     loot: [],
   },

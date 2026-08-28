@@ -124,16 +124,17 @@ export class Monster {
    * simple 2-frame sheets just toggle frame 0/1, flipped horizontally for
    * movement direction. A 4-pose sheet (troll: idle/stepA/stepB/attack)
    * alternates between the two dedicated step frames (1/2) once per tile
-   * step, which is how that art was designed to read. A 2-pose sheet
-   * (idle/move only, no separate step-alternation art — e.g. cave_rat) has
-   * no frame 2 to alternate into and looks static/gliding if held on one
-   * frame per step; instead it plays a real, continuously looping idle<->move
-   * animation (registered in BootScene) that only restarts when the facing
-   * direction actually changes, not on every step boundary.
+   * step, which is how that art was designed to read. A `continuousWalk`
+   * sheet (no separate step-alternation/attack art — cave_rat's idle+move,
+   * goblin's 6-frame walk cycle) has no fixed step frame to hold and looks
+   * static/gliding if held on one frame per step; instead it plays a real,
+   * continuously looping walk animation (registered in BootScene) that only
+   * restarts when the facing direction actually changes, not on every step
+   * boundary.
    */
   private applyFrame(idle: boolean) {
     const perDir = this.def.framesPerDirection;
-    if (perDir === 2) {
+    if (perDir && this.def.continuousWalk) {
       if (idle) {
         this.sprite.anims.stop();
         this.sprite.setFrame(directionalFrameIndex(this.facing, 0, perDir));
@@ -162,7 +163,7 @@ export class Monster {
    */
   playAttack() {
     const perDir = this.def.framesPerDirection;
-    if (perDir && perDir > ATTACK_FRAME) {
+    if (perDir && perDir > ATTACK_FRAME && !this.def.continuousWalk) {
       this.sprite.setFrame(directionalFrameIndex(this.facing, ATTACK_FRAME, perDir));
       this.scene.time.delayedCall(ATTACK_POSE_MS, () => {
         if (this.alive && !this.moving) this.applyFrame(true);

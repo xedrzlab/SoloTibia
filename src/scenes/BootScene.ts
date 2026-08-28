@@ -49,21 +49,22 @@ export class BootScene extends Phaser.Scene {
       repeat: -1,
     });
 
-    // A monster whose directional sheet is only idle+move (no dedicated
-    // stepA/stepB art, e.g. cave_rat) gets a real looping walk animation
-    // per direction instead of a frame flipped once per tile-step — it
-    // plays continuously while moving and only restarts if the direction
-    // changes, rather than resetting (or freezing) on every step boundary.
-    const twoPoseTextures = new Set(
+    // A monster whose directional sheet has no dedicated stepA/stepB/attack
+    // art (e.g. cave_rat's idle+move, goblin's 6-frame walk cycle) gets a
+    // real looping walk animation per direction instead of a frame flipped
+    // once per tile-step — it plays continuously while moving and only
+    // restarts if the direction changes, rather than resetting (or
+    // freezing) on every step boundary.
+    const continuousWalkTextures = new Map(
       Object.values(MONSTERS)
-        .filter((m) => m.framesPerDirection === 2)
-        .map((m) => m.textureKey),
+        .filter((m) => m.continuousWalk && m.framesPerDirection)
+        .map((m) => [m.textureKey, m.framesPerDirection!]),
     );
-    for (const textureKey of twoPoseTextures) {
+    for (const [textureKey, perDir] of continuousWalkTextures) {
       DIRECTION_ORDER.forEach((direction, i) => {
         this.anims.create({
           key: walkAnimKey(textureKey, direction),
-          frames: this.anims.generateFrameNumbers(textureKey, { start: i * 2, end: i * 2 + 1 }),
+          frames: this.anims.generateFrameNumbers(textureKey, { start: i * perDir, end: i * perDir + perDir - 1 }),
           frameRate: 5,
           repeat: -1,
         });
