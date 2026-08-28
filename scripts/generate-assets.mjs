@@ -1742,6 +1742,79 @@ function buildingTimberHall() {
 }
 
 /**
+ * Tudor house — 4 tiles wide (64x74 source), a steep red clay A-frame roof
+ * over cream plaster walls with dark timber cross-bracing, double doors and
+ * two flanking windows, plus a small gable window where the roof meets the
+ * eave. Replaces an earlier hand-cropped real-art PNG whose pixel size
+ * wasn't a clean multiple of a tile, so it never sat flush against its
+ * footprint however it was anchored/scaled — drawn procedurally instead, the
+ * same way every other building in town is, so it's guaranteed to line up.
+ */
+function buildingTudorHouse() {
+  const W = 64,
+    H = 74;
+  const s = new Sprite(W, H);
+  const wall = WALL_PLASTER;
+  const trim = WALL_TIMBER;
+  const roof = ROOF_CLAY;
+  const wallY = 42,
+    groundY = 70;
+  const cx = Math.floor(W / 2);
+
+  // Ground shadow
+  s.fillRect(4, groundY, W - 6, 2, "#14110f");
+  s.fillRect(6, groundY + 2, W - 8, 1, "#1a1712");
+
+  // Front wall — cream plaster, extends to ground
+  s.fillRect(3, wallY, W - 6, groundY - wallY, wall.mid);
+  s.fillRect(3, wallY, 2, groundY - wallY, wall.light);
+  s.fillRect(W - 5, wallY, 2, groundY - wallY, wall.dark);
+  s.speckleRect(5, wallY + 2, W - 12, groundY - wallY - 3, 26, wall.dark, 71);
+  s.speckleRect(5, wallY + 2, W - 12, groundY - wallY - 3, 14, wall.light, 72);
+
+  // Timber cross-bracing — corner posts plus a big X, the classic Tudor look
+  s.fillRect(3, wallY, 2, groundY - wallY, trim.mid);
+  s.fillRect(W - 5, wallY, 2, groundY - wallY, trim.mid);
+  s.line(3, wallY, cx, groundY, trim.mid);
+  s.line(W - 4, wallY, cx, groundY, trim.mid);
+  s.fillRect(3, wallY + 10, W - 6, 2, trim.mid);
+
+  // Steep A-frame roof — a full triangle rising almost to the top, same
+  // progress-based fill buildingLogCabin/buildingTowerHouse use.
+  const ridgeY = 3,
+    eaveY = wallY - 2;
+  s.fillRect(0, eaveY, W, 2, roof.dark); // eave line
+  s.fillRect(3, wallY, W - 6, 1, "#1a1512"); // shadow just under the eave
+  for (let y = ridgeY; y < eaveY; y++) {
+    const progress = (y - ridgeY) / (eaveY - ridgeY);
+    const halfW = Math.floor(progress * (W / 2 - 1));
+    s.fillRect(cx - halfW, y, halfW * 2 + 1, 1, roof.mid);
+    if ((y - ridgeY) % 3 === 0) s.fillRect(cx - halfW, y, halfW * 2 + 1, 1, roof.dark); // tile courses
+  }
+  // Light falls from the upper left: brighten that face, deepen the right.
+  for (let y = ridgeY; y < eaveY; y++) {
+    const progress = (y - ridgeY) / (eaveY - ridgeY);
+    const halfW = Math.floor(progress * (W / 2 - 1));
+    if (halfW > 0) s.fillRect(cx - halfW, y, Math.min(8, halfW), 1, roof.light);
+    if (halfW > 5) s.fillRect(cx + halfW - 5, y, 5, 1, roof.dark);
+  }
+  // Ridge cap
+  s.setPixel(cx, ridgeY - 1, roof.dark);
+  s.fillRect(cx - 1, ridgeY, 3, 1, roof.dark);
+
+  // Small gable window low on the roof, timber-framed, where the eave meets the ridge.
+  drawWindow(s, cx - 3, eaveY - 12, 6, 6, null);
+
+  drawDoor(s, cx, wallY + 8, groundY);
+  drawWindow(s, 10, wallY + 10, 7, 7, null);
+  drawWindow(s, W - 17, wallY + 10, 7, 7, null);
+
+  // Doorstep
+  s.fillRect(cx - 6, groundY - 2, 12, 2, WALL_STONE.light);
+  return s;
+}
+
+/**
  * Tower house — 2 tiles wide, 3 tall (32x64). Narrow stone tower with a
  * steep pointed roof, arrow-slit window, heavy studded door.
  */
@@ -3145,6 +3218,7 @@ saveSprite(buildingLogCabin(), SCALE, `${OUT}/buildings/log_cabin_01.png`);
 saveSprite(buildingWorkshop(), SCALE, `${OUT}/buildings/workshop_01.png`);
 saveSprite(buildingFarmhouse(), SCALE, `${OUT}/buildings/farmhouse_01.png`);
 saveSprite(buildingLHouse(), SCALE, `${OUT}/buildings/l_house_01.png`);
+saveSprite(buildingTudorHouse(), SCALE, `${OUT}/buildings/tudor_house_01.png`);
 
 // --- characters ----------------------------------------------------------
 // player_base_sheet.png is real art, not generated here (see the comment

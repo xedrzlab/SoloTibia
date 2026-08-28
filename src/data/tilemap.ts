@@ -421,9 +421,8 @@ export const PROPS: PropPlacement[] = [
   // this becomes a real roof piece on an actual building.
   { textureKey: "chimney-brick", x: 41, y: 26 },
   // On the tudor house's roof (footprint at 33,33 4x3 above) — position
-  // tuned by eye against a live screenshot, not derived from the building
-  // image's pixel layout (the two assets aren't tile-grid-aligned to begin
-  // with).
+  // tuned by eye against a live screenshot; re-check after any change to
+  // buildingTudorHouse's roof shape in generate-assets.mjs.
   { textureKey: "chimney-brick", x: 35, y: 32 },
 
   // Town cats.

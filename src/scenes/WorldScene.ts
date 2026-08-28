@@ -421,21 +421,15 @@ export class WorldScene extends Phaser.Scene {
   private buildEnvironmentDecoration() {
     for (const building of BUILDINGS) {
       // Anchor at the bottom-right tile of the footprint (Tibia-style oblique
-      // anchor) so the building leans up-left over the tiles behind it.
+      // anchor) so the building leans up-left over the tiles behind it. Every
+      // building image is drawn exactly footprintW * TILE_SIZE wide (see
+      // generate-assets.mjs) so this lands flush against the footprint with
+      // no gap or overlap.
+      const anchorTileX = building.footprintX + building.footprintW - 1;
       const anchorTileY = building.footprintY + building.footprintH - 1;
-      // Centered horizontally on the footprint rather than flush against its
-      // right edge: every procedurally-drawn building is already exactly
-      // footprintW tiles wide, so this lands in the same place it always
-      // did for them. Real-art buildings (e.g. the Tudor house, cropped
-      // from a source sheet at a width that isn't a clean multiple of
-      // TILE_SIZE) split the leftover margin evenly across both sides
-      // instead of piling it up on one — no stretching, so the art stays
-      // crisp at its native resolution rather than the blur/smear a forced
-      // scale-to-fit produced.
-      const footprintCenterX = tileAnchorX(building.footprintX - 1) + (building.footprintW * TILE_SIZE) / 2;
       this.add
-        .image(footprintCenterX, tileAnchorY(anchorTileY), building.textureKey)
-        .setOrigin(0.5, 1)
+        .image(tileAnchorX(anchorTileX), tileAnchorY(anchorTileY), building.textureKey)
+        .setOrigin(1, 1)
         .setDepth(depthForTileY(anchorTileY));
     }
     // Props are anchored like everything else, so tall ones (torches, carts)

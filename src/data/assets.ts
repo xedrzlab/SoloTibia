@@ -123,11 +123,13 @@ export const IMAGE_ASSETS: ImageAsset[] = [
   { key: "building-workshop", path: "buildings/workshop_01.png" },
   { key: "building-farmhouse", path: "buildings/farmhouse_01.png" },
   { key: "building-l-house", path: "buildings/l_house_01.png" },
-  // Real art (wall/roof/door/windows composited into one image) from the
-  // user's transparent props sheet, not procedurally generated like the
-  // rest of this list. Its chimney is a separate animated "chimney-brick"
-  // prop placed on the roof, not baked into this image.
-  { key: "building-tudor-house", path: "buildings/tudor_house_01.png", smooth: true },
+  // Procedurally generated like the rest of this list (buildingTudorHouse
+  // in generate-assets.mjs) — started as real art cropped from the user's
+  // transparent props sheet, but that crop's pixel size wasn't a clean
+  // multiple of a tile and never sat flush on its footprint. Its chimney
+  // is a separate animated "chimney-brick" prop placed on the roof, not
+  // baked into this image.
+  { key: "building-tudor-house", path: "buildings/tudor_house_01.png" },
 
   // --- npcs ---
   { key: "npc-borin", path: "characters/npc_borin.png" },
