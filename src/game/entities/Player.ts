@@ -20,6 +20,8 @@ import { Direction, directionFromDelta, directionalFrameIndex } from "../directi
 // idle/rest pose, frames 1-3 cycle while moving, same treatment as the
 // goblin/bear's continuousWalk monsters.
 const PLAYER_FRAMES_PER_DIRECTION = 4;
+/** Sprite scale multiplier — same knob Monster.ts uses per-monster, applied here for the player's own bump in size. */
+const PLAYER_SCALE = 1.5;
 /** How long the attack lunge is held — no swing pose to hold instead (see comment above). */
 const ATTACK_POSE_MS = 180;
 
@@ -101,6 +103,7 @@ export class Player {
       directionalFrameIndex("down", 0, PLAYER_FRAMES_PER_DIRECTION),
     );
     this.sprite.setOrigin(1, 1);
+    this.sprite.setScale(PLAYER_SCALE);
     this.sprite.setDepth(depthForTileY(tileY));
 
     // A silhouette cast one pixel down-right, behind the body. Two jobs: it
@@ -111,6 +114,7 @@ export class Player {
     this.silhouette = scene.add
       .sprite(this.sprite.x + 1, this.sprite.y + 1, "player", this.sprite.frame.name)
       .setOrigin(1, 1)
+      .setScale(PLAYER_SCALE)
       .setTint(0x000000)
       .setAlpha(0.4)
       .setDepth(this.sprite.depth - 0.05);
