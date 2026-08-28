@@ -89,18 +89,16 @@ export const ITEMS: Record<string, ItemDef> = {
     regenSeconds: 108,
     regenPercentOfMaxHp: 0.1,
   },
+  // Trophy drops for now (not food) — kind "trophy" didn't exist before
+  // bear's loot table needed it.
   honeycomb: {
     id: "honeycomb",
     name: "Honeycomb",
     textureKey: "honeycomb",
-    kind: "consumable",
+    kind: "trophy",
     stackable: true,
     weight: 6,
-    regenSeconds: 96,
-    regenPercentOfMaxHp: 0.12,
   },
-  // Not food — a trophy drop, doesn't fit any existing ItemKind, so it's
-  // its own kind rather than misclassified as a consumable.
   bear_paw: {
     id: "bear_paw",
     name: "Bear Paw",

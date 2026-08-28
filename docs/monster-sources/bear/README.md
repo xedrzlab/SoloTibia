@@ -56,11 +56,16 @@ TibiaWiki's loot table (estimated from ~61k kill samples):
 None of Meat/Ham/Bear Paw/Honeycomb existed as items before this — they were added to
 `src/data/items.ts` (icons generated in `scripts/generate-assets.mjs`:
 `meatIcon`/`hamIcon`/`bearPawIcon`/`honeycombIcon`, `npm run gen:assets` to regenerate).
-Meat/Ham/Honeycomb are simple consumable food (`regenSeconds`/`regenPercentOfMaxHp`,
-same pattern as `cheese`) with weight/regen values estimated to fit this game's existing
-scale — TibiaWiki's own combat page doesn't carry food-regen numbers, since real Tibia
-food only staves off hunger rather than healing. Bear Paw is a non-consumable trophy
-drop, which didn't fit any existing `ItemKind`, so a new `"trophy"` kind was added.
+
+- **Meat** and **Ham** are stackable consumable food, same pattern as `cheese`
+  (`regenSeconds`/`regenPercentOfMaxHp`). Their weight/regen numbers are still *estimates*
+  fit to this game's existing scale, not read off the wiki — TibiaWiki's own Meat/Ham
+  pages have the real weight (and, in real Tibia, hunger-satiation rather than HP regen)
+  figures if those are ever wanted for accuracy.
+- **Honeycomb** and **Bear Paw** are stackable/non-stackable `"trophy"` items
+  respectively (a new `ItemKind` — didn't fit consumable/currency/equipment/container/
+  ammo) rather than food, per the user's call — real Tibia's Honeycomb is actually a
+  minor consumable, but this game treats it as a curio for now.
 
 ## To actually spawn it
 
