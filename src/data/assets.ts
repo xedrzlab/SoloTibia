@@ -59,6 +59,36 @@ export const IMAGE_ASSETS: ImageAsset[] = [
   { key: "grass-flowers-purple", path: "terrain/grass-flowers-purple.png" },
   { key: "grass-flowers-orange", path: "terrain/grass-flowers-orange.png" },
   { key: "grass-flowers-mixed", path: "terrain/grass-flowers-mixed.png" },
+  // 20 more tiles the user supplied as individual, already-32x32,
+  // already-named files (grass_tiles_32x32_individual.zip, not checked
+  // into the repo) — no cropping needed, just registered under the same
+  // key style. Unlike the flat swatches above, these are meant to be used
+  // by rarity tier, not thrown into one shared pool: grass-clean/short/light
+  // join the base "." variants below (subtle, common); the rest get their
+  // own low-density LEGEND tile letters (h/i/j/l) further down, each
+  // scattered far more sparingly than the base tier — see the comment by
+  // the "h" entry for why a flat equal-weight variants list was the
+  // mistake last time.
+  { key: "grass-clean", path: "terrain/grass-clean.png" },
+  { key: "grass-short", path: "terrain/grass-short.png" },
+  { key: "grass-light", path: "terrain/grass-light.png" },
+  { key: "grass-tuft", path: "terrain/grass-tuft.png" },
+  { key: "grass-two-tufts", path: "terrain/grass-two-tufts.png" },
+  { key: "grass-small-weeds", path: "terrain/grass-small-weeds.png" },
+  { key: "grass-mixed-weeds", path: "terrain/grass-mixed-weeds.png" },
+  { key: "grass-small-rocks", path: "terrain/grass-small-rocks.png" },
+  { key: "grass-pebbles", path: "terrain/grass-pebbles.png" },
+  { key: "grass-twig", path: "terrain/grass-twig.png" },
+  { key: "grass-leaf-clusters", path: "terrain/grass-leaf-clusters.png" },
+  { key: "grass-mud-patch", path: "terrain/grass-mud-patch.png" },
+  { key: "grass-dark-patch", path: "terrain/grass-dark-patch.png" },
+  { key: "grass-light-patch", path: "terrain/grass-light-patch.png" },
+  { key: "grass-flower-white", path: "terrain/grass-flower-white.png" },
+  { key: "grass-flower-yellow", path: "terrain/grass-flower-yellow.png" },
+  { key: "grass-flower-red", path: "terrain/grass-flower-red.png" },
+  { key: "grass-flower-blue", path: "terrain/grass-flower-blue.png" },
+  { key: "grass-flower-purple", path: "terrain/grass-flower-purple.png" },
+  { key: "grass-mixed-flowers", path: "terrain/grass-mixed-flowers.png" },
   { key: "dirt", path: "terrain/dirt_01.png" },
   { key: "dirt-2", path: "terrain/dirt_02.png" },
   { key: "cave-floor", path: "terrain/cave_floor_01.png" },

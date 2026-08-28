@@ -315,21 +315,35 @@ b.scatter(2, 4, 18, 20, "b", ["."], 0.05, 701);
 b.scatter(2, 4, 18, 20, "f", ["."], 0.04, 702);
 b.scatter(2, 4, 18, 20, "e", ["."], 0.06, 703);
 b.scatter(2, 4, 18, 20, "z", ["."], 0.02, 704);
+b.scatter(2, 4, 18, 20, "i", ["."], 0.05, 705);
+b.scatter(2, 4, 18, 20, "h", ["."], 0.03, 706);
+b.scatter(2, 4, 18, 20, "j", ["."], 0.02, 707);
+b.scatter(2, 4, 18, 20, "l", ["."], 0.015, 708);
 
 b.scatter(50, 4, 18, 20, "p", ["."], 0.14, 720);
 b.scatter(50, 4, 18, 20, "m", ["."], 0.05, 721);
 b.scatter(50, 4, 18, 20, "f", ["."], 0.03, 722);
 b.scatter(50, 4, 18, 20, "e", ["."], 0.06, 723);
 b.scatter(50, 4, 18, 20, "z", ["."], 0.02, 724);
+b.scatter(50, 4, 18, 20, "i", ["."], 0.05, 725);
+b.scatter(50, 4, 18, 20, "h", ["."], 0.03, 726);
+b.scatter(50, 4, 18, 20, "j", ["."], 0.02, 727);
+b.scatter(50, 4, 18, 20, "l", ["."], 0.015, 728);
 
 b.scatter(TOWN.x - 3, TOWN.y - 3, TOWN.w + 6, TOWN.h + 6, "f", ["."], 0.03, 730);
 b.scatter(TOWN.x - 3, TOWN.y - 3, TOWN.w + 6, TOWN.h + 6, "n", ["."], 0.02, 731);
+b.scatter(TOWN.x - 3, TOWN.y - 3, TOWN.w + 6, TOWN.h + 6, "i", ["."], 0.03, 732);
+b.scatter(TOWN.x - 3, TOWN.y - 3, TOWN.w + 6, TOWN.h + 6, "l", ["."], 0.01, 733);
 
 b.scatter(2, 32, MAP_WIDTH - 4, 24, "t", ["."], 0.05, 740);
 b.scatter(2, 32, MAP_WIDTH - 4, 24, "b", ["."], 0.02, 741);
 b.scatter(2, 32, MAP_WIDTH - 4, 24, "f", ["."], 0.04, 742);
 b.scatter(2, 32, MAP_WIDTH - 4, 24, "e", ["."], 0.04, 743);
 b.scatter(2, 32, MAP_WIDTH - 4, 24, "z", ["."], 0.015, 744);
+b.scatter(2, 32, MAP_WIDTH - 4, 24, "i", ["."], 0.04, 745);
+b.scatter(2, 32, MAP_WIDTH - 4, 24, "h", ["."], 0.025, 746);
+b.scatter(2, 32, MAP_WIDTH - 4, 24, "j", ["."], 0.015, 747);
+b.scatter(2, 32, MAP_WIDTH - 4, 24, "l", ["."], 0.01, 748);
 
 // ---------------------------------------------------------------------------
 // Props
@@ -633,6 +647,9 @@ const LEGEND: Record<string, TileInfo> = {
       "grass-sparse-2",
       "grass-autumn",
       "grass-mossy",
+      "grass-clean",
+      "grass-short",
+      "grass-light",
     ],
     safe: false,
     groundFriction: 150,
@@ -689,6 +706,54 @@ const LEGEND: Record<string, TileInfo> = {
       "grass-flowers-purple",
       "grass-flowers-orange",
       "grass-flowers-mixed",
+    ],
+    safe: false,
+    groundFriction: 150,
+  },
+  // Four more tiers from grass_tiles_32x32_individual.zip (see assets.ts),
+  // each its own tile letter with its own scatter density — NOT folded
+  // into "."'s variants pool. That pool is picked with equal probability
+  // per entry (variantForCell/cellHash), so mixing rare accents in at the
+  // same weight as the common base tiles is what made an earlier pass at
+  // this look busy/patchy instead of like a lawn with occasional detail.
+  // Scatter density is the only lever for "how rare", so each tier gets
+  // its own letter and its own (low) density in the b.scatter calls below.
+  h: {
+    // Ground patches — the most visible tier, so the lowest density.
+    walkable: true,
+    textureKey: "grass",
+    variants: ["grass-mud-patch", "grass-dark-patch", "grass-light-patch"],
+    safe: false,
+    groundFriction: 150,
+  },
+  i: {
+    // Tufts/weeds — light texture detail.
+    walkable: true,
+    textureKey: "grass",
+    variants: ["grass-tuft", "grass-two-tufts", "grass-small-weeds", "grass-mixed-weeds"],
+    safe: false,
+    groundFriction: 150,
+  },
+  j: {
+    // Small debris.
+    walkable: true,
+    textureKey: "grass",
+    variants: ["grass-small-rocks", "grass-pebbles", "grass-twig", "grass-leaf-clusters"],
+    safe: false,
+    groundFriction: 150,
+  },
+  l: {
+    // Single wildflowers, dotted thinly — distinct from "z"'s solid-colour
+    // meadow patches (a denser cluster covering the whole tile).
+    walkable: true,
+    textureKey: "grass",
+    variants: [
+      "grass-flower-white",
+      "grass-flower-yellow",
+      "grass-flower-red",
+      "grass-flower-blue",
+      "grass-flower-purple",
+      "grass-mixed-flowers",
     ],
     safe: false,
     groundFriction: 150,
