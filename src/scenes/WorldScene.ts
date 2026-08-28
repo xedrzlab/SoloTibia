@@ -292,7 +292,7 @@ export class WorldScene extends Phaser.Scene {
     );
     bus.on(EVENTS.SELECT_TARGET, (payload: SelectTargetPayload) => {
       const monster = this.monsters[payload.id];
-      if (monster?.alive) this.setTarget(monster);
+      if (monster?.alive) this.toggleTarget(monster);
     });
     bus.on(EVENTS.DROP_ITEM, (payload: DropItemPayload) => this.dropItem(payload.from, payload.screenX, payload.screenY));
     bus.on(EVENTS.PICKUP_ITEM, (payload: PickupItemPayload) => this.pickupItem(payload.index));
@@ -589,7 +589,7 @@ export class WorldScene extends Phaser.Scene {
 
     const hitMonster = this.monsters.find((m) => m.alive && m.sprite.getBounds().contains(wx, wy));
     if (hitMonster) {
-      this.setTarget(hitMonster);
+      this.toggleTarget(hitMonster);
       return;
     }
 
@@ -647,12 +647,21 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private setTarget(monster: Monster) {
+    this.target?.setTargeted(false);
     this.target = monster;
+    monster.setTargeted(true);
     this.chaseTimer = 0;
     bus.emit(EVENTS.TARGET, { name: monster.def.name, hp: monster.hp, maxHp: monster.def.hp });
   }
 
+  /** Re-selecting the current target un-targets it instead — same toggle whether picked via the Battle window or tapped in the world. */
+  private toggleTarget(monster: Monster) {
+    if (this.target === monster) this.clearTarget();
+    else this.setTarget(monster);
+  }
+
   private clearTarget() {
+    this.target?.setTargeted(false);
     this.target = null;
     bus.emit(EVENTS.TARGET, null);
     this.pendingWalkToPile = null;

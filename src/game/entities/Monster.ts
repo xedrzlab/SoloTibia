@@ -30,6 +30,7 @@ export class Monster {
   private hpBarBg: Phaser.GameObjects.Rectangle;
   private hpBarFill: Phaser.GameObjects.Rectangle;
   private nameLabel: Phaser.GameObjects.Text;
+  private targetFrame: Phaser.GameObjects.Rectangle;
   private aiTimer = Math.random() * AI_TICK_MS; // desync monsters so they don't all decide on the same frame
   private attackCooldown = 0;
   private respawnTimer = 0;
@@ -72,10 +73,24 @@ export class Monster {
     // player should be able to read a monster's health at a glance the
     // moment they see it, the same way the name tag already works.
     this.updateHpBar();
+
+    // Red outline around the sprite while this monster is the current
+    // target — hidden by default, toggled by WorldScene.setTarget/clearTarget.
+    this.targetFrame = scene.add
+      .rectangle(0, 0, this.sprite.displayWidth, this.sprite.displayHeight, 0x000000, 0)
+      .setStrokeStyle(2, 0xff2020, 1)
+      .setDepth(8)
+      .setVisible(false);
+    this.syncBarPosition();
   }
 
   get tile(): TileCoord {
     return { x: this.tileX, y: this.tileY };
+  }
+
+  /** Toggled by WorldScene.setTarget/clearTarget — a red outline around the sprite while this monster is the current target. */
+  setTargeted(targeted: boolean) {
+    this.targetFrame.setVisible(targeted);
   }
 
   /** Sprite origin is bottom-right (oblique-projection anchor), so the horizontal center is offset left by half the width. */
@@ -118,6 +133,10 @@ export class Monster {
     this.hpBarFill.y = barY;
     this.hpBarFill.x = barX - (24 - this.hpBarFill.width) / 2;
     this.nameLabel.setPosition(barX, this.nameY());
+    // Guarded: called once from updateHpBar() in the constructor, before
+    // targetFrame exists yet — the explicit call right after creating it
+    // covers that first positioning.
+    this.targetFrame?.setPosition(barX, this.sprite.y - this.sprite.displayHeight / 2);
   }
 
   /**
@@ -239,6 +258,7 @@ export class Monster {
     this.hpBarBg.setVisible(false);
     this.hpBarFill.setVisible(false);
     this.nameLabel.setVisible(false);
+    this.targetFrame.setVisible(false);
     this.respawnTimer = MONSTER_RESPAWN_MS;
   }
 
@@ -320,5 +340,6 @@ export class Monster {
     this.hpBarBg.destroy();
     this.hpBarFill.destroy();
     this.nameLabel.destroy();
+    this.targetFrame.destroy();
   }
 }
