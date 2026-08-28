@@ -123,12 +123,17 @@ export const IMAGE_ASSETS: ImageAsset[] = [
   { key: "building-workshop", path: "buildings/workshop_01.png" },
   { key: "building-farmhouse", path: "buildings/farmhouse_01.png" },
   { key: "building-l-house", path: "buildings/l_house_01.png" },
-  // Composited from several pieces of real art cropped from the user's
-  // transparent props sheet (PropsSheetTrans.png, not checked into the
-  // repo): a timber-frame wall panel, a door, two windows, and a gable
-  // roof piece — each cropped separately with margin on every side so
-  // none of them are clipped, then assembled into one building image.
-  { key: "building-tudor-house", path: "buildings/tudor_house_01.png" },
+  // A single AI-generated house icon the user supplied (House1.png, not
+  // checked into the repo) — a complete building already: shingled roof,
+  // stone chimney, timber porch, door, two windows and a stone path.
+  // Its background was a two-tone checkerboard baked into the RGB pixels
+  // (no real alpha) rather than true transparency, so it was rebuilt into
+  // one via a near-neutral/near-white color match, then cropped to the
+  // house's bounding box and downscaled (Lanczos) from ~930x1026 to
+  // 128x141. Smooth/shaded art like the goblin, bear and cave-rat
+  // sheets — linear-filtered in BootScene rather than left on the
+  // renderer's default nearest-neighbor pixel-art filtering.
+  { key: "building-tudor-house", path: "buildings/tudor_house_01.png", smooth: true },
 
   // --- npcs ---
   { key: "npc-borin", path: "characters/npc_borin.png" },

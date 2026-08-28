@@ -199,17 +199,10 @@ export const BUILDINGS: BuildingPlacement[] = [
   // L-shaped brick house — 4x4 footprint with courtyard.
   { textureKey: "building-l-house", footprintX: 26, footprintY: 32, footprintW: 4, footprintH: 4 },
   // Composited from real art cropped from the user's props sheet
-  // (PropsSheetTrans.png, not checked into the repo) — a timber-frame
-  // wall tile (tiled twice, 2px overlap so the tile's own antialiased
-  // edge column doesn't leave a translucent seam down the middle), a
-  // door, two windows, and a gable roof piece, each cropped separately
-  // with margin on every side so nothing is clipped. The roof sits on a
-  // solid timber trim line sampled from the wall art's own post color,
-  // so it reads as resting on the wall instead of floating above a
-  // mismatched fill. 110x91 native, slightly wider than its 3x3
-  // footprint — leans up-left over the tiles behind
-  // it like every other oversized building/prop.
-  { textureKey: "building-tudor-house", footprintX: 33, footprintY: 33, footprintW: 3, footprintH: 3 },
+  // A single AI-generated house icon (see assets.ts) — 128x141, so this
+  // is one of the few buildings taller than its footprint width; the
+  // extra height is roof overhang, same convention as the church/tower.
+  { textureKey: "building-tudor-house", footprintX: 33, footprintY: 33, footprintW: 4, footprintH: 4 },
   { textureKey: "building-log-cabin", footprintX: 40, footprintY: 33, footprintW: 3, footprintH: 3 },
   { textureKey: "building-house", footprintX: 47, footprintY: 33, footprintW: 3, footprintH: 3 },
 
