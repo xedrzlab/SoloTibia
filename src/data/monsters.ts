@@ -23,6 +23,17 @@ export interface MonsterDef {
   continuousWalk?: boolean;
   /** Sprite scale multiplier, for a monster whose art is bigger/smaller than the norm without needing its own larger source frames (cf. troll/cave_rat, which bake size into the sheet itself). Omit for 1x. */
   scale?: number;
+  /**
+   * The creature's actual silhouette within its frame, as fractions (0-1)
+   * of the full frame — every sheet has transparent padding around the
+   * art (a small ground creature like the rat/slime sits in the lower half
+   * of its frame, not the full height), so the red target outline needs
+   * this to hug the creature instead of the frame. Measured from the union
+   * of the opaque bounding box across every frame in the sheet (so it
+   * doesn't need to change during the walk cycle). Omit for the full
+   * frame (0,1,0,1).
+   */
+  targetBox?: { xMin: number; xMax: number; yMin: number; yMax: number };
   hp: number;
   xp: number;
   minDamage: number;
@@ -44,6 +55,7 @@ export const MONSTERS: Record<string, MonsterDef> = {
     name: "Rat",
     textureKey: "rat",
     frameCount: 2,
+    targetBox: { xMin: 0, xMax: 0.94, yMin: 0.25, yMax: 0.88 },
     hp: 20,
     xp: 5,
     minDamage: 0,
@@ -65,6 +77,7 @@ export const MONSTERS: Record<string, MonsterDef> = {
     frameCount: 8,
     framesPerDirection: 2,
     continuousWalk: true,
+    targetBox: { xMin: 0.05, xMax: 0.95, yMin: 0.05, yMax: 0.93 },
     hp: 30,
     xp: 10,
     minDamage: 1,
@@ -84,6 +97,7 @@ export const MONSTERS: Record<string, MonsterDef> = {
     name: "Slime",
     textureKey: "slime",
     frameCount: 2,
+    targetBox: { xMin: 0.06, xMax: 0.94, yMin: 0.38, yMax: 1 },
     hp: 8,
     xp: 3,
     minDamage: 0,
@@ -104,6 +118,7 @@ export const MONSTERS: Record<string, MonsterDef> = {
     textureKey: "troll",
     frameCount: 16,
     framesPerDirection: 4,
+    targetBox: { xMin: 0, xMax: 1, yMin: 0.08, yMax: 1 },
     hp: 50,
     xp: 25,
     minDamage: 3,
@@ -130,6 +145,7 @@ export const MONSTERS: Record<string, MonsterDef> = {
     frameCount: 8,
     framesPerDirection: 2,
     continuousWalk: true,
+    targetBox: { xMin: 0.05, xMax: 0.95, yMin: 0.05, yMax: 0.93 },
     hp: 20,
     xp: 0,
     minDamage: 0,
@@ -153,6 +169,7 @@ export const MONSTERS: Record<string, MonsterDef> = {
     framesPerDirection: 6,
     continuousWalk: true,
     scale: 1.5,
+    targetBox: { xMin: 0.16, xMax: 0.84, yMin: 0.09, yMax: 0.91 },
     hp: 25,
     xp: 0,
     minDamage: 0,
@@ -178,6 +195,7 @@ export const MONSTERS: Record<string, MonsterDef> = {
     framesPerDirection: 4,
     continuousWalk: true,
     scale: 2,
+    targetBox: { xMin: 0.09, xMax: 0.88, yMin: 0.09, yMax: 0.88 },
     hp: 80,
     xp: 23,
     minDamage: 0,

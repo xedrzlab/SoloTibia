@@ -76,8 +76,21 @@ export class Monster {
 
     // Red outline around the sprite while this monster is the current
     // target — hidden by default, toggled by WorldScene.setTarget/clearTarget.
+    // Sized from def.targetBox (the creature's actual silhouette within its
+    // frame) rather than the full frame — most sheets have real transparent
+    // padding around the art (a ground creature like the rat/slime doesn't
+    // fill anywhere near the full frame height), so a frame-sized outline
+    // reads as loose/mis-fit around the creature.
+    const box = def.targetBox ?? { xMin: 0, xMax: 1, yMin: 0, yMax: 1 };
     this.targetFrame = scene.add
-      .rectangle(0, 0, this.sprite.displayWidth, this.sprite.displayHeight, 0x000000, 0)
+      .rectangle(
+        0,
+        0,
+        this.sprite.displayWidth * (box.xMax - box.xMin),
+        this.sprite.displayHeight * (box.yMax - box.yMin),
+        0x000000,
+        0,
+      )
       .setStrokeStyle(2, 0xff2020, 1)
       .setDepth(8)
       .setVisible(false);
@@ -135,8 +148,16 @@ export class Monster {
     this.nameLabel.setPosition(barX, this.nameY());
     // Guarded: called once from updateHpBar() in the constructor, before
     // targetFrame exists yet — the explicit call right after creating it
-    // covers that first positioning.
-    this.targetFrame?.setPosition(barX, this.sprite.y - this.sprite.displayHeight / 2);
+    // covers that first positioning. Centered on the targetBox (not
+    // necessarily the full frame's center — see the constructor comment),
+    // since the box isn't always symmetric within the frame.
+    const box = this.def.targetBox ?? { xMin: 0, xMax: 1, yMin: 0, yMax: 1 };
+    const frameTopLeftX = this.sprite.x - this.sprite.displayWidth;
+    const frameTopLeftY = this.sprite.y - this.sprite.displayHeight;
+    this.targetFrame?.setPosition(
+      frameTopLeftX + ((box.xMin + box.xMax) / 2) * this.sprite.displayWidth,
+      frameTopLeftY + ((box.yMin + box.yMax) / 2) * this.sprite.displayHeight,
+    );
   }
 
   /**
