@@ -1,6 +1,16 @@
 // Starter bestiary — the "cellar" hunting ground from docs/GAME_DESIGN.md §3.
 // More zones/monsters get added here as new hunting grounds are built.
 
+import { Direction } from "../game/directionalSprite";
+
+/** A creature's opaque bounding box within its frame, as fractions (0-1). */
+export interface TargetBox {
+  xMin: number;
+  xMax: number;
+  yMin: number;
+  yMax: number;
+}
+
 export interface LootEntry {
   itemId: string;
   chance: number; // 0..1
@@ -28,12 +38,17 @@ export interface MonsterDef {
    * of the full frame — every sheet has transparent padding around the
    * art (a small ground creature like the rat/slime sits in the lower half
    * of its frame, not the full height), so the red target outline needs
-   * this to hug the creature instead of the frame. Measured from the union
-   * of the opaque bounding box across every frame in the sheet (so it
-   * doesn't need to change during the walk cycle). Omit for the full
-   * frame (0,1,0,1).
+   * this to hug the creature instead of the frame. Measured from the
+   * opaque bounding box of that direction's frame(s) — a side (left/right)
+   * pose is often much wider than a front/back (down/up) one (a bear or
+   * cave-rat seen from the side spans nearly the whole frame width; head-on
+   * it's much narrower), so a single box shared across all four directions
+   * either clips the wide pose or sits loose around the narrow ones. A
+   * plain box applies to every direction (fine when a creature's silhouette
+   * doesn't vary much by facing, e.g. the troll or the non-directional
+   * rat/slime); omit entirely for the full frame (0,1,0,1).
    */
-  targetBox?: { xMin: number; xMax: number; yMin: number; yMax: number };
+  targetBox?: TargetBox | Partial<Record<Direction, TargetBox>>;
   hp: number;
   xp: number;
   minDamage: number;
@@ -48,6 +63,24 @@ export interface MonsterDef {
   fleeAtHpPct: number; // 0 = never flees
   loot: LootEntry[];
 }
+
+// Shared per-direction target boxes for the cave-rat texture (used by both
+// cave_rat and curious_rat) and the bear — side-on (left/right) is much
+// wider and shorter than front/back (down/up) for both, so one shared box
+// across all four directions was either loose or clipped depending on facing.
+const CAVE_RAT_TARGET_BOX = {
+  down: { xMin: 0.25, xMax: 0.75, yMin: 0.05, yMax: 0.93 },
+  up: { xMin: 0.25, xMax: 0.75, yMin: 0.05, yMax: 0.93 },
+  left: { xMin: 0.05, xMax: 0.95, yMin: 0.25, yMax: 0.75 },
+  right: { xMin: 0.05, xMax: 0.95, yMin: 0.25, yMax: 0.75 },
+};
+
+const BEAR_TARGET_BOX = {
+  down: { xMin: 0.25, xMax: 0.75, yMin: 0.09, yMax: 0.88 },
+  up: { xMin: 0.25, xMax: 0.75, yMin: 0.09, yMax: 0.88 },
+  left: { xMin: 0.09, xMax: 0.88, yMin: 0.22, yMax: 0.75 },
+  right: { xMin: 0.09, xMax: 0.88, yMin: 0.22, yMax: 0.75 },
+};
 
 export const MONSTERS: Record<string, MonsterDef> = {
   rat: {
@@ -77,7 +110,7 @@ export const MONSTERS: Record<string, MonsterDef> = {
     frameCount: 8,
     framesPerDirection: 2,
     continuousWalk: true,
-    targetBox: { xMin: 0.05, xMax: 0.95, yMin: 0.05, yMax: 0.93 },
+    targetBox: CAVE_RAT_TARGET_BOX,
     hp: 30,
     xp: 10,
     minDamage: 1,
@@ -145,7 +178,7 @@ export const MONSTERS: Record<string, MonsterDef> = {
     frameCount: 8,
     framesPerDirection: 2,
     continuousWalk: true,
-    targetBox: { xMin: 0.05, xMax: 0.95, yMin: 0.05, yMax: 0.93 },
+    targetBox: CAVE_RAT_TARGET_BOX,
     hp: 20,
     xp: 0,
     minDamage: 0,
@@ -195,7 +228,7 @@ export const MONSTERS: Record<string, MonsterDef> = {
     framesPerDirection: 4,
     continuousWalk: true,
     scale: 2,
-    targetBox: { xMin: 0.09, xMax: 0.88, yMin: 0.09, yMax: 0.88 },
+    targetBox: BEAR_TARGET_BOX,
     hp: 80,
     xp: 23,
     minDamage: 0,

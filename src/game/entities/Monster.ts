@@ -6,7 +6,7 @@ import {
   RESPAWN_SAFE_DISTANCE,
   stepDurationMs,
 } from "../constants";
-import { MonsterDef } from "../../data/monsters";
+import { MonsterDef, TargetBox } from "../../data/monsters";
 import { findPath, chebyshevDistance, TileCoord } from "../pathfinding";
 import { Direction, directionFromDelta, directionalFrameIndex, walkAnimKey } from "../directionalSprite";
 import { tileAnchorX, tileAnchorY, depthForTileY } from "../tileAnchor";
@@ -80,17 +80,11 @@ export class Monster {
     // frame) rather than the full frame — most sheets have real transparent
     // padding around the art (a ground creature like the rat/slime doesn't
     // fill anywhere near the full frame height), so a frame-sized outline
-    // reads as loose/mis-fit around the creature.
-    const box = def.targetBox ?? { xMin: 0, xMax: 1, yMin: 0, yMax: 1 };
+    // reads as loose/mis-fit around the creature. syncBarPosition() (called
+    // continuously during movement) keeps both size and position current
+    // as facing changes, for creatures whose box differs per direction.
     this.targetFrame = scene.add
-      .rectangle(
-        0,
-        0,
-        this.sprite.displayWidth * (box.xMax - box.xMin),
-        this.sprite.displayHeight * (box.yMax - box.yMin),
-        0x000000,
-        0,
-      )
+      .rectangle(0, 0, 0, 0, 0x000000, 0)
       .setStrokeStyle(2, 0xff2020, 1)
       .setDepth(8)
       .setVisible(false);
@@ -148,16 +142,29 @@ export class Monster {
     this.nameLabel.setPosition(barX, this.nameY());
     // Guarded: called once from updateHpBar() in the constructor, before
     // targetFrame exists yet — the explicit call right after creating it
-    // covers that first positioning. Centered on the targetBox (not
-    // necessarily the full frame's center — see the constructor comment),
-    // since the box isn't always symmetric within the frame.
-    const box = this.def.targetBox ?? { xMin: 0, xMax: 1, yMin: 0, yMax: 1 };
+    // covers that first positioning. Resized and centered on the current
+    // direction's targetBox (not necessarily the full frame's center, and
+    // not necessarily the same size as the last direction's box — see
+    // resolveTargetBox()) every call, so it tracks facing changes too.
+    const box = this.resolveTargetBox();
     const frameTopLeftX = this.sprite.x - this.sprite.displayWidth;
     const frameTopLeftY = this.sprite.y - this.sprite.displayHeight;
+    this.targetFrame?.setSize(
+      this.sprite.displayWidth * (box.xMax - box.xMin),
+      this.sprite.displayHeight * (box.yMax - box.yMin),
+    );
     this.targetFrame?.setPosition(
       frameTopLeftX + ((box.xMin + box.xMax) / 2) * this.sprite.displayWidth,
       frameTopLeftY + ((box.yMin + box.yMax) / 2) * this.sprite.displayHeight,
     );
+  }
+
+  /** def.targetBox is either one box for every direction, or a per-direction map (see the MonsterDef comment) — resolve to the box for the current facing. */
+  private resolveTargetBox(): TargetBox {
+    const box = this.def.targetBox;
+    if (!box) return { xMin: 0, xMax: 1, yMin: 0, yMax: 1 };
+    if ("xMin" in box) return box;
+    return box[this.facing] ?? { xMin: 0, xMax: 1, yMin: 0, yMax: 1 };
   }
 
   /**
