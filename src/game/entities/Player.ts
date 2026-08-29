@@ -177,8 +177,19 @@ export class Player {
       // never left looping or mid-cycle from the previous step, since the
       // next tile can have a different friction/diagonal and so a
       // different duration.
+      //
+      // Passing `duration` alone does NOT work here: BootScene registers
+      // this animation with an explicit frameRate, and Phaser's
+      // AnimationState.play() resolves a missing `frameRate` in the play
+      // config by falling back to the anim's own registered frameRate
+      // (Animation.calculateDuration always lets a non-null frameRate win
+      // over duration, even a duration given in the same call) — so the
+      // fixed 5fps/600ms cycle silently kept running regardless of this
+      // step's real length. Compute frameRate directly instead: 3 walk
+      // frames evenly spanning stepDurationMs, no fallback ambiguity.
       const key = walkAnimKey("player", this.facing);
-      this.sprite.anims.play({ key, duration: stepDurationMs, repeat: 0 });
+      const frameRate = 3000 / (stepDurationMs || BASE_STEP_MS);
+      this.sprite.anims.play({ key, frameRate, repeat: 0 });
     }
     this.syncSilhouette();
   }
