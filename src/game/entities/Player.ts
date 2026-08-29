@@ -160,16 +160,25 @@ export class Player {
     this.facing = directionFromDelta(dx, dy, this.facing);
   }
 
-  private applyFrame(idle: boolean) {
+  /**
+   * `stepDurationMs` is the current tile-step's own tween duration — the
+   * walk cycle is timed to that (not a fixed frame rate) so the 3 walk
+   * frames play out as exactly one cycle per tile-step, old-Tibia style:
+   * legs never run ahead of or lag behind the body's actual travel time,
+   * whether that's a slow level-1 step or a fast high-level/cobble one.
+   * Unused (and omittable) on the idle branch.
+   */
+  private applyFrame(idle: boolean, stepDurationMs?: number) {
     if (idle) {
       this.sprite.anims.stop();
       this.sprite.setFrame(directionalFrameIndex(this.facing, 0, PLAYER_FRAMES_PER_DIRECTION));
     } else {
-      // Each step's completion stops the anim (the idle branch above) before
-      // the next one starts it again — same key, so also check isPlaying, or
-      // a same-direction restart after that stop would never fire.
+      // Every step (re)plays from the start, at that step's own duration —
+      // never left looping or mid-cycle from the previous step, since the
+      // next tile can have a different friction/diagonal and so a
+      // different duration.
       const key = walkAnimKey("player", this.facing);
-      if (!this.sprite.anims.isPlaying || this.sprite.anims.currentAnim?.key !== key) this.sprite.play(key);
+      this.sprite.anims.play({ key, duration: stepDurationMs, repeat: 0 });
     }
     this.syncSilhouette();
   }
@@ -226,7 +235,7 @@ export class Player {
       this.tileX = x;
       this.tileY = y;
       this.moving = true;
-      this.applyFrame(false);
+      this.applyFrame(false, duration);
       this.sprite.setDepth(depthForTileY(y));
       this.scene.tweens.add({
         targets: this.sprite,
