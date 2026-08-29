@@ -76,13 +76,20 @@ export class BootScene extends Phaser.Scene {
     // monsters above (see Player.ts's applyFrame). Frame 0 is reserved for
     // the idle pose, so unlike the monsters' loop above, the player's loop
     // starts at frame 1 and excludes it.
+    //
+    // Sequence is 1,2,3,2 (not the plain ascending 1,2,3) — pixel-diffing
+    // the sheet showed 3→1 (the wrap of a straight 1,2,3 loop) is the single
+    // biggest frame-to-frame jump in the cycle, since frame 3 and frame 1
+    // aren't visually equivalent poses; frame 2 sits visually between both
+    // 1 and 3, so ping-ponging back through it every repeat (…,3,2,1,2,3,2,1,…)
+    // replaces that jump with the cycle's two smallest ones.
     const PLAYER_FRAMES_PER_DIRECTION = 4;
+    const PLAYER_WALK_SEQUENCE = [1, 2, 3, 2];
     DIRECTION_ORDER.forEach((direction, i) => {
       this.anims.create({
         key: walkAnimKey("player", direction),
         frames: this.anims.generateFrameNumbers("player", {
-          start: i * PLAYER_FRAMES_PER_DIRECTION + 1,
-          end: i * PLAYER_FRAMES_PER_DIRECTION + PLAYER_FRAMES_PER_DIRECTION - 1,
+          frames: PLAYER_WALK_SEQUENCE.map((f) => i * PLAYER_FRAMES_PER_DIRECTION + f),
         }),
         frameRate: 5,
         repeat: -1,

@@ -162,8 +162,8 @@ export class Player {
 
   /**
    * `stepDurationMs` is the current tile-step's own tween duration — the
-   * walk cycle is timed to that (not a fixed frame rate) so the 3 walk
-   * frames play out as exactly one cycle per tile-step, old-Tibia style:
+   * walk cycle is timed to that (not a fixed frame rate) so the walk
+   * sequence plays out as exactly one cycle per tile-step, old-Tibia style:
    * legs never run ahead of or lag behind the body's actual travel time,
    * whether that's a slow level-1 step or a fast high-level/cobble one.
    * Unused (and omittable) on the idle branch.
@@ -185,10 +185,11 @@ export class Player {
       // (Animation.calculateDuration always lets a non-null frameRate win
       // over duration, even a duration given in the same call) — so the
       // fixed 5fps/600ms cycle silently kept running regardless of this
-      // step's real length. Compute frameRate directly instead: 3 walk
-      // frames evenly spanning stepDurationMs, no fallback ambiguity.
+      // step's real length. Compute frameRate directly instead: BootScene's
+      // PLAYER_WALK_SEQUENCE (1,2,3,2 — 4 entries) evenly spanning
+      // stepDurationMs, no fallback ambiguity.
       const key = walkAnimKey("player", this.facing);
-      const frameRate = 3000 / (stepDurationMs || BASE_STEP_MS);
+      const frameRate = 4000 / (stepDurationMs || BASE_STEP_MS);
       this.sprite.anims.play({ key, frameRate, repeat: 0 });
     }
     this.syncSilhouette();
