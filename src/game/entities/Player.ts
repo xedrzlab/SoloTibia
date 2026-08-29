@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { BASE_SPEED, BASE_STEP_MS, SPEED_PER_LEVEL, stepDurationMs as sharedStepDurationMs } from "../constants";
+import { BASE_SPEED, BASE_STEP_MS, SPEED_PER_LEVEL, TILE_SIZE, stepDurationMs as sharedStepDurationMs } from "../constants";
 import { tileAnchorX, tileAnchorY, depthForTileY } from "../tileAnchor";
 import {
   Vocation,
@@ -25,6 +25,25 @@ import { Direction, directionFromDelta, directionalFrameIndex, walkAnimKey } fro
 const PLAYER_FRAMES_PER_DIRECTION = 4;
 /** Sprite scale multiplier — same knob Monster.ts uses per-monster, applied here for the player's own bump in size. */
 const PLAYER_SCALE = 1.5;
+/**
+ * tileAnchorX/Y (origin (1,1), the shared "leaning" anchor every tall
+ * sprite in the game uses — see tileAnchor.ts) pins the sprite's
+ * bottom-right corner to the tile's own bottom-right corner. That's
+ * correct for something genuinely taller/wider than one tile (trees,
+ * buildings): the extra canvas is real height that should overhang
+ * upward. The player's source frame isn't that — the character's own
+ * opaque pixels already fill nearly the whole 32x32 frame (measured
+ * bbox center sits within half a pixel of the frame's true center, in
+ * every frame of every direction) — so scaling it up by PLAYER_SCALE
+ * while still pinning the bottom-right corner just drags the whole
+ * enlarged sprite up and left of the tile: pinning growth-32
+ * (extra width/height from the scale) entirely to the upper-left
+ * hangs 8px too far each way at 1.5x. This offsets the render position
+ * back by exactly that amount so the character's actual silhouette
+ * centers on the tile, without moving tileAnchorX/Y itself, this.tileX/
+ * tileY, or anything any other system reads as the player's position.
+ */
+const PLAYER_ANCHOR_OFFSET = ((PLAYER_SCALE - 1) * TILE_SIZE) / 2;
 /** How long the attack lunge is held — no swing pose to hold instead (see comment above). */
 const ATTACK_POSE_MS = 180;
 
@@ -98,8 +117,8 @@ export class Player {
     this.equipStartingGear();
 
     this.sprite = scene.add.sprite(
-      tileAnchorX(tileX),
-      tileAnchorY(tileY),
+      this.spriteAnchorX(tileX),
+      this.spriteAnchorY(tileY),
       "player",
       directionalFrameIndex("down", 0, PLAYER_FRAMES_PER_DIRECTION),
     );
@@ -154,6 +173,15 @@ export class Player {
 
   get tile(): { x: number; y: number } {
     return { x: this.tileX, y: this.tileY };
+  }
+
+  /** Where the sprite itself (not the logical tile — see PLAYER_ANCHOR_OFFSET) should render for a given tile. */
+  private spriteAnchorX(tileX: number): number {
+    return tileAnchorX(tileX) + PLAYER_ANCHOR_OFFSET;
+  }
+
+  private spriteAnchorY(tileY: number): number {
+    return tileAnchorY(tileY) + PLAYER_ANCHOR_OFFSET;
   }
 
   setFacing(dx: number, dy: number) {
@@ -251,8 +279,8 @@ export class Player {
       this.sprite.setDepth(depthForTileY(y));
       this.scene.tweens.add({
         targets: this.sprite,
-        x: tileAnchorX(x),
-        y: tileAnchorY(y),
+        x: this.spriteAnchorX(x),
+        y: this.spriteAnchorY(y),
         duration,
         onUpdate: () => this.syncSilhouette(), // shadow rides the tween with the body
         onComplete: () => {
@@ -357,8 +385,8 @@ export class Player {
   teleportTo(x: number, y: number) {
     this.tileX = x;
     this.tileY = y;
-    this.sprite.x = tileAnchorX(x);
-    this.sprite.y = tileAnchorY(y);
+    this.sprite.x = this.spriteAnchorX(x);
+    this.sprite.y = this.spriteAnchorY(y);
     this.sprite.setDepth(depthForTileY(y));
     this.syncSilhouette();
   }
