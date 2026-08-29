@@ -34,6 +34,16 @@ export interface MonsterDef {
   /** Sprite scale multiplier, for a monster whose art is bigger/smaller than the norm without needing its own larger source frames (cf. troll/cave_rat, which bake size into the sheet itself). Omit for 1x. */
   scale?: number;
   /**
+   * How many tiles long this creature's body actually is — a real
+   * multi-tile footprint (not just an oversized sprite drawn over one
+   * tile), so a long creature like the bear genuinely occupies its front
+   * tile AND the tile its back legs trail on: both block movement/pathing
+   * for everyone else, and the creature's own next step must lead onto a
+   * free tile the same way a 1-tile creature's does (the tile its tail
+   * vacates was, trivially, already its own). Omit for 1 (the norm).
+   */
+  footprintTiles?: number;
+  /**
    * The creature's actual silhouette within its frame, as fractions (0-1)
    * of the full frame — every sheet has transparent padding around the
    * art (a small ground creature like the rat/slime sits in the lower half
@@ -228,6 +238,7 @@ export const MONSTERS: Record<string, MonsterDef> = {
     framesPerDirection: 4,
     continuousWalk: true,
     scale: 2,
+    footprintTiles: 2,
     targetBox: BEAR_TARGET_BOX,
     hp: 80,
     xp: 23,

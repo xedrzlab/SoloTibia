@@ -74,3 +74,8 @@ export function findPath(
 export function chebyshevDistance(a: TileCoord, b: TileCoord): number {
   return Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y));
 }
+
+/** Distance to whichever of a multi-tile creature's occupied tiles is nearest — so being next to a bear's trailing back legs counts the same as being next to its head. */
+export function closestChebyshevDistance(a: TileCoord, tiles: TileCoord[]): number {
+  return Math.min(...tiles.map((t) => chebyshevDistance(a, t)));
+}

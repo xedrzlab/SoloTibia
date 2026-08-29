@@ -29,7 +29,7 @@ import { SPELLS } from "../data/spells";
 import { ChosenVocation, VOCATION_NAMES, vocationDisplayName } from "../game/stats";
 import { Player } from "../game/entities/Player";
 import { Monster } from "../game/entities/Monster";
-import { findPath, chebyshevDistance, TileCoord } from "../game/pathfinding";
+import { findPath, chebyshevDistance, closestChebyshevDistance, TileCoord } from "../game/pathfinding";
 import { DebugOverlay } from "../game/debugOverlay";
 import { DayNightCycle } from "../game/dayNight";
 import { getActiveCharacter, updateActiveCharacter, setActiveCharacter } from "../game/profile";
@@ -649,7 +649,11 @@ export class WorldScene extends Phaser.Scene {
     if (!opts.ignorePlayer && this.player.tileX === x && this.player.tileY === y) return false;
     for (const m of this.monsters) {
       if (!m.alive || m === opts.ignoreMonster) continue;
-      if (m.tileX === x && m.tileY === y) return false;
+      // A multi-tile creature (see MonsterDef.footprintTiles) blocks every
+      // tile its body actually covers, not just the one its sprite anchors
+      // to — otherwise something could path straight through a bear's back
+      // legs.
+      if (m.occupiedTiles().some((t) => t.x === x && t.y === y)) return false;
     }
     return true;
   }
@@ -806,7 +810,9 @@ export class WorldScene extends Phaser.Scene {
     }
 
     const { mode, range } = this.resolveAttackMode();
-    const dist = chebyshevDistance(this.player.tile, target.tile);
+    // Distance to whichever occupied tile is closest — a multi-tile
+    // creature's trailing tiles count the same as its front for range.
+    const dist = closestChebyshevDistance(this.player.tile, target.occupiedTiles());
     this.player.attackCooldown -= delta;
 
     if (dist <= range) {
@@ -890,7 +896,7 @@ export class WorldScene extends Phaser.Scene {
         // distanceMaxDamage; a hit rolls the normal range untouched by
         // whatever the hit chance happened to be.
         const maxRange = equipment.attackRange();
-        const dist = chebyshevDistance(player.tile, target.tile);
+        const dist = closestChebyshevDistance(player.tile, target.occupiedTiles());
         const hitChancePct = distanceHitChance(dist, maxRange) * 100;
         const roll = Math.random() * 100;
         const hit = roll < hitChancePct;
@@ -1007,7 +1013,7 @@ export class WorldScene extends Phaser.Scene {
         this.log("info", "You need a target for that spell.");
         return;
       }
-      if (chebyshevDistance(player.tile, target.tile) > (spell.range ?? 1)) {
+      if (closestChebyshevDistance(player.tile, target.occupiedTiles()) > (spell.range ?? 1)) {
         this.log("info", "The target is too far away.");
         return;
       }

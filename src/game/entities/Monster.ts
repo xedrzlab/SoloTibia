@@ -7,7 +7,7 @@ import {
   stepDurationMs,
 } from "../constants";
 import { MonsterDef, TargetBox } from "../../data/monsters";
-import { findPath, chebyshevDistance, TileCoord } from "../pathfinding";
+import { findPath, chebyshevDistance, closestChebyshevDistance, TileCoord } from "../pathfinding";
 import { Direction, directionFromDelta, directionalFrameIndex, walkAnimKey } from "../directionalSprite";
 import { tileAnchorX, tileAnchorY, depthForTileY } from "../tileAnchor";
 
@@ -26,6 +26,14 @@ export class Monster {
   moving = false;
   facing: Direction = "down";
   private stepToggle = false;
+  /**
+   * Tiles trailing behind the front (tileX, tileY), most recent first —
+   * where a multi-tile creature's back segments actually are, built from
+   * its own step history so a turn drags the tail around the corner
+   * instead of cutting across it. Length is always def.footprintTiles - 1;
+   * stays empty for every 1-tile creature.
+   */
+  private trail: TileCoord[] = [];
 
   private hpBarBg: Phaser.GameObjects.Rectangle;
   private hpBarFill: Phaser.GameObjects.Rectangle;
@@ -44,6 +52,7 @@ export class Monster {
     this.tileX = spawnX;
     this.tileY = spawnY;
     this.hp = def.hp;
+    this.trail = Array.from({ length: (def.footprintTiles ?? 1) - 1 }, () => ({ x: spawnX, y: spawnY }));
 
     this.sprite = scene.add.sprite(tileAnchorX(spawnX), tileAnchorY(spawnY), def.textureKey, 0);
     this.sprite.setOrigin(1, 1);
@@ -93,6 +102,11 @@ export class Monster {
 
   get tile(): TileCoord {
     return { x: this.tileX, y: this.tileY };
+  }
+
+  /** Every tile this creature's body actually covers right now — the front tile plus any trailing segments (see `trail`). Empty-footprint creatures just get the one. */
+  occupiedTiles(): TileCoord[] {
+    return [this.tile, ...this.trail];
   }
 
   /** Toggled by WorldScene.setTarget/clearTarget — a red outline around the sprite while this monster is the current target. */
@@ -248,6 +262,14 @@ export class Monster {
       } else if (dx !== 0) {
         this.sprite.setFlipX(dx < 0);
       }
+      // The tile it's stepping off becomes the new front of the trail — the
+      // tail follows the exact path taken, so a turn drags it around the
+      // corner rather than cutting across it.
+      const footprint = this.def.footprintTiles ?? 1;
+      if (footprint > 1) {
+        this.trail.unshift({ x: this.tileX, y: this.tileY });
+        this.trail.length = footprint - 1;
+      }
       this.tileX = x;
       this.tileY = y;
       this.moving = true;
@@ -295,6 +317,10 @@ export class Monster {
     this.hp = this.def.hp;
     this.tileX = this.spawnX;
     this.tileY = this.spawnY;
+    this.trail = Array.from({ length: (this.def.footprintTiles ?? 1) - 1 }, () => ({
+      x: this.spawnX,
+      y: this.spawnY,
+    }));
     this.sprite.setPosition(tileAnchorX(this.spawnX), tileAnchorY(this.spawnY));
     this.sprite.setDepth(depthForTileY(this.spawnY));
     this.facing = "down";
@@ -331,7 +357,9 @@ export class Monster {
     if (!playerAlive) return;
 
     this.attackCooldown -= dtMs;
-    const dist = chebyshevDistance(this.tile, playerTile);
+    // Closest occupied tile, not just the front one — a bear can bite from
+    // its back legs' tile just as well as its head's.
+    const dist = closestChebyshevDistance(playerTile, this.occupiedTiles());
 
     if (dist <= MELEE_RANGE) {
       if (this.attackCooldown <= 0) {
