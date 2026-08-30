@@ -45,6 +45,12 @@ const PLAYER_ANCHOR_OFFSET = ((PLAYER_SCALE - 1) * TILE_SIZE) / 2;
 const PLAYER_FOOT_ROW = 30;
 /** Gap from the scaled frame's bottom edge up to the feet, in screen px. */
 const PLAYER_FEET_FROM_BOTTOM = (TILE_SIZE - PLAYER_FOOT_ROW) * PLAYER_SCALE;
+/**
+ * Small downward nudge so the feet sit just below the tile's exact centre
+ * (in the lower half of the tile) rather than dead-centre — reads as more
+ * grounded without letting the boots spill into the tile below.
+ */
+const PLAYER_FOOT_NUDGE = 5;
 /** How long the attack lunge is held — no swing pose to hold instead (see comment above). */
 const ATTACK_POSE_MS = 180;
 
@@ -189,7 +195,7 @@ export class Player {
     // origin is (1,1), so sprite.y is the frame's bottom edge: back off half
     // a tile to reach the tile centre, then down by the frame-bottom-to-feet
     // gap so the feet (not the empty rows below them) hit that centre.
-    return tileAnchorY(tileY) - TILE_SIZE / 2 + PLAYER_FEET_FROM_BOTTOM;
+    return tileAnchorY(tileY) - TILE_SIZE / 2 + PLAYER_FEET_FROM_BOTTOM + PLAYER_FOOT_NUDGE;
   }
 
   setFacing(dx: number, dy: number) {
