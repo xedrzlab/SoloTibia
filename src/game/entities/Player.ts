@@ -26,24 +26,25 @@ const PLAYER_FRAMES_PER_DIRECTION = 4;
 /** Sprite scale multiplier — same knob Monster.ts uses per-monster, applied here for the player's own bump in size. */
 const PLAYER_SCALE = 1.5;
 /**
- * tileAnchorX/Y (origin (1,1), the shared "leaning" anchor every tall
- * sprite in the game uses — see tileAnchor.ts) pins the sprite's
- * bottom-right corner to the tile's own bottom-right corner. That's
- * correct for something genuinely taller/wider than one tile (trees,
- * buildings): the extra canvas is real height that should overhang
- * upward. The player's source frame isn't that — the character's own
- * opaque pixels already fill nearly the whole 32x32 frame (measured
- * bbox center sits within half a pixel of the frame's true center, in
- * every frame of every direction) — so scaling it up by PLAYER_SCALE
- * while still pinning the bottom-right corner just drags the whole
- * enlarged sprite up and left of the tile: pinning growth-32
- * (extra width/height from the scale) entirely to the upper-left
- * hangs 8px too far each way at 1.5x. This offsets the render position
- * back by exactly that amount so the character's actual silhouette
- * centers on the tile, without moving tileAnchorX/Y itself, this.tileX/
- * tileY, or anything any other system reads as the player's position.
+ * Horizontal centering. tileAnchorX (origin (1,1), the shared "leaning"
+ * anchor every tall sprite uses — see tileAnchor.ts) pins the sprite's
+ * right edge to the tile's right edge, so a sprite wider than one tile
+ * (the character is, once scaled by PLAYER_SCALE) hangs its extra width
+ * entirely to the left. The character's opaque pixels are horizontally
+ * centered in their 32px frame, so we shift right by half the scale-added
+ * width to re-center that silhouette over the tile column. Applied to X
+ * only (see spriteAnchorY for the vertical rule).
  */
 const PLAYER_ANCHOR_OFFSET = ((PLAYER_SCALE - 1) * TILE_SIZE) / 2;
+/**
+ * The row, in the unscaled 32px frame, the character's boots rest on — the
+ * bbox bottom of the art (feet occupy up to row 29 in every frame, so the
+ * floor line is ~30). Used to seat the FEET on the tile rather than the
+ * frame, per spriteAnchorY.
+ */
+const PLAYER_FOOT_ROW = 30;
+/** Gap from the scaled frame's bottom edge up to the feet, in screen px. */
+const PLAYER_FEET_FROM_BOTTOM = (TILE_SIZE - PLAYER_FOOT_ROW) * PLAYER_SCALE;
 /** How long the attack lunge is held — no swing pose to hold instead (see comment above). */
 const ATTACK_POSE_MS = 180;
 
@@ -181,7 +182,14 @@ export class Player {
   }
 
   private spriteAnchorY(tileY: number): number {
-    return tileAnchorY(tileY) + PLAYER_ANCHOR_OFFSET;
+    // Seat the FEET on the tile's centre, not the frame's bottom on the
+    // tile's bottom. The body is taller than one tile and is meant to
+    // overhang upward into the tiles above; what has to land squarely on
+    // each destination tile is the feet, in the middle of its 32x32 square.
+    // origin is (1,1), so sprite.y is the frame's bottom edge: back off half
+    // a tile to reach the tile centre, then down by the frame-bottom-to-feet
+    // gap so the feet (not the empty rows below them) hit that centre.
+    return tileAnchorY(tileY) - TILE_SIZE / 2 + PLAYER_FEET_FROM_BOTTOM;
   }
 
   setFacing(dx: number, dy: number) {
