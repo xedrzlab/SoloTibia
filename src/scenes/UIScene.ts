@@ -1089,14 +1089,14 @@ export class UIScene extends Phaser.Scene {
     if (stack.count > 1) {
       this.addToLayer(
         this.add
-          .text(x + size - 2, y + size - 2, String(stack.count), {
+          .text(x + size - 2, y + 2, String(stack.count), {
             ...TEXT,
             fontSize: fs(9),
             color: "#ffffff",
             stroke: "#000000",
             strokeThickness: 3,
           })
-          .setOrigin(1, 1)
+          .setOrigin(1, 0)
           .setScrollFactor(0),
       );
     }
