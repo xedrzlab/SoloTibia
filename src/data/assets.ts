@@ -346,6 +346,7 @@ export const IMAGE_ASSETS: ImageAsset[] = [
   { key: "ring", path: "items/jewel_ring.png" },
   { key: "backpack", path: "items/container_backpack.png" },
   { key: "bag", path: "items/container_bag.png" },
+  { key: "loot-bag", path: "items/loot_bag.png" },
   { key: "health-potion", path: "items/potion_health.png" },
   { key: "mana-potion", path: "items/potion_mana.png" },
   { key: "gold-coin", path: "items/coin_gold.png" },

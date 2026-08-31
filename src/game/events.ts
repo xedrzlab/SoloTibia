@@ -154,6 +154,8 @@ export interface InventoryStatePayload {
   openContainers: Container[];
   capacityUsed: number;
   maxCapacity: number;
+  /** Container ids that are monster loot bags — the UI lays these out in the auto loot-grid instead of the free-drag sidebar strip. */
+  lootContainerIds: string[];
 }
 
 export interface MoveItemPayload {

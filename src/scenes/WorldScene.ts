@@ -86,6 +86,18 @@ const CORPSE_DECAY_MS = 60_000;
 /** Slots in a monster corpse's loot bag. */
 const CORPSE_CAPACITY = 8;
 
+/** How many tiles a loot bag can be "pushed" (dragged) from where it currently sits. */
+const LOOT_BAG_PUSH_RANGE = 3;
+
+/** Floating name above a loot bag — matches the creature name-label look. */
+const CREATURE_LABEL_STYLE = {
+  fontFamily: "monospace",
+  fontSize: "11px",
+  color: "#ffffff",
+  stroke: "#000000",
+  strokeThickness: 3,
+} as const;
+
 /** How long a dropped item sits on the ground before vanishing, same as a corpse. */
 const GROUND_PILE_DECAY_MS = 60_000;
 
@@ -111,9 +123,17 @@ const MANA_REGEN_FRACTION = 0.03;
 type AttackMode = "melee" | "distance" | "wand";
 
 interface Corpse {
+  /** The loot-bag sprite dropped where the monster died. */
   sprite: Phaser.GameObjects.Sprite;
+  /** Floating "Dead <Monster>" name above the bag. */
+  label: Phaser.GameObjects.Text;
   container: Container;
   name: string;
+  tileX: number;
+  tileY: number;
+  decayTimer: Phaser.Time.TimerEvent;
+  /** Set while the bag is being dragged ("pushed") so its release doesn't also open the loot window. */
+  dragging: boolean;
 }
 
 /** Items dropped or thrown onto a tile — any item in the game can end up here, not just monster loot. */
@@ -135,6 +155,8 @@ export class WorldScene extends Phaser.Scene {
   private monsters: Monster[] = [];
   private npcs: NpcInstance[] = [];
   private corpses: Corpse[] = [];
+  /** Container ids that belong to loot bags — the UI lays these out in its auto grid. */
+  private lootContainerIds = new Set<string>();
   private groundPiles: GroundPile[] = [];
   private target: Monster | null = null;
   private playerPath: TileCoord[] = [];
@@ -215,6 +237,10 @@ export class WorldScene extends Phaser.Scene {
       const def = spawn.overrides ? { ...MONSTERS[spawn.monsterId], ...spawn.overrides } : MONSTERS[spawn.monsterId];
       return new Monster(this, def, spawn.x, spawn.y);
     });
+
+    // A small drag threshold so a tap on a loot bag opens it, and only a real
+    // drag past this distance "pushes" it to another tile.
+    this.input.dragDistanceThreshold = 8;
 
     const mapWidthPx = MAP_WIDTH * TILE_SIZE;
     const mapHeightPx = MAP_HEIGHT * TILE_SIZE;
@@ -532,11 +558,10 @@ export class WorldScene extends Phaser.Scene {
     const tx = Math.floor(wx / TILE_SIZE);
     const ty = Math.floor(wy / TILE_SIZE);
 
-    const hitCorpse = this.corpses.find((c) => c.sprite.getBounds().contains(wx, wy));
-    if (hitCorpse) {
-      this.lootCorpse(hitCorpse);
-      return;
-    }
+    // Loot bags handle their own tap (open) and drag (push) via per-sprite
+    // handlers in wireLootBagInput — the world tap just shouldn't fall through
+    // to tile/climb logic when a bag was pressed.
+    if (this.corpses.some((c) => c.sprite.getBounds().contains(wx, wy))) return;
 
     // A ground pile is picked up via hold-to-open-menu, not a plain tap.
     const hitPile = this.groundPiles.find((p) => p.sprite.getBounds().contains(wx, wy));
@@ -679,6 +704,7 @@ export class WorldScene extends Phaser.Scene {
     this.updateCombat(delta);
     this.updatePickupWalk(delta);
     this.updatePlayerMovement(delta);
+    this.updateLootBagWindows();
 
     // Skill training fires many times a second; push one refresh per frame.
     if (this.skillsDirty) this.emitSkills();
@@ -1522,43 +1548,127 @@ export class WorldScene extends Phaser.Scene {
     }
 
     const drops = rollLoot(monster.def.loot);
-    this.spawnCorpse(monster, drops);
+    // No loot, no bag — the monster just vanishes (its sprite is already hidden by die()).
+    if (drops.length > 0) this.spawnCorpse(monster, drops);
     this.emitPlayerStats();
   }
 
+  /**
+   * A monster that dropped loot leaves a loot bag centred on the tile it died
+   * on (the monster's own sprite is already hidden by Monster.die()). The bag
+   * is just a container, so looting reuses the same drag the player already
+   * uses between backpacks — but its window auto-opens/closes with proximity
+   * (see updateLootBagWindows) and it can be dragged around to "push" it.
+   */
   private spawnCorpse(monster: Monster, loot: { itemId: string; amount: number }[]) {
-    const sprite = this.add.sprite(monster.sprite.x, monster.sprite.y, monster.def.textureKey, 0);
-    sprite
-      .setOrigin(1, 1)
-      .setDepth(depthForTileY(monster.tileY) - 1) // just under the live sprite it replaces
-      .setTint(0x808080)
-      .setScale(1, 0.55)
-      .setAlpha(0.9);
+    const tileX = monster.tileX;
+    const tileY = monster.tileY;
+    const cx = tileX * TILE_SIZE + TILE_SIZE / 2;
+    const cy = tileY * TILE_SIZE + TILE_SIZE / 2;
 
-    // The corpse is just another container, so looting is the same drag the
-    // player already uses between backpacks.
-    const container = new Container(`Dead ${monster.def.name}`, monster.def.textureKey, CORPSE_CAPACITY);
+    const sprite = this.add
+      .sprite(cx, cy, "loot-bag")
+      .setOrigin(0.5, 0.5)
+      .setScale(0.85)
+      .setDepth(depthForTileY(tileY) - 1)
+      .setInteractive({ draggable: true, useHandCursor: true });
+
+    const label = this.add
+      .text(cx, tileY * TILE_SIZE - 2, `Dead ${monster.def.name}`, {
+        ...CREATURE_LABEL_STYLE,
+      })
+      .setOrigin(0.5, 1)
+      .setDepth(depthForTileY(tileY) + 100);
+
+    const container = new Container(`Dead ${monster.def.name}`, "loot-bag", CORPSE_CAPACITY);
     for (const drop of loot) container.addItem(drop.itemId, drop.amount);
+    this.lootContainerIds.add(container.id);
 
-    const corpse: Corpse = { sprite, container, name: monster.def.name };
+    const corpse: Corpse = {
+      sprite,
+      label,
+      container,
+      name: monster.def.name,
+      tileX,
+      tileY,
+      dragging: false,
+      decayTimer: this.time.delayedCall(CORPSE_DECAY_MS, () => this.removeCorpse(corpse)),
+    };
     this.corpses.push(corpse);
-    this.time.delayedCall(CORPSE_DECAY_MS, () => this.removeCorpse(corpse));
+    this.wireLootBagInput(corpse);
+  }
+
+  /** Tap a bag (that wasn't a push-drag) to open it; drag it to push it to another tile. */
+  private wireLootBagInput(corpse: Corpse) {
+    corpse.sprite.on("dragstart", () => {
+      corpse.dragging = true;
+    });
+    corpse.sprite.on("drag", (pointer: Phaser.Input.Pointer) => {
+      corpse.sprite.setPosition(pointer.worldX, pointer.worldY);
+      corpse.label.setPosition(pointer.worldX, pointer.worldY - TILE_SIZE / 2);
+    });
+    corpse.sprite.on("dragend", (pointer: Phaser.Input.Pointer) => {
+      this.dropLootBag(corpse, pointer.worldX, pointer.worldY);
+      // Reset on the next tick so the pointerup that follows dragend still sees dragging=true and skips opening.
+      this.time.delayedCall(0, () => (corpse.dragging = false));
+    });
+    corpse.sprite.on("pointerup", (pointer: Phaser.Input.Pointer) => {
+      if (corpse.dragging || pointer.getDistance() > 8) return;
+      this.tryOpenCorpse(corpse);
+    });
+  }
+
+  /** Land a pushed bag on the nearest walkable tile under the release point (capped range), else snap back. */
+  private dropLootBag(corpse: Corpse, worldX: number, worldY: number) {
+    let tx = Math.floor(worldX / TILE_SIZE);
+    let ty = Math.floor(worldY / TILE_SIZE);
+    const withinReach = chebyshevDistance({ x: tx, y: ty }, { x: corpse.tileX, y: corpse.tileY }) <= LOOT_BAG_PUSH_RANGE;
+    if (!withinReach || !this.isWalkableForMover(tx, ty)) {
+      tx = corpse.tileX;
+      ty = corpse.tileY;
+    }
+    this.placeLootBag(corpse, tx, ty);
+  }
+
+  private placeLootBag(corpse: Corpse, tx: number, ty: number) {
+    corpse.tileX = tx;
+    corpse.tileY = ty;
+    const cx = tx * TILE_SIZE + TILE_SIZE / 2;
+    corpse.sprite.setPosition(cx, ty * TILE_SIZE + TILE_SIZE / 2).setDepth(depthForTileY(ty) - 1);
+    corpse.label.setPosition(cx, ty * TILE_SIZE - 2).setDepth(depthForTileY(ty) + 100);
   }
 
   private removeCorpse(corpse: Corpse) {
     const idx = this.corpses.indexOf(corpse);
     if (idx >= 0) this.corpses.splice(idx, 1);
-    this.closeContainer(corpse.container); // don't leave a window onto a vanished corpse
+    this.lootContainerIds.delete(corpse.container.id);
+    corpse.decayTimer.remove();
+    this.closeContainer(corpse.container); // don't leave a window onto a vanished bag
+    corpse.label.destroy();
     corpse.sprite.destroy();
   }
 
-  private lootCorpse(corpse: Corpse) {
+  /** Open the loot window, but only when the player is standing on or beside the bag. */
+  private tryOpenCorpse(corpse: Corpse) {
+    if (chebyshevDistance(this.player.tile, { x: corpse.tileX, y: corpse.tileY }) > 1) {
+      this.log("info", "You are too far away.");
+      return;
+    }
     if (corpse.container.usedSlots === 0) {
-      this.log("info", "There is nothing left to loot.");
       this.removeCorpse(corpse);
       return;
     }
     this.openContainer(corpse.container);
+  }
+
+  /** Close any loot window whose bag the player has stepped more than one tile away from. */
+  private updateLootBagWindows() {
+    for (const corpse of this.corpses) {
+      if (!this.openContainers.includes(corpse.container)) continue;
+      if (chebyshevDistance(this.player.tile, { x: corpse.tileX, y: corpse.tileY }) > 1) {
+        this.closeContainer(corpse.container);
+      }
+    }
   }
 
   // --- Ground item piles ---------------------------------------------------
@@ -2036,6 +2146,7 @@ export class WorldScene extends Phaser.Scene {
       openContainers: [...this.openContainers],
       capacityUsed: this.player.capacityUsed(),
       maxCapacity: this.player.maxCapacity,
+      lootContainerIds: [...this.lootContainerIds],
     });
   }
 

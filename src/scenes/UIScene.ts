@@ -189,6 +189,8 @@ export class UIScene extends Phaser.Scene {
   private skills: SkillsPayload | null = null;
   private equipment: Equipment | null = null;
   private openContainers: Container[] = [];
+  /** Ids of open containers that are monster loot bags (laid out in the auto grid, not the free-drag strip). */
+  private lootContainerIds = new Set<string>();
   private capacityUsed = 0;
   private maxCapacity = 0;
   private battleEntries: BattleListPayload["entries"] = [];
@@ -311,6 +313,7 @@ export class UIScene extends Phaser.Scene {
       this.openContainers = p.openContainers;
       this.capacityUsed = p.capacityUsed;
       this.maxCapacity = p.maxCapacity;
+      this.lootContainerIds = new Set(p.lootContainerIds);
       this.sidebarDirty = true;
     });
     bus.on(EVENTS.BATTLE_LIST, (p: BattleListPayload) => {
@@ -630,13 +633,34 @@ export class UIScene extends Phaser.Scene {
     for (const r of renderers) r.run();
   }
 
-  /** Shared window chrome: background, draggable/collapsible title bar. Returns the content origin. */
+  /**
+   * Position of a loot bag's window in the auto grid: anchored just left of
+   * the sidebar strip and stacked upward from above the action bar, spilling
+   * into a second column further left once the first fills. Order follows the
+   * sequence the bags were opened in.
+   */
+  private lootGridPos(container: Container, height: number): PanelPos {
+    const lootOpen = this.openContainers.filter((c) => this.lootContainerIds.has(c.id));
+    const index = Math.max(0, lootOpen.indexOf(container));
+    const gap = 4;
+    const rightEdge = this.scale.width - this.sidebarWidth - gap;
+    const bottomEdge = this.scale.height - ACTION_SLOT_SIZE - 16;
+    const rowStride = height + gap;
+    const perColumn = Math.max(1, Math.floor((bottomEdge - 4) / rowStride));
+    const col = Math.floor(index / perColumn);
+    const row = index % perColumn;
+    const x = rightEdge - SIDEBAR_WIDTH - col * (SIDEBAR_WIDTH + gap);
+    const y = bottomEdge - height - row * rowStride;
+    return { x: Math.max(4, x), y: Math.max(4, y) };
+  }
+
+  /** Shared window chrome: background, collapsible (and, unless a loot bag, draggable) title bar. Returns the content origin. */
   private renderPanelChrome(
     id: string,
     title: string,
     pos: PanelPos,
     height: number,
-    extras?: { onClose?: () => void; onLootAll?: () => void },
+    extras?: { onClose?: () => void; onLootAll?: () => void; draggable?: boolean },
   ): { x: number; y: number; w: number } {
     const w = SIDEBAR_WIDTH;
     this.panelRects.set(id, { x: pos.x, y: pos.y, w, h: height });
@@ -649,12 +673,13 @@ export class UIScene extends Phaser.Scene {
         .setScrollFactor(0),
     );
 
+    const draggable = extras?.draggable ?? true;
     const bar = this.add
       .rectangle(pos.x, pos.y, w, WINDOW_TITLE_H, COLORS.titleBg, 1)
       .setOrigin(0, 0)
       .setStrokeStyle(1, COLORS.border)
       .setScrollFactor(0)
-      .setInteractive({ draggable: true, useHandCursor: true });
+      .setInteractive({ draggable, useHandCursor: true });
     bar.setData("kind", "panel");
     bar.setData("panelId", id);
     bar.on("pointerup", (pointer: Phaser.Input.Pointer) => {
@@ -974,13 +999,21 @@ export class UIScene extends Phaser.Scene {
   private renderContainerPanel(container: Container) {
     const key = `c:${container.id}`;
     const height = this.containerPanelHeight(container);
-    const pos = this.ensurePanelPos(key, () => ({
-      x: this.scale.width - SIDEBAR_WIDTH,
-      y: this.nextDefaultY(this.scale.width - SIDEBAR_WIDTH),
-    }));
+    const isLoot = this.lootContainerIds.has(container.id);
+    // Loot bags don't use the free-drag sidebar strip: they auto-arrange in a
+    // grid anchored left of the sidebar, stacking upward then into a second
+    // column to the left. Player bags (backpack/depot) keep their saved,
+    // draggable positions.
+    const pos = isLoot
+      ? this.lootGridPos(container, height)
+      : this.ensurePanelPos(key, () => ({
+          x: this.scale.width - SIDEBAR_WIDTH,
+          y: this.nextDefaultY(this.scale.width - SIDEBAR_WIDTH),
+        }));
     const { x: left, y: top, w } = this.renderPanelChrome(key, container.name, pos, height, {
       onClose: () => bus.emit(EVENTS.CLOSE_CONTAINER, { container }),
       onLootAll: () => bus.emit(EVENTS.LOOT_ALL, { container }),
+      draggable: !isLoot,
     });
     if (this.collapsed.has(key)) return;
 
