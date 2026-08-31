@@ -472,20 +472,33 @@ export const PROPS: PropPlacement[] = [
   { textureKey: "ladder-up", x: 19, y: 67 },
   { textureKey: "ladder-up", x: 49, y: 67 },
   { textureKey: "ladder-up", x: 35, y: 91 },
-  { textureKey: "torch", x: 19, y: 65, blocks: true },
-  { textureKey: "torch", x: 49, y: 65, blocks: true },
-  { textureKey: "torch", x: 33, y: 89, blocks: true },
-  { textureKey: "torch", x: 37, y: 89, blocks: true },
+  //
+  // Every torch below is anchored on a WALL tile ("V", solid), not the open
+  // floor — the same bottom-right lean anchor as a building or tree, applied
+  // to a 1-wide sprite, puts the sprite's bottom edge exactly on the
+  // wall/floor seam and leaves the whole thing hanging in the wall's own
+  // footprint. That reads as mounted on the rock face right over the path,
+  // the way Tibia's own dungeon torches sit, instead of standing on the open
+  // floor as a post someone has to walk around — so none of these need
+  // `blocks: true`, the wall was already solid. A horizontal passage gets
+  // its torch on the wall row directly NORTH of it (the lean hangs the torch
+  // down to that seam); a north-south passage gets it on the wall column one
+  // west of the passage (the lean has no horizontal spillover — 1 tile wide
+  // — so it just sits beside the path rather than floating over it).
+  { textureKey: "torch", x: 19, y: 63 }, // room A's north wall, over the ladder
+  { textureKey: "torch", x: 49, y: 63 }, // room B's north wall, over the ladder
+  { textureKey: "torch", x: 33, y: 87 }, // room C's north wall
+  { textureKey: "torch", x: 37, y: 87 }, // room C's north wall
   // A few more along the long corridors, spaced well apart on purpose —
   // pools of light with real dark, mysterious stretches between them rather
   // than a lit-up hallway. The A-B corridor and both north-to-south drops
   // (~30 tiles each) would otherwise be pitch black the whole way, since the
   // room-entrance torches above only reach the first few tiles of each.
-  { textureKey: "torch", x: 27, y: 68, blocks: true },
-  { textureKey: "torch", x: 42, y: 68, blocks: true },
-  { textureKey: "torch", x: 20, y: 77, blocks: true },
-  { textureKey: "torch", x: 50, y: 77, blocks: true },
-  { textureKey: "torch", x: 35, y: 85, blocks: true },
+  { textureKey: "torch", x: 27, y: 67 }, // A-B corridor's north wall
+  { textureKey: "torch", x: 42, y: 67 }, // A-B corridor's north wall
+  { textureKey: "torch", x: 19, y: 77 }, // west wall of the A-side drop
+  { textureKey: "torch", x: 49, y: 77 }, // west wall of the B-side drop
+  { textureKey: "torch", x: 34, y: 85 }, // west wall of the final drop into room C
   { textureKey: "chest", x: 11, y: 68, blocks: true },
 ];
 
