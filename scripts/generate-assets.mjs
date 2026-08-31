@@ -2266,19 +2266,6 @@ function slimeFrame({ squish = false } = {}) {
 // Items (small icons, drawn centered in a 16x16 canvas)
 // ---------------------------------------------------------------------------
 
-/** Raw meat: a red cut with darker marbling and a bone stub. */
-function meatIcon() {
-  const s = new Sprite(16, 16);
-  s.fillEllipse(9, 9, 5.5, 4.5, "#a8402f");
-  s.fillEllipse(8, 7.5, 4.2, 3, "#c9584a");
-  s.fillRect(3, 8, 3, 2, "#e8dcc2"); // bone stub
-  s.fillRect(3, 8, 3, 1, "#f5eeda");
-  s.setPixel(9, 8, "#8a2f20"); // marbling
-  s.setPixel(11, 10, "#8a2f20");
-  s.setPixel(7, 10, "#8a2f20");
-  return s;
-}
-
 /** Bear paw: a rounded pad with claw tips, the trophy-drop look. */
 function bearPawIcon() {
   const s = new Sprite(16, 16);
@@ -2492,14 +2479,15 @@ saveSprite(smokePuffSprite(), SCALE, `${OUT}/effects/smoke_puff.png`);
 // armor_helmet_leather/steel, armor_body_leather/plate,
 // armor_legs_leather/plate, armor_boots_leather, jewel_amulet/ring,
 // potion_health/mana, coin_gold (+ its gold-coin-N pile tiers) and
-// food_cheese/ham — none of those are generated here, same treatment as
-// player_base_sheet.png etc. Only the items the sheet didn't cover
-// (container_bag, food_meat, trophy_bear_paw, food_honeycomb, the spell
-// icons) still come from the procedural generator below.
+// food_cheese/ham/meat — none of those are generated here, same treatment
+// as player_base_sheet.png etc. (food_meat.png reuses the sheet's ham art —
+// a real food image reads better than the old procedural cut, and the
+// sheet's actual ham photo replaced it as food_ham.png). Only the items
+// the sheet didn't cover (container_bag, trophy_bear_paw, food_honeycomb,
+// the spell icons) still come from the procedural generator below.
 // container_backpack.png (and its red/blue/green/gray/tan variants) are also
 // real art (cropped from the user's backpack sheet).
 saveSprite(bagIcon(), SCALE, `${OUT}/items/container_bag.png`);
-saveSprite(meatIcon(), SCALE, `${OUT}/items/food_meat.png`);
 saveSprite(bearPawIcon(), SCALE, `${OUT}/items/trophy_bear_paw.png`);
 saveSprite(honeycombIcon(), SCALE, `${OUT}/items/food_honeycomb.png`);
 saveSprite(healSpellIcon(), SCALE, `${OUT}/items/spell_heal.png`);
