@@ -204,42 +204,6 @@ function rockyGroundTile() {
  * with a wooden grate cover pulled half aside over a dark drop. Standing on
  * this tile climbs the player down into the sewers.
  */
-function sewerEntranceSprite() {
-  const s = new Sprite(16, 16);
-  const rim = P_STONE.mid;
-  const rimHi = P_STONE.light;
-  const rimLo = P_STONE.deep;
-  const wood = "#5a3d22";
-  const woodHi = "#82603a";
-  const pit = "#0a0a0c";
-
-  // Stone rim.
-  s.fillRect(1, 1, 14, 14, rim);
-  s.fillRect(1, 1, 14, 1, rimHi);
-  s.fillRect(1, 1, 1, 14, rimHi);
-  s.fillRect(13, 1, 1, 14, rimLo);
-  s.fillRect(1, 13, 14, 1, rimLo);
-
-  // Dark drop.
-  s.fillRect(3, 3, 10, 10, pit);
-  s.fillEllipse(8, 8, 4, 3.4, "#14120f");
-
-  // A ladder top peeking out of the hole, so the down-tile visually pairs
-  // with the up-tile below.
-  s.fillRect(6, 4, 1, 6, wood);
-  s.fillRect(9, 4, 1, 6, wood);
-  s.setPixel(6, 4, woodHi);
-  s.setPixel(9, 4, woodHi);
-  s.fillRect(6, 6, 4, 1, wood);
-  s.fillRect(6, 9, 4, 1, wood);
-
-  // Wooden grate cover, dragged half aside.
-  s.fillRect(1, 1, 5, 4, wood);
-  s.fillRect(1, 1, 5, 1, woodHi);
-  s.setPixel(2, 2, woodHi);
-  return s;
-}
-
 function voidWallTile() {
   const s = new Sprite(16, 16);
   s.fillRect(0, 0, 16, 16, "#1c1c20");
@@ -2647,9 +2611,9 @@ saveSprite(campfireSprite(), SCALE, `${OUT}/props/campfire_01.png`);
 saveSprite(torchSprite(), SCALE, `${OUT}/props/torch_01.png`);
 saveSprite(gravestoneSprite(), SCALE, `${OUT}/props/gravestone_01.png`);
 saveSprite(chestSprite(), SCALE, `${OUT}/props/chest_01.png`);
-// ladder_up_01.png is real art now (cropped from the user's ladder sheet),
-// not generated here — same treatment as player_base_sheet.png etc.
-saveSprite(sewerEntranceSprite(), SCALE, `${OUT}/props/sewer_entrance_01.png`);
+// ladder_up_01.png and sewer_entrance_01.png are real art now (cropped from
+// the user's ladder sheet and cave-hole image), not generated here — same
+// treatment as player_base_sheet.png etc.
 saveSprite(sackSprite(), SCALE, `${OUT}/props/sack_01.png`);
 saveSprite(fenceGateSprite(), SCALE, `${OUT}/props/fence_gate_01.png`);
 saveSprite(statueSprite(), SCALE, `${OUT}/props/statue_01.png`);
