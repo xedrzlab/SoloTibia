@@ -2266,23 +2266,6 @@ function slimeFrame({ squish = false } = {}) {
 // Items (small icons, drawn centered in a 16x16 canvas)
 // ---------------------------------------------------------------------------
 
-/** Bear paw: a rounded pad with claw tips, the trophy-drop look. */
-function bearPawIcon() {
-  const s = new Sprite(16, 16);
-  s.fillEllipse(8, 10, 5, 4, "#6b4a2e"); // pad
-  s.fillEllipse(7, 9, 3.4, 2.6, "#8a6440");
-  for (const [x, y] of [
-    [4, 5],
-    [7, 4],
-    [10, 4],
-    [12, 5.5],
-  ]) {
-    s.fillRect(x, y, 1.5, 3, "#5a3d22"); // claw/toe
-    s.setPixel(Math.round(x), Math.round(y), "#e8dcc2"); // claw tip
-  }
-  return s;
-}
-
 // --- Containers ---
 
 /** Shared body for the bag/backpack icons, parameterised by size and leather tone. */
@@ -2464,13 +2447,12 @@ saveSprite(smokePuffSprite(), SCALE, `${OUT}/effects/smoke_puff.png`);
 // as player_base_sheet.png etc. (food_meat.png reuses the sheet's ham art —
 // a real food image reads better than the old procedural cut, and the
 // sheet's actual ham photo replaced it as food_ham.png). food_honeycomb.png
-// is also real art now (a standalone user-supplied photo, not from the item
-// sheet). Only container_bag, trophy_bear_paw and the spell icons still
-// come from the procedural generator below.
+// and trophy_bear_paw.png are also real art now (standalone user-supplied
+// photos, not from the item sheet). Only container_bag and the spell icons
+// still come from the procedural generator below.
 // container_backpack.png (and its red/blue/green/gray/tan variants) are also
 // real art (cropped from the user's backpack sheet).
 saveSprite(bagIcon(), SCALE, `${OUT}/items/container_bag.png`);
-saveSprite(bearPawIcon(), SCALE, `${OUT}/items/trophy_bear_paw.png`);
 saveSprite(healSpellIcon(), SCALE, `${OUT}/items/spell_heal.png`);
 saveSprite(flameSpellIcon(), SCALE, `${OUT}/items/spell_flame.png`);
 
