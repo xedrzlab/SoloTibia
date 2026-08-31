@@ -2283,25 +2283,6 @@ function bearPawIcon() {
   return s;
 }
 
-/** Honeycomb: hexagonal amber cells, a small chunk broken off the comb. */
-function honeycombIcon() {
-  const s = new Sprite(16, 16);
-  s.fillEllipse(8, 8, 6, 5.5, "#c9942f");
-  s.fillEllipse(8, 8, 5.2, 4.7, "#e6b13f");
-  for (const [x, y] of [
-    [5, 6],
-    [8, 5],
-    [11, 6],
-    [6, 9],
-    [9, 9],
-    [7, 11],
-  ]) {
-    s.fillCircle(x, y, 1.1, "#f5cf6a");
-    s.setPixel(x, y, "#a8781f");
-  }
-  return s;
-}
-
 // --- Containers ---
 
 /** Shared body for the bag/backpack icons, parameterised by size and leather tone. */
@@ -2482,14 +2463,14 @@ saveSprite(smokePuffSprite(), SCALE, `${OUT}/effects/smoke_puff.png`);
 // food_cheese/ham/meat — none of those are generated here, same treatment
 // as player_base_sheet.png etc. (food_meat.png reuses the sheet's ham art —
 // a real food image reads better than the old procedural cut, and the
-// sheet's actual ham photo replaced it as food_ham.png). Only the items
-// the sheet didn't cover (container_bag, trophy_bear_paw, food_honeycomb,
-// the spell icons) still come from the procedural generator below.
+// sheet's actual ham photo replaced it as food_ham.png). food_honeycomb.png
+// is also real art now (a standalone user-supplied photo, not from the item
+// sheet). Only container_bag, trophy_bear_paw and the spell icons still
+// come from the procedural generator below.
 // container_backpack.png (and its red/blue/green/gray/tan variants) are also
 // real art (cropped from the user's backpack sheet).
 saveSprite(bagIcon(), SCALE, `${OUT}/items/container_bag.png`);
 saveSprite(bearPawIcon(), SCALE, `${OUT}/items/trophy_bear_paw.png`);
-saveSprite(honeycombIcon(), SCALE, `${OUT}/items/food_honeycomb.png`);
 saveSprite(healSpellIcon(), SCALE, `${OUT}/items/spell_heal.png`);
 saveSprite(flameSpellIcon(), SCALE, `${OUT}/items/spell_flame.png`);
 
