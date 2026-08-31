@@ -42,7 +42,7 @@ const CH_STAIRS_UP = "U";
 const CH_STAIRS_DOWN = "d";
 const CH_DEPOT = "X";
 
-/** How a room's floor/walls are dressed. Only the four named shops + the bank got the real wood set; only the temple got the real stone set. */
+/** How a room's floor/walls are dressed. Only the named shops + the bank got the real wood set; only the temple got the real stone set. */
 type WallStyle = "stone" | "wood-panel" | "plain";
 
 // Five floor planks that are all the same style (only shade/wear differs), so
@@ -250,7 +250,7 @@ export class InteriorScene extends Phaser.Scene {
   /** Which floor/wall dressing a room gets: stone (temple), the new wood-panel set (shops + bank), or the old flat plank (everything else — currently just the depot). */
   private roomWallStyle(): WallStyle {
     if (this.room.id.startsWith("temple_")) return "stone";
-    if (["melee_shop", "ranged_shop", "bank", "magic_shop"].includes(this.room.id)) return "wood-panel";
+    if (["melee_shop", "ranged_shop", "bank", "magic_shop", "general_store"].includes(this.room.id)) return "wood-panel";
     return "plain";
   }
 
