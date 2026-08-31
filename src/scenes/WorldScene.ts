@@ -1,6 +1,6 @@
 import Phaser from "phaser";
 import { TILE_SIZE, MELEE_RANGE, NPC_INTERACT_RANGE, VOCATION_CHOICE_LEVEL } from "../game/constants";
-import { tileAnchorX, tileAnchorY, depthForTileY } from "../game/tileAnchor";
+import { tileAnchorX, tileAnchorY, depthForTileY, LABEL_DEPTH } from "../game/tileAnchor";
 import {
   forEachTile,
   frictionAt,
@@ -1578,7 +1578,7 @@ export class WorldScene extends Phaser.Scene {
         ...CREATURE_LABEL_STYLE,
       })
       .setOrigin(0.5, 1)
-      .setDepth(depthForTileY(tileY) + 100);
+      .setDepth(LABEL_DEPTH + 1);
 
     const container = new Container(`Dead ${monster.def.name}`, "loot-bag", CORPSE_CAPACITY);
     for (const drop of loot) container.addItem(drop.itemId, drop.amount);
@@ -1635,7 +1635,7 @@ export class WorldScene extends Phaser.Scene {
     corpse.tileY = ty;
     const cx = tx * TILE_SIZE + TILE_SIZE / 2;
     corpse.sprite.setPosition(cx, ty * TILE_SIZE + TILE_SIZE / 2).setDepth(depthForTileY(ty) - 1);
-    corpse.label.setPosition(cx, ty * TILE_SIZE - 2).setDepth(depthForTileY(ty) + 100);
+    corpse.label.setPosition(cx, ty * TILE_SIZE - 2).setDepth(LABEL_DEPTH + 1);
   }
 
   private removeCorpse(corpse: Corpse) {

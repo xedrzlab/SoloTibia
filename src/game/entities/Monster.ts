@@ -9,7 +9,7 @@ import {
 import { MonsterDef, TargetBox } from "../../data/monsters";
 import { findPath, chebyshevDistance, closestChebyshevDistance, TileCoord } from "../pathfinding";
 import { Direction, directionFromDelta, directionalFrameIndex, walkAnimKey } from "../directionalSprite";
-import { tileAnchorX, tileAnchorY, depthForTileY } from "../tileAnchor";
+import { tileAnchorX, tileAnchorY, depthForTileY, LABEL_DEPTH } from "../tileAnchor";
 
 const AI_TICK_MS = 400; // throttle pathfinding/decision-making for battery friendliness
 
@@ -63,8 +63,9 @@ export class Monster {
 
     const barY = this.barY();
     const barX = this.barX();
-    this.hpBarBg = scene.add.rectangle(barX, barY, 24, 4, 0x000000, 0.6).setDepth(6).setVisible(false);
-    this.hpBarFill = scene.add.rectangle(barX, barY, 24, 4, 0xc9302f).setDepth(7).setVisible(false);
+    // Nameplate (name + HP bar) always draws above world geometry — see LABEL_DEPTH.
+    this.hpBarBg = scene.add.rectangle(barX, barY, 24, 4, 0x000000, 0.6).setDepth(LABEL_DEPTH).setVisible(false);
+    this.hpBarFill = scene.add.rectangle(barX, barY, 24, 4, 0xc9302f).setDepth(LABEL_DEPTH).setVisible(false);
 
     // Name tag: always up while the monster is alive (unlike the HP bar,
     // which only shows once damaged) — so a player can tell what they're
@@ -78,7 +79,7 @@ export class Monster {
         strokeThickness: 3,
       })
       .setOrigin(0.5, 1)
-      .setDepth(6);
+      .setDepth(LABEL_DEPTH + 1);
 
     // Show full and green from the start, not just once damaged — a
     // player should be able to read a monster's health at a glance the

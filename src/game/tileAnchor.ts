@@ -22,3 +22,10 @@ const DEPTH_BASE = 10;
 export function depthForTileY(tileY: number): number {
   return DEPTH_BASE + tileY;
 }
+
+/**
+ * Overhead nameplates (creature names, HP bars, loot-bag names) always draw
+ * on top of world geometry — well above any depthForTileY a prop/building can
+ * reach — so a name is never hidden behind a house it stands near or behind.
+ */
+export const LABEL_DEPTH = 1_000_000;
