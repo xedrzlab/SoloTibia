@@ -224,19 +224,6 @@ export const IMAGE_ASSETS: ImageAsset[] = [
   { key: "cart", path: "props/cart_01.png" },
   { key: "campfire", path: "props/campfire_01.png" },
   { key: "gravestone", path: "props/gravestone_01.png" },
-  // Boulder-pile wall faces for the sewer — real art cropped from a
-  // user-supplied cave-wall reference sheet, not procedural. "north-*" is
-  // for a wall cell whose floor neighbor is to its south (the common case:
-  // room ceilings, corridor tops); "side" is for a cell whose floor neighbor
-  // is to its east or west (a vertical corridor's flanking walls) — its
-  // rock mass sits on the left with debris trailing right, i.e. it "opens
-  // east" by default, and WorldScene flips it horizontally for the mirrored
-  // case. See tilemap.ts SEWER_WALL_ROCKS for the selection logic.
-  { key: "cave-wall-rock-north-1", path: "props/cave_wall_rock_north_1.png" },
-  { key: "cave-wall-rock-north-2", path: "props/cave_wall_rock_north_2.png" },
-  { key: "cave-wall-rock-north-3", path: "props/cave_wall_rock_north_3.png" },
-  { key: "cave-wall-rock-north-4", path: "props/cave_wall_rock_north_4.png" },
-  { key: "cave-wall-rock-side", path: "props/cave_wall_rock_side.png" },
   // Real art cropped from the user's transparent props sheet (not procedural
   // like the rest of this list) — a testing placement, see tilemap.ts PROPS.
   { key: "chimney-brick", path: "props/chimney_brick.png" },

@@ -21,7 +21,6 @@ import {
   sewerLinkAtSurface,
   sewerLinkAtSewer,
   SewerLink,
-  SEWER_WALL_ROCKS,
 } from "../data/tilemap";
 import { MONSTERS, MonsterDef } from "../data/monsters";
 import { EquipSlot, goldCoinTextureFor, ITEMS } from "../data/items";
@@ -410,17 +409,6 @@ export class WorldScene extends Phaser.Scene {
         .image(tileAnchorX(cell.x), tileAnchorY(cell.y), cell.textureKey)
         .setOrigin(1, 1)
         .setDepth(depthForTileY(cell.y));
-    }
-
-    // Sewer wall faces: boulder piles leaning the same way, over every wall
-    // cell that actually borders a room or corridor (see tilemap.ts
-    // SEWER_WALL_ROCKS for the selection rule).
-    for (const rock of SEWER_WALL_ROCKS) {
-      this.add
-        .image(tileAnchorX(rock.x), tileAnchorY(rock.y), rock.textureKey)
-        .setOrigin(1, 1)
-        .setDepth(depthForTileY(rock.y))
-        .setFlipX(!!rock.flipX);
     }
   }
 

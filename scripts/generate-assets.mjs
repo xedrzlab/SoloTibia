@@ -380,11 +380,6 @@ function campfireSprite() {
   return s;
 }
 
-// cave_wall_rock_north_1..4.png and cave_wall_rock_side.png are real art now
-// (extracted from a user-supplied cave-wall reference sheet, not procedural)
-// — see tilemap.ts SEWER_WALL_ROCKS and assets.ts for how they're keyed and
-// placed.
-
 /** Weathered gravestone. */
 function gravestoneSprite() {
   const s = new Sprite(16, 16);
@@ -2363,9 +2358,6 @@ saveSprite(campfireSprite(), SCALE, `${OUT}/props/campfire_01.png`);
 // user's wall-torch photo), not generated here — see assets.ts SHEET_ASSETS.
 saveSprite(gravestoneSprite(), SCALE, `${OUT}/props/gravestone_01.png`);
 saveSprite(chestSprite(), SCALE, `${OUT}/props/chest_01.png`);
-// cave_wall_rock_north_1..4.png and cave_wall_rock_side.png are real art now
-// — see tilemap.ts SEWER_WALL_ROCKS for where these get placed and
-// WorldScene for how they're rendered (leaning, like a tree).
 // ladder_up_01.png and sewer_entrance_01.png are real art now (cropped from
 // the user's ladder sheet and cave-hole image), not generated here — same
 // treatment as player_base_sheet.png etc.
