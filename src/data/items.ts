@@ -222,7 +222,7 @@ export const ITEMS: Record<string, ItemDef> = {
   two_handed_sword: {
     id: "two_handed_sword",
     name: "Two Handed Sword",
-    textureKey: "sword", // no dedicated icon yet — shares the one-handed sword's
+    textureKey: "sword-two-handed",
     kind: "equipment",
     stackable: false,
     weight: 75,
@@ -393,4 +393,15 @@ export const FIST_ATTACK = 7;
 
 export function itemWeight(itemId: string, count = 1): number {
   return (ITEMS[itemId]?.weight ?? 0) * count;
+}
+
+/** Ascending stack-size breakpoints with a dedicated gold coin pile icon. */
+const GOLD_COIN_TIERS = [1, 5, 10, 20, 50, 100];
+
+/** Picks the smallest coin-pile icon whose count is >= the stack's count. */
+export function goldCoinTextureFor(count: number): string {
+  for (const tier of GOLD_COIN_TIERS) {
+    if (count <= tier) return `gold-coin-${tier}`;
+  }
+  return `gold-coin-${GOLD_COIN_TIERS[GOLD_COIN_TIERS.length - 1]}`;
 }

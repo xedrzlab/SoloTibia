@@ -15,7 +15,7 @@ import {
   SkillsPayload,
   TargetPayload,
 } from "../game/events";
-import { EquipSlot, ITEMS } from "../data/items";
+import { EquipSlot, goldCoinTextureFor, ITEMS } from "../data/items";
 import { SHOPS } from "../data/shops";
 import { SPELLS, SPELL_BAR } from "../data/spells";
 import { Container, ItemStack, SlotRef } from "../game/containers";
@@ -1067,8 +1067,9 @@ export class UIScene extends Phaser.Scene {
     }
 
     const def = ITEMS[stack.itemId];
+    const textureKey = stack.itemId === "gold_coin" ? goldCoinTextureFor(stack.count) : (def?.textureKey ?? "gold-coin");
     const icon = this.add
-      .image(x + size / 2, y + size / 2, def?.textureKey ?? "gold-coin")
+      .image(x + size / 2, y + size / 2, textureKey)
       .setScrollFactor(0)
       .setInteractive({ draggable: true, useHandCursor: true });
     icon.setData("kind", "item");

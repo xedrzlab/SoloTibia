@@ -23,7 +23,7 @@ import {
   SewerLink,
 } from "../data/tilemap";
 import { MONSTERS, MonsterDef } from "../data/monsters";
-import { EquipSlot, ITEMS } from "../data/items";
+import { EquipSlot, goldCoinTextureFor, ITEMS } from "../data/items";
 import { SHOPS } from "../data/shops";
 import { SPELLS } from "../data/spells";
 import { ChosenVocation, VOCATION_NAMES, vocationDisplayName } from "../game/stats";
@@ -1699,7 +1699,11 @@ export class WorldScene extends Phaser.Scene {
   private touchGroundPile(pile: GroundPile, latestItemId: string) {
     pile.decayTimer.remove();
     pile.decayTimer = this.time.delayedCall(GROUND_PILE_DECAY_MS, () => this.removeGroundPile(pile));
-    pile.sprite.setTexture(ITEMS[latestItemId]?.textureKey ?? pile.sprite.texture.key);
+    const textureKey =
+      latestItemId === "gold_coin"
+        ? goldCoinTextureFor(pile.container.countItem("gold_coin"))
+        : (ITEMS[latestItemId]?.textureKey ?? pile.sprite.texture.key);
+    pile.sprite.setTexture(textureKey);
   }
 
   private removeGroundPile(pile: GroundPile) {

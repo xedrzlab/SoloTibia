@@ -331,6 +331,7 @@ export const IMAGE_ASSETS: ImageAsset[] = [
 
   // --- item icons; keys match ItemDef.textureKey in src/data/items.ts ---
   { key: "sword", path: "items/weapon_sword.png" },
+  { key: "sword-two-handed", path: "items/weapon_sword_two_handed.png" },
   { key: "axe", path: "items/weapon_axe.png" },
   { key: "bow", path: "items/weapon_bow.png" },
   { key: "wand", path: "items/weapon_wand.png" },
@@ -356,7 +357,15 @@ export const IMAGE_ASSETS: ImageAsset[] = [
   { key: "loot-bag", path: "items/loot_bag.png" },
   { key: "health-potion", path: "items/potion_health.png" },
   { key: "mana-potion", path: "items/potion_mana.png" },
+  // "gold-coin" is the plain fallback; the tiered keys are what the UI
+  // actually shows for a stack, picked by items.ts's goldCoinTextureFor.
   { key: "gold-coin", path: "items/coin_gold.png" },
+  { key: "gold-coin-1", path: "items/coin_gold_1.png" },
+  { key: "gold-coin-5", path: "items/coin_gold_5.png" },
+  { key: "gold-coin-10", path: "items/coin_gold_10.png" },
+  { key: "gold-coin-20", path: "items/coin_gold_20.png" },
+  { key: "gold-coin-50", path: "items/coin_gold_50.png" },
+  { key: "gold-coin-100", path: "items/coin_gold_100.png" },
   { key: "cheese", path: "items/food_cheese.png" },
   { key: "meat", path: "items/food_meat.png" },
   { key: "ham", path: "items/food_ham.png" },
