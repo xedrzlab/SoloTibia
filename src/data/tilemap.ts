@@ -986,9 +986,16 @@ export interface WallRockPlacement {
   x: number;
   y: number;
   textureKey: string;
+  /** Mirror horizontally — see the "side" case below. */
+  flipX?: boolean;
 }
 
-const SEWER_WALL_ROCK_TEXTURES = ["cave-wall-rock-1", "cave-wall-rock-2", "cave-wall-rock-3", "cave-wall-rock-4"];
+const SEWER_WALL_ROCK_NORTH_TEXTURES = [
+  "cave-wall-rock-north-1",
+  "cave-wall-rock-north-2",
+  "cave-wall-rock-north-3",
+  "cave-wall-rock-north-4",
+];
 
 /**
  * Every solid ("V") cell in the sewer whose SOUTH, EAST, or WEST neighbour is
@@ -1004,18 +1011,35 @@ const SEWER_WALL_ROCK_TEXTURES = ["cave-wall-rock-1", "cave-wall-rock-2", "cave-
  * point is to occlude someone standing south of it, not someone standing on
  * top of it. A cell with floor to its south, east, or west has no such
  * conflict: the sprite only ever grows into more of its own wall.
+ *
+ * Orientation: a cell facing floor to its south (a room ceiling or corridor
+ * top — by far the common case, including a cell that also faces east/west,
+ * e.g. an inside corner nub) gets one of the "north" boulder-cluster
+ * variants. A cell that only faces east or west (a vertical corridor's
+ * flanking wall, no south-facing floor) gets the "side" column instead,
+ * which is drawn opening toward the east by default — mirrored with flipX
+ * for a wall whose floor is to its WEST instead.
  */
 export const SEWER_WALL_ROCKS: WallRockPlacement[] = [];
 for (let y = SURFACE_HEIGHT; y < MAP_HEIGHT; y++) {
   for (let x = 0; x < MAP_WIDTH; x++) {
     if (tileAt(x, y).walkable) continue;
-    const facesFloor = tileAt(x, y + 1).walkable || tileAt(x + 1, y).walkable || tileAt(x - 1, y).walkable;
-    if (!facesFloor) continue;
-    SEWER_WALL_ROCKS.push({
-      x,
-      y,
-      textureKey: SEWER_WALL_ROCK_TEXTURES[cellHash(x, y) % SEWER_WALL_ROCK_TEXTURES.length],
-    });
+    const southFloor = tileAt(x, y + 1).walkable;
+    const eastFloor = tileAt(x + 1, y).walkable;
+    const westFloor = tileAt(x - 1, y).walkable;
+    if (!southFloor && !eastFloor && !westFloor) continue;
+    if (southFloor) {
+      SEWER_WALL_ROCKS.push({
+        x,
+        y,
+        textureKey: SEWER_WALL_ROCK_NORTH_TEXTURES[cellHash(x, y) % SEWER_WALL_ROCK_NORTH_TEXTURES.length],
+      });
+    } else {
+      // eastFloor: wall is west of the passage, asset's default "opens
+      // east" orientation is already correct. westFloor: wall is east of
+      // the passage, needs the mirror.
+      SEWER_WALL_ROCKS.push({ x, y, textureKey: "cave-wall-rock-side", flipX: westFloor });
+    }
   }
 }
 

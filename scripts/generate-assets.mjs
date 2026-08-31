@@ -27,15 +27,6 @@ const OUT = "public/assets";
 const ICONS = "public/icons";
 const SCALE = 2; // 16x16 source canvas -> 32x32 tiles, matching the 1-tile-per-sqm convention
 
-/** Same LCG as Sprite.speckle's inline one, factored out for callers that need a seeded rand() directly. */
-function seededRandom(seed) {
-  let s = seed;
-  return () => {
-    s = (s * 1103515245 + 12345) & 0x7fffffff;
-    return s / 0x7fffffff;
-  };
-}
-
 // ---------------------------------------------------------------------------
 // Tiles (only the ones with no real-art replacement)
 // ---------------------------------------------------------------------------
@@ -389,91 +380,10 @@ function campfireSprite() {
   return s;
 }
 
-// Matched to cave-wall-earth-1.png's sampled tone (~#472416 mid) rather than
-// the cool-grey P_STONE used for gravestones/campfire rings — this sits
-// directly against that flat earth texture (see caveWallRockSprite), so it
-// needs to be the same warm rock family, just with real shape instead of
-// flat speckle.
-const P_CAVE_ROCK = { deep: "#170b06", dark: "#301909", mid: "#47240f", light: "#6b4322", hi: "#8f5c30" };
-
-function caveWallBoulder(s, cx, cy, r) {
-  s.fillEllipse(cx + 0.9, cy + 0.9, r + 0.9, r * 0.55 + 0.9, P_CAVE_ROCK.deep);
-  s.fillEllipse(cx, cy, r, r * 0.8, P_CAVE_ROCK.mid);
-  s.fillEllipse(cx - r * 0.32, cy - r * 0.34, r * 0.58, r * 0.44, P_CAVE_ROCK.light);
-  if (r > 3) s.fillEllipse(cx - r * 0.48, cy - r * 0.5, r * 0.24, r * 0.18, P_CAVE_ROCK.hi);
-}
-
-/**
- * A stacked boulder pile forming a dungeon wall face — 2 tiles tall so it
- * leans up from its own footprint the same way a torch or tree does (see
- * tilemap.ts SEWER_WALL_ROCKS and WorldScene's rendering of it), instead of
- * the flat cave-wall-earth ground texture the rest of the sewer's unseen
- * solid rock uses. Bottom-anchored: the biggest, most detailed boulders sit
- * in the lowest rows (right at the wall/floor seam, closest to the player
- * standing in the passage below), thinning out and finally going transparent
- * near the top so it fades into the flat wall texture continuing above
- * rather than cutting off with a hard edge. `seed` nudges every boulder's
- * position/size a little so the handful of variants placed side by side
- * don't repeat identically.
- */
-function caveWallRockSprite(seed) {
-  const s = new Sprite(16, 32);
-  const rand = seededRandom(seed);
-  const jitter = (n) => (rand() - 0.5) * n;
-
-  s.fillRect(0, 29, 16, 3, P_CAVE_ROCK.deep); // grounding shadow at the seam
-
-  const boulders = [
-    // Bottom cluster — largest, most detailed, closest to the passage.
-    { cx: 3, cy: 28, r: 5 },
-    { cx: 9, cy: 29, r: 6 },
-    { cx: 14, cy: 27, r: 4.2 },
-    { cx: 6, cy: 24, r: 4.5 },
-    // Middle — thinning out.
-    { cx: 2, cy: 19, r: 3.6 },
-    { cx: 10, cy: 19, r: 4 },
-    { cx: 14, cy: 15, r: 3 },
-    { cx: 6, cy: 14, r: 3.2 },
-    // Top — sparse, receding into the unlit rock above.
-    { cx: 4, cy: 8, r: 2.6 },
-    { cx: 11, cy: 6, r: 2.2 },
-    { cx: 8, cy: 2, r: 1.8 },
-  ];
-  const placed = [];
-  for (const b of boulders) {
-    const cx = b.cx + jitter(1.0);
-    const cy = b.cy + jitter(1.0);
-    const r = Math.max(1.4, b.r + jitter(0.6));
-    caveWallBoulder(s, cx, cy, r);
-    placed.push({ cx, cy, r });
-  }
-  // Crevice lines between boulders sitting close together — drawn last so
-  // they cut a visible seam through the overlap instead of being painted
-  // over by the next boulder, which is what made an early version of this
-  // read as one soft blob instead of distinct stones.
-  for (let i = 0; i < placed.length; i++) {
-    for (let j = i + 1; j < placed.length; j++) {
-      const a = placed[i], b2 = placed[j];
-      const dx = b2.cx - a.cx, dy = b2.cy - a.cy;
-      const dist = Math.hypot(dx, dy);
-      if (dist < (a.r + b2.r) * 0.95 && dist > 0.1) {
-        const mx = (a.cx + b2.cx) / 2, my = (a.cy + b2.cy) / 2;
-        const px = -dy / dist, py = dx / dist;
-        const len = Math.min(a.r, b2.r) * 0.7;
-        // Sprite.line() steps by whole pixels and stops on exact endpoint
-        // equality, so float coordinates would loop forever — round first.
-        s.line(
-          Math.round(mx - px * len),
-          Math.round(my - py * len),
-          Math.round(mx + px * len),
-          Math.round(my + py * len),
-          P_CAVE_ROCK.deep,
-        );
-      }
-    }
-  }
-  return s;
-}
+// cave_wall_rock_north_1..4.png and cave_wall_rock_side.png are real art now
+// (extracted from a user-supplied cave-wall reference sheet, not procedural)
+// — see tilemap.ts SEWER_WALL_ROCKS and assets.ts for how they're keyed and
+// placed.
 
 /** Weathered gravestone. */
 function gravestoneSprite() {
@@ -2453,12 +2363,9 @@ saveSprite(campfireSprite(), SCALE, `${OUT}/props/campfire_01.png`);
 // user's wall-torch photo), not generated here — see assets.ts SHEET_ASSETS.
 saveSprite(gravestoneSprite(), SCALE, `${OUT}/props/gravestone_01.png`);
 saveSprite(chestSprite(), SCALE, `${OUT}/props/chest_01.png`);
-// Sewer wall-face boulder piles — see tilemap.ts SEWER_WALL_ROCKS for where
-// these get placed (only on wall cells that actually border a walkable
-// cell) and WorldScene for how they're rendered (leaning, like a tree).
-for (let i = 1; i <= 4; i++) {
-  saveSprite(caveWallRockSprite(i), SCALE, `${OUT}/props/cave_wall_rock_${i}.png`);
-}
+// cave_wall_rock_north_1..4.png and cave_wall_rock_side.png are real art now
+// — see tilemap.ts SEWER_WALL_ROCKS for where these get placed and
+// WorldScene for how they're rendered (leaning, like a tree).
 // ladder_up_01.png and sewer_entrance_01.png are real art now (cropped from
 // the user's ladder sheet and cave-hole image), not generated here — same
 // treatment as player_base_sheet.png etc.

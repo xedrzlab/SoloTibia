@@ -419,7 +419,8 @@ export class WorldScene extends Phaser.Scene {
       this.add
         .image(tileAnchorX(rock.x), tileAnchorY(rock.y), rock.textureKey)
         .setOrigin(1, 1)
-        .setDepth(depthForTileY(rock.y));
+        .setDepth(depthForTileY(rock.y))
+        .setFlipX(!!rock.flipX);
     }
   }
 
