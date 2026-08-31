@@ -273,18 +273,25 @@ export class Monster {
         this.trail.unshift({ x: this.tileX, y: this.tileY });
         this.trail.length = footprint - 1;
       }
+      const fromY = this.tileY;
       this.tileX = x;
       this.tileY = y;
       this.moving = true;
       this.stepToggle = !this.stepToggle;
       this.applyFrame(false);
-      this.sprite.setDepth(depthForTileY(y));
       this.scene.tweens.add({
         targets: this.sprite,
         x: tileAnchorX(x),
         y: tileAnchorY(y),
         duration,
-        onUpdate: () => this.syncBarPosition(),
+        // Depth tracks the tween's own progress rather than jumping to the
+        // destination tile up front — see Player.stepTo's comment: moving
+        // up would otherwise render the creature behind something on the
+        // row it hasn't visually reached yet for the whole step.
+        onUpdate: (tween) => {
+          this.sprite.setDepth(depthForTileY(fromY + (y - fromY) * tween.progress));
+          this.syncBarPosition();
+        },
         onComplete: () => {
           this.moving = false;
           this.applyFrame(true);

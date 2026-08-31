@@ -283,18 +283,26 @@ export class Player {
       const dy = y - this.tileY;
       const diagonal = dx !== 0 && dy !== 0;
       const duration = friction === undefined ? BASE_STEP_MS : this.stepDurationMs(friction, diagonal);
+      const fromY = this.tileY;
       this.setFacing(dx, dy);
       this.tileX = x;
       this.tileY = y;
       this.moving = true;
       this.applyFrame(false, duration);
-      this.sprite.setDepth(depthForTileY(y));
       this.scene.tweens.add({
         targets: this.sprite,
         x: this.spriteAnchorX(x),
         y: this.spriteAnchorY(y),
         duration,
-        onUpdate: () => this.syncSilhouette(), // shadow rides the tween with the body
+        // Depth tracks the tween's own progress (not the destination tile,
+        // set up front) — moving up would otherwise drop the depth before
+        // the sprite visually leaves its old row, so for the whole step it
+        // renders as if already behind whatever's on the row it hasn't
+        // reached yet, reading as a shadow passing over the character.
+        onUpdate: (tween) => {
+          this.sprite.setDepth(depthForTileY(fromY + (y - fromY) * tween.progress));
+          this.syncSilhouette(); // shadow rides the tween with the body
+        },
         onComplete: () => {
           this.moving = false;
           this.applyFrame(true);
