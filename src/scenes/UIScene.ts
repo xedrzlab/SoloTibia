@@ -20,6 +20,7 @@ import { SHOPS } from "../data/shops";
 import { SPELLS, SPELL_BAR } from "../data/spells";
 import { Container, ItemStack, SlotRef } from "../game/containers";
 import { Equipment, EQUIP_SLOT_NAMES } from "../game/equipment";
+import { itemInfoLines } from "../game/itemInfo";
 import { VOCATION_DESCRIPTIONS, VOCATION_NAMES, ChosenVocation } from "../game/stats";
 import { CombatStance, COMBAT_STANCE_NAMES } from "../game/skills";
 
@@ -126,6 +127,12 @@ const COLORS = {
 
 const TEXT = { fontFamily: "monospace" } as const;
 
+// Tap-and-hold to inspect an item. Tunable: how long the finger must rest
+// before the info panel opens, and how far it may drift first before the
+// gesture is treated as a drag instead (matches input.dragDistanceThreshold).
+const HOLD_DURATION_MS = 450;
+const DRAG_THRESHOLD_PX = 8;
+
 /** The paper-doll grid, matching the classic client's 3-wide arrangement. */
 const EQUIP_LAYOUT: { slot: EquipSlot; col: number; row: number }[] = [
   { slot: "neck", col: 0, row: 0 },
@@ -220,6 +227,15 @@ export class UIScene extends Phaser.Scene {
   private dragGhost: Phaser.GameObjects.Image | null = null;
   private dragFrom: SlotRef | null = null;
 
+  // --- Tap-and-hold item inspect (sits on top of the existing tap/drag) -----
+  private holdTimer?: Phaser.Time.TimerEvent;
+  /** True once a hold has opened the inspect panel, so the following pointerup doesn't also fire the item's tap action. Reset on the next pointerdown. */
+  private holdConsumed = false;
+  private holdStart: { x: number; y: number } | null = null;
+  private infoPanel: Phaser.GameObjects.Container | null = null;
+  private infoPanelRect: Phaser.Geom.Rectangle | null = null;
+  private infoCloseHandler: ((p: Phaser.Input.Pointer) => void) | null = null;
+
   // --- Floating (over-world) UI --------------------------------------------
   private targetPanel!: Phaser.GameObjects.Container;
   private targetLabel!: Phaser.GameObjects.Text;
@@ -280,6 +296,7 @@ export class UIScene extends Phaser.Scene {
     this.buildClimbPanel();
     this.buildPickupPanel();
     this.setupDragAndDrop();
+    this.setupItemInspect();
 
     bus.on(EVENTS.PLAYER_STATS, (p: PlayerStatsPayload) => {
       this.stats = p;
@@ -1019,7 +1036,11 @@ export class UIScene extends Phaser.Scene {
       .setInteractive({ draggable: true, useHandCursor: true });
     icon.setData("kind", "item");
     icon.setData("ref", ref);
+    icon.on("pointerdown", (pointer: Phaser.Input.Pointer) => this.beginItemHold(stack.itemId, pointer));
     icon.on("pointerup", (pointer: Phaser.Input.Pointer) => {
+      // A completed hold already opened the inspect panel; swallow this
+      // release so it doesn't also fire the normal tap action.
+      if (this.holdConsumed) return;
       // Phaser clears dragState after dragend, so a real drag never reaches
       // here as a tap; guard on distance anyway for slow, twitchy touches.
       if (pointer.getDistance() > 8) return;
@@ -1072,6 +1093,9 @@ export class UIScene extends Phaser.Scene {
         return;
       }
       if (kind !== "item") return;
+      // Movement crossed the drag threshold — the hold gesture loses to the
+      // drag, and no inspect panel appears for this interaction.
+      this.cancelItemHold();
       this.dragFrom = obj.getData("ref") as SlotRef;
       const image = obj as Phaser.GameObjects.Image;
       image.setAlpha(0.35);
@@ -1151,6 +1175,131 @@ export class UIScene extends Phaser.Scene {
       if (slot.bg.visible && slot.bg.getBounds().contains(x, y)) return false;
     }
     return true;
+  }
+
+  // =========================================================================
+  // Tap-and-hold item inspect
+  // =========================================================================
+
+  /**
+   * Global listeners that let a hold lose cleanly to a drag or a quick tap:
+   * any drift past the threshold, any release, or the scene shutting down
+   * cancels a pending hold and never leaves an orphaned timer or panel behind.
+   */
+  private setupItemInspect() {
+    this.input.on("pointermove", (p: Phaser.Input.Pointer) => {
+      if (!this.holdTimer || !this.holdStart) return;
+      const dx = p.x - this.holdStart.x;
+      const dy = p.y - this.holdStart.y;
+      if (dx * dx + dy * dy > DRAG_THRESHOLD_PX * DRAG_THRESHOLD_PX) this.cancelItemHold();
+    });
+    const cancel = () => this.cancelItemHold();
+    this.input.on("pointerup", cancel);
+    this.input.on("pointerupoutside", cancel);
+    this.input.on("gameout", cancel);
+
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.cancelItemHold();
+      this.closeItemInfo();
+    });
+  }
+
+  /** Start the hold timer on pointer-down. A fresh press clears the consumed flag so a normal tap can happen. */
+  private beginItemHold(itemId: string, pointer: Phaser.Input.Pointer) {
+    this.cancelItemHold();
+    this.holdConsumed = false;
+    this.holdStart = { x: pointer.x, y: pointer.y };
+    this.holdTimer = this.time.delayedCall(HOLD_DURATION_MS, () => {
+      this.holdTimer = undefined;
+      this.holdConsumed = true; // suppress the tap action that this same press would otherwise fire on release
+      if (this.holdStart) this.openItemInfo(itemId, this.holdStart.x, this.holdStart.y);
+    });
+  }
+
+  /** Cancel a pending hold. Leaves holdConsumed untouched so a completed hold still suppresses its release. */
+  private cancelItemHold() {
+    this.holdTimer?.remove(false);
+    this.holdTimer = undefined;
+  }
+
+  /**
+   * Build the inspect panel for an item purely from its existing ITEMS
+   * definition (see itemInfoLines) and place it near the finger, nudged fully
+   * on-screen. Info-only: no equip/use/drop/buy actions.
+   */
+  private openItemInfo(itemId: string, px: number, py: number) {
+    this.closeItemInfo();
+    const def = ITEMS[itemId];
+    if (!def) return;
+    const { title, lines } = itemInfoLines(def);
+
+    const PAD = Math.round(8 * UI_SCALE);
+    const container = this.add.container(0, 0).setScrollFactor(0).setDepth(500);
+
+    const titleText = this.add
+      .text(PAD, PAD, title, { ...TEXT, fontSize: fs(12), color: "#e6c34a" })
+      .setScrollFactor(0);
+    container.add(titleText);
+    let y = PAD + titleText.height + 4;
+    let maxW = titleText.width;
+
+    for (const line of lines) {
+      if (line === "") {
+        y += Math.round(6 * UI_SCALE);
+        continue;
+      }
+      const t = this.add.text(PAD, y, line, { ...TEXT, fontSize: fs(10), color: "#dcdcdc" }).setScrollFactor(0);
+      container.add(t);
+      maxW = Math.max(maxW, t.width);
+      y += t.height + 3;
+    }
+
+    const w = maxW + PAD * 2;
+    const h = y + PAD;
+    // Interactive background so taps on the panel don't fall through to any
+    // item slot behind it (and it reads as a solid pixel-art window).
+    const bg = this.add
+      .rectangle(0, 0, w, h, COLORS.windowBg, 0.97)
+      .setOrigin(0, 0)
+      .setStrokeStyle(1, COLORS.accent)
+      .setScrollFactor(0)
+      .setInteractive();
+    container.addAt(bg, 0);
+
+    // Place next to the finger, then flip/clamp so the whole panel stays on
+    // screen: near the right edge it goes left, near the bottom it goes up.
+    const sw = this.scale.width;
+    const sh = this.scale.height;
+    const gap = Math.round(12 * UI_SCALE);
+    let x = px + gap;
+    if (x + w > sw - 4) x = px - gap - w;
+    let top = py + gap;
+    if (top + h > sh - 4) top = py - gap - h;
+    x = Phaser.Math.Clamp(x, 4, Math.max(4, sw - w - 4));
+    top = Phaser.Math.Clamp(top, 4, Math.max(4, sh - h - 4));
+    container.setPosition(x, top);
+
+    this.infoPanel = container;
+    this.infoPanelRect = new Phaser.Geom.Rectangle(x, top, w, h);
+
+    // The gesture that opened this panel is a still-held press, so the next
+    // pointerdown is a fresh one: close on any press outside the panel (which
+    // also covers pressing a different item to inspect it instead).
+    this.infoCloseHandler = (p: Phaser.Input.Pointer) => {
+      if (this.infoPanelRect && this.infoPanelRect.contains(p.x, p.y)) return;
+      this.closeItemInfo();
+    };
+    this.input.on("pointerdown", this.infoCloseHandler);
+  }
+
+  private closeItemInfo() {
+    if (this.infoCloseHandler) {
+      this.input.off("pointerdown", this.infoCloseHandler);
+      this.infoCloseHandler = null;
+    }
+    this.infoPanel?.destroy(true);
+    this.infoPanel = null;
+    this.infoPanelRect = null;
   }
 
   private drawBar(
@@ -1386,6 +1535,7 @@ export class UIScene extends Phaser.Scene {
   private closeShop() {
     this.shopOpen = false;
     this.shopPanel.setVisible(false);
+    this.closeItemInfo();
     this.syncModalState();
   }
 
@@ -1444,12 +1594,18 @@ export class UIScene extends Phaser.Scene {
       const label = this.add
         .text(36, y + (rowHeight - 3) / 2, text, { ...TEXT, fontSize: "10px", color: "#f0f0f0" })
         .setOrigin(0, 0.5);
-      row.on("pointerdown", () =>
+      // Hold to inspect; a plain tap still buys/sells — moved to pointerup so
+      // the hold gesture has a chance to complete first (a tap and a hold both
+      // begin with the same pointerdown).
+      row.on("pointerdown", (pointer: Phaser.Input.Pointer) => this.beginItemHold(offer.itemId, pointer));
+      row.on("pointerup", (pointer: Phaser.Input.Pointer) => {
+        if (this.holdConsumed) return;
+        if (pointer.getDistance() > DRAG_THRESHOLD_PX) return;
         bus.emit(offer.mode === "buy" ? EVENTS.BUY_ITEM : EVENTS.SELL_ITEM, {
           npcId: this.currentShop!.npcId,
           itemId: offer.itemId,
-        }),
-      );
+        });
+      });
       this.shopPanel.add([row, icon, label]);
       y += rowHeight;
     }
