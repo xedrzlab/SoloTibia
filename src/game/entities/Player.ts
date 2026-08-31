@@ -169,8 +169,6 @@ export class Player {
     backpack.addItem("mana_potion", 1);
     backpack.addItem("wooden_shield", 1);
     backpack.addItem("leather_helmet", 1);
-    // A spare bag, so nested containers are discoverable from the first minute.
-    backpack.addItem("bag", 1);
   }
 
   /** Root of the inventory tree — null only if the backpack slot is emptied. */

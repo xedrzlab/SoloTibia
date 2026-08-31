@@ -165,6 +165,7 @@ export const BUILDINGS: BuildingPlacement[] = [
 
   // --- Southernmost row (footprints y=33-35, doors y=35, road y=36) ---
   { textureKey: "building-magic-shop", footprintX: 24, footprintY: 33, footprintW: 6, footprintH: 3 },
+  { textureKey: "building-general-store", footprintX: 40, footprintY: 33, footprintW: 6, footprintH: 3 },
 ];
 for (const building of BUILDINGS) {
   b.rect(building.footprintX, building.footprintY, building.footprintW, building.footprintH, "B");
@@ -200,6 +201,7 @@ export const ENTRY_POINTS: EntryPoint[] = [
   { x: 27, y: 29, interiorId: "melee_shop" },
   { x: 43, y: 29, interiorId: "ranged_shop" },
   { x: 27, y: 35, interiorId: "magic_shop" },
+  { x: 43, y: 35, interiorId: "general_store" },
 ];
 // Punch each door tile out of the wall paint above, so the player can
 // actually step onto it. The building sprite still draws over the tile —

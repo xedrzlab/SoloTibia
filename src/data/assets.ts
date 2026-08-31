@@ -309,6 +309,7 @@ export const IMAGE_ASSETS: ImageAsset[] = [
   { key: "building-ranged-shop", path: "buildings/ranged_shop_01.png", smooth: true },
   { key: "building-magic-shop", path: "buildings/magic_shop_01.png", smooth: true },
   { key: "building-temple", path: "buildings/temple_01.png", smooth: true },
+  { key: "building-general-store", path: "buildings/general_store_01.png", smooth: true },
 
   // --- npcs ---
   { key: "npc-borin", path: "characters/npc_borin.png" },
@@ -319,6 +320,7 @@ export const IMAGE_ASSETS: ImageAsset[] = [
   { key: "npc-farmer-02", path: "characters/npc_farmer_02.png" },
   { key: "npc-priest", path: "characters/npc_priest.png" },
   { key: "npc-banker", path: "characters/npc_banker.png" },
+  { key: "npc-grocer", path: "characters/npc_grocer.png" },
 
   // --- effects ---
   { key: "fx-hit", path: "effects/hit_spark_01.png" },
@@ -345,6 +347,11 @@ export const IMAGE_ASSETS: ImageAsset[] = [
   { key: "amulet", path: "items/jewel_amulet.png" },
   { key: "ring", path: "items/jewel_ring.png" },
   { key: "backpack", path: "items/container_backpack.png" },
+  { key: "backpack-red", path: "items/container_backpack_red.png" },
+  { key: "backpack-blue", path: "items/container_backpack_blue.png" },
+  { key: "backpack-green", path: "items/container_backpack_green.png" },
+  { key: "backpack-gray", path: "items/container_backpack_gray.png" },
+  { key: "backpack-tan", path: "items/container_backpack_tan.png" },
   { key: "bag", path: "items/container_bag.png" },
   { key: "loot-bag", path: "items/loot_bag.png" },
   { key: "health-potion", path: "items/potion_health.png" },

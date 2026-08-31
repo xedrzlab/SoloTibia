@@ -1,6 +1,7 @@
-// Three shops, split by fighting style. Each keeps its own inventory — a
-// magic buyer isn't going to trade in a sword, and a blacksmith won't touch a
-// wand — which is what the world tells the player through the shop signs.
+// Four shops: three split by fighting style, plus the general store for
+// food and carry gear. Each keeps its own inventory — a magic buyer isn't
+// going to trade in a sword, and a blacksmith won't touch a wand — which is
+// what the world tells the player through the shop signs.
 
 export interface ShopOffer {
   itemId: string;
@@ -77,6 +78,30 @@ export const SHOPS: Record<string, ShopDef> = {
       { itemId: "wand_of_vortex", price: 48 },
       { itemId: "amulet_of_life", price: 36 },
       { itemId: "ring_of_healing", price: 44 },
+    ],
+  },
+
+  // The General Store — food and carry gear, the two things every traveller
+  // needs regardless of vocation. Backpacks are cosmetic color variants of
+  // the same 12-slot container, so they're all priced the same; no buyback
+  // on containers, matching the blacksmith's precedent.
+  grocer: {
+    npcId: "grocer",
+    sells: [
+      { itemId: "cheese", price: 8 },
+      { itemId: "meat", price: 14 },
+      { itemId: "ham", price: 22 },
+      { itemId: "backpack", price: 35 },
+      { itemId: "backpack_red", price: 35 },
+      { itemId: "backpack_blue", price: 35 },
+      { itemId: "backpack_green", price: 35 },
+      { itemId: "backpack_gray", price: 35 },
+      { itemId: "backpack_tan", price: 35 },
+    ],
+    buys: [
+      { itemId: "cheese", price: 3 },
+      { itemId: "meat", price: 5 },
+      { itemId: "ham", price: 8 },
     ],
   },
 };

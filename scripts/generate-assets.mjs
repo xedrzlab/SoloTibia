@@ -1749,6 +1749,44 @@ function elderFrame() {
   return s;
 }
 
+/** Della the grocer: cream shirt, green apron, sleeves rolled up for a day of shelf-stocking. */
+function grocerFrame() {
+  const s = new Sprite(16, 16);
+  const shirt = "#e8e0c8";
+  const shirtLo = "#c8bfa0";
+  const apron = "#4a7a4a";
+  const apronHi = "#5c945c";
+  const apronLo = "#365a36";
+  const skin = "#d9a06c";
+  const hair = "#7a4a26";
+  s.fillRect(6, 12, 2, 2, "#3a2717");
+  s.fillRect(8, 12, 2, 2, "#3a2717");
+  // Long apron over the shirt, straps crossing at the chest
+  s.fillRect(5, 9, 6, 4, apron);
+  s.fillRect(5, 9, 1, 4, apronLo);
+  s.fillRect(10, 9, 1, 4, apronLo);
+  s.fillRect(6, 10, 4, 1, apronHi); // pocket seam
+  // Shirt visible above the apron and at the rolled-up sleeves
+  s.fillRect(4, 6, 8, 4, shirt);
+  s.fillRect(4, 6, 8, 1, shirtLo);
+  s.fillRect(6, 8, 4, 1, apron); // apron bib
+  s.setPixel(6, 8, apronHi);
+  s.setPixel(9, 8, apronHi);
+  // Arms, sleeves rolled to the elbow
+  s.fillRect(3, 7, 1, 2, shirt);
+  s.fillRect(12, 7, 1, 2, shirt);
+  s.setPixel(3, 9, skin);
+  s.setPixel(12, 9, skin);
+  // Head
+  s.fillCircle(8, 3, 2.4, skin);
+  s.fillRect(6, 1, 4, 1, hair);
+  s.setPixel(5, 2, hair);
+  s.setPixel(10, 2, hair);
+  s.setPixel(7, 3, "#241a12");
+  s.setPixel(9, 3, "#241a12");
+  return s;
+}
+
 /** The banker: dark waistcoat, a coin pouch at the hip, silver chain. */
 function bankerFrame() {
   const s = new Sprite(16, 16);
@@ -2347,21 +2385,6 @@ function packIcon({ dark, mid, light, strap, width, height, top }) {
   return s;
 }
 
-function backpackIcon() {
-  const s = packIcon({
-    dark: "#4a2f1a",
-    mid: "#7a5230",
-    light: "#96683c",
-    strap: "#e6c34a",
-    width: 10,
-    height: 11,
-    top: 3,
-  });
-  s.fillRect(4, 1, 2, 3, "#5c3c22"); // shoulder straps
-  s.fillRect(10, 1, 2, 3, "#5c3c22");
-  return s;
-}
-
 function bagIcon() {
   const s = packIcon({
     dark: "#5a3d22",
@@ -2657,6 +2680,7 @@ saveSprite(farmerFrame(0), SCALE, `${OUT}/characters/npc_farmer_01.png`);
 saveSprite(farmerFrame(1), SCALE, `${OUT}/characters/npc_farmer_02.png`);
 saveSprite(priestFrame(), SCALE, `${OUT}/characters/npc_priest.png`);
 saveSprite(bankerFrame(), SCALE, `${OUT}/characters/npc_banker.png`);
+saveSprite(grocerFrame(), SCALE, `${OUT}/characters/npc_grocer.png`);
 
 // --- creatures -----------------------------------------------------------
 const trollMeta = saveSpriteSheet(directionalFrames(trollFrame), SCALE, `${OUT}/creatures/troll_sheet.png`);
@@ -2692,7 +2716,9 @@ saveSprite(plateLegsIcon(), SCALE, `${OUT}/items/armor_legs_plate.png`);
 saveSprite(leatherBootsIcon(), SCALE, `${OUT}/items/armor_boots_leather.png`);
 saveSprite(amuletIcon(), SCALE, `${OUT}/items/jewel_amulet.png`);
 saveSprite(ringIcon(), SCALE, `${OUT}/items/jewel_ring.png`);
-saveSprite(backpackIcon(), SCALE, `${OUT}/items/container_backpack.png`);
+// container_backpack.png (and its red/blue/green/gray/tan variants) are real
+// art now (cropped from the user's backpack sheet), not generated here —
+// same treatment as player_base_sheet.png etc.
 saveSprite(bagIcon(), SCALE, `${OUT}/items/container_bag.png`);
 saveSprite(healthPotionIcon(), SCALE, `${OUT}/items/potion_health.png`);
 saveSprite(manaPotionIcon(), SCALE, `${OUT}/items/potion_mana.png`);

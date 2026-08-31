@@ -230,6 +230,25 @@ export const INTERIORS: Record<string, InteriorRoom> = {
     decor: [],
   },
 
+  general_store: {
+    id: "general_store",
+    title: "Oakhollow General Store",
+    rows: SHOP_ROWS,
+    spawn: SHOP_SPAWN,
+    npc: {
+      id: "grocer",
+      name: "Della",
+      textureKey: "npc-grocer",
+      role: "shop",
+      greeting: "Cheese, ham, a spare pack — what'll it be?",
+      about:
+        "I keep the shelves stocked with whatever a traveller might've forgotten to pack — food for the road, and a backpack for everything else.",
+      x: 4,
+      y: 3,
+    },
+    decor: [],
+  },
+
   // ---------------------------------------------------------------------
   // Bank — deposit and withdraw gold. Same shop template, different keeper.
   // ---------------------------------------------------------------------
