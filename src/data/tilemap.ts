@@ -978,6 +978,47 @@ export function forEachTile(cb: (x: number, y: number, tile: TileInfo) => void):
   }
 }
 
+// ---------------------------------------------------------------------------
+// Sewer wall-face boulder piles
+// ---------------------------------------------------------------------------
+
+export interface WallRockPlacement {
+  x: number;
+  y: number;
+  textureKey: string;
+}
+
+const SEWER_WALL_ROCK_TEXTURES = ["cave-wall-rock-1", "cave-wall-rock-2", "cave-wall-rock-3", "cave-wall-rock-4"];
+
+/**
+ * Every solid ("V") cell in the sewer whose SOUTH, EAST, or WEST neighbour is
+ * walkable floor — i.e. every wall cell that actually faces a room or
+ * corridor, not the bulk of unseen solid rock behind it. Each becomes a
+ * leaning boulder-pile sprite in WorldScene (same bottom-right anchor as a
+ * tree or building), so it reads as a rock wall rising over the passage
+ * instead of the flat cave-wall-earth ground texture used everywhere else.
+ *
+ * NORTH neighbours are deliberately excluded: with the bottom-right lean
+ * anchor, a sprite placed on a cell whose floor is to its NORTH would hang
+ * *up into* that floor tile — exactly wrong, since a leaning sprite's whole
+ * point is to occlude someone standing south of it, not someone standing on
+ * top of it. A cell with floor to its south, east, or west has no such
+ * conflict: the sprite only ever grows into more of its own wall.
+ */
+export const SEWER_WALL_ROCKS: WallRockPlacement[] = [];
+for (let y = SURFACE_HEIGHT; y < MAP_HEIGHT; y++) {
+  for (let x = 0; x < MAP_WIDTH; x++) {
+    if (tileAt(x, y).walkable) continue;
+    const facesFloor = tileAt(x, y + 1).walkable || tileAt(x + 1, y).walkable || tileAt(x - 1, y).walkable;
+    if (!facesFloor) continue;
+    SEWER_WALL_ROCKS.push({
+      x,
+      y,
+      textureKey: SEWER_WALL_ROCK_TEXTURES[cellHash(x, y) % SEWER_WALL_ROCK_TEXTURES.length],
+    });
+  }
+}
+
 /** Returns the interior room to zone into if `(x,y)` is a door tile. */
 export function entryPointAt(x: number, y: number): EntryPoint | null {
   return ENTRY_POINTS.find((e) => e.x === x && e.y === y) ?? null;

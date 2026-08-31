@@ -224,6 +224,11 @@ export const IMAGE_ASSETS: ImageAsset[] = [
   { key: "cart", path: "props/cart_01.png" },
   { key: "campfire", path: "props/campfire_01.png" },
   { key: "gravestone", path: "props/gravestone_01.png" },
+  // Boulder-pile wall faces for the sewer — see tilemap.ts SEWER_WALL_ROCKS.
+  { key: "cave-wall-rock-1", path: "props/cave_wall_rock_1.png" },
+  { key: "cave-wall-rock-2", path: "props/cave_wall_rock_2.png" },
+  { key: "cave-wall-rock-3", path: "props/cave_wall_rock_3.png" },
+  { key: "cave-wall-rock-4", path: "props/cave_wall_rock_4.png" },
   // Real art cropped from the user's transparent props sheet (not procedural
   // like the rest of this list) — a testing placement, see tilemap.ts PROPS.
   { key: "chimney-brick", path: "props/chimney_brick.png" },
