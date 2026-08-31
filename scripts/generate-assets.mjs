@@ -199,30 +199,6 @@ function rockyGroundTile() {
  * exactly the tile WorldScene fades this sprite for for when the player
  * walks onto it, so they're never hidden behind their own ladder.
  */
-function ladderUpSprite() {
-  const s = new Sprite(16, 32);
-  const rail = "#6b4a2a";
-  const railHi = "#8a6a3d";
-  const rung = "#5a3d22";
-  const pit = "#0a0a0c";
-
-  // Dark pit the ladder rises from, in the bottom (base) tile.
-  s.fillEllipse(8, 25, 6, 5, pit);
-  s.fillEllipse(8, 25, 5, 4, "#141210");
-
-  // Side rails, running the full two-tile height.
-  s.fillRect(4, 1, 2, 27, rail);
-  s.fillRect(10, 1, 2, 27, rail);
-  s.fillRect(4, 1, 1, 27, railHi);
-  s.fillRect(10, 1, 1, 27, railHi);
-
-  // Rungs, evenly spaced up both tiles.
-  for (let y = 3; y < 26; y += 3) {
-    s.fillRect(5, y, 6, 1, rung);
-  }
-  return s;
-}
-
 /**
  * Sewer entrance: a square hatch cut into the street/ground, stone-rimmed,
  * with a wooden grate cover pulled half aside over a dark drop. Standing on
@@ -2671,7 +2647,8 @@ saveSprite(campfireSprite(), SCALE, `${OUT}/props/campfire_01.png`);
 saveSprite(torchSprite(), SCALE, `${OUT}/props/torch_01.png`);
 saveSprite(gravestoneSprite(), SCALE, `${OUT}/props/gravestone_01.png`);
 saveSprite(chestSprite(), SCALE, `${OUT}/props/chest_01.png`);
-saveSprite(ladderUpSprite(), SCALE, `${OUT}/props/ladder_up_01.png`);
+// ladder_up_01.png is real art now (cropped from the user's ladder sheet),
+// not generated here — same treatment as player_base_sheet.png etc.
 saveSprite(sewerEntranceSprite(), SCALE, `${OUT}/props/sewer_entrance_01.png`);
 saveSprite(sackSprite(), SCALE, `${OUT}/props/sack_01.png`);
 saveSprite(fenceGateSprite(), SCALE, `${OUT}/props/fence_gate_01.png`);
