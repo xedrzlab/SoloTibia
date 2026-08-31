@@ -49,6 +49,15 @@ export class BootScene extends Phaser.Scene {
       repeat: -1,
     });
 
+    // Wall torches flicker continuously (not tied to movement), 4 frames at
+    // an uneven pace so the loop doesn't read as a metronome.
+    this.anims.create({
+      key: "torch-flicker",
+      frames: this.anims.generateFrameNumbers("torch", { start: 0, end: 3 }),
+      frameRate: 6,
+      repeat: -1,
+    });
+
     // A monster whose directional sheet has no dedicated stepA/stepB/attack
     // art (e.g. cave_rat's idle+move, goblin's 6-frame walk cycle) gets a
     // real looping walk animation per direction instead of a frame flipped

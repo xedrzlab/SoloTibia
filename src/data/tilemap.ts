@@ -476,6 +476,16 @@ export const PROPS: PropPlacement[] = [
   { textureKey: "torch", x: 49, y: 65, blocks: true },
   { textureKey: "torch", x: 33, y: 89, blocks: true },
   { textureKey: "torch", x: 37, y: 89, blocks: true },
+  // A few more along the long corridors, spaced well apart on purpose —
+  // pools of light with real dark, mysterious stretches between them rather
+  // than a lit-up hallway. The A-B corridor and both north-to-south drops
+  // (~30 tiles each) would otherwise be pitch black the whole way, since the
+  // room-entrance torches above only reach the first few tiles of each.
+  { textureKey: "torch", x: 27, y: 68, blocks: true },
+  { textureKey: "torch", x: 42, y: 68, blocks: true },
+  { textureKey: "torch", x: 20, y: 77, blocks: true },
+  { textureKey: "torch", x: 50, y: 77, blocks: true },
+  { textureKey: "torch", x: 35, y: 85, blocks: true },
   { textureKey: "chest", x: 11, y: 68, blocks: true },
 ];
 

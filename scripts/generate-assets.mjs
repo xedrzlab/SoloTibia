@@ -380,20 +380,6 @@ function campfireSprite() {
   return s;
 }
 
-/** Standing torch on a post — lights dungeon walls and town roads. */
-function torchSprite() {
-  const s = new Sprite(16, 16);
-  s.fillEllipse(8, 14, 2.4, 1, "#14110f");
-  s.fillRect(7, 6, 2, 8, P_BARK.mid);
-  s.fillRect(7, 6, 1, 8, P_BARK.light);
-  s.fillRect(6, 5, 4, 2, "#3a3640"); // iron cage
-  s.fillEllipse(8, 3.6, 2.2, 2.8, "#8a3410");
-  s.fillEllipse(8, 4, 1.4, 2, "#e8862f");
-  s.setPixel(8, 4, "#ffe08a");
-  s.setPixel(8, 1, "#c95a1e");
-  return s;
-}
-
 /** Weathered gravestone. */
 function gravestoneSprite() {
   const s = new Sprite(16, 16);
@@ -2368,7 +2354,8 @@ saveSprite(fenceVerticalSprite(), SCALE, `${OUT}/props/fence_v_01.png`);
 saveSprite(benchSprite(), SCALE, `${OUT}/props/bench_01.png`);
 saveSprite(cartSprite(), SCALE, `${OUT}/props/cart_01.png`);
 saveSprite(campfireSprite(), SCALE, `${OUT}/props/campfire_01.png`);
-saveSprite(torchSprite(), SCALE, `${OUT}/props/torch_01.png`);
+// torch_01.png is real art now (a 4-frame flicker sheet cropped from the
+// user's wall-torch photo), not generated here — see assets.ts SHEET_ASSETS.
 saveSprite(gravestoneSprite(), SCALE, `${OUT}/props/gravestone_01.png`);
 saveSprite(chestSprite(), SCALE, `${OUT}/props/chest_01.png`);
 // ladder_up_01.png and sewer_entrance_01.png are real art now (cropped from

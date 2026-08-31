@@ -187,7 +187,11 @@ export class WorldScene extends Phaser.Scene {
    * layered trees); a ladder is not, since its footprint is only one tile
    * wide and there's nowhere else to route around it.
    */
-  private ladders: { sprite: Phaser.GameObjects.Image; tileX: number; tileY: number }[] = [];
+  private ladders: {
+    sprite: Phaser.GameObjects.Image | Phaser.GameObjects.Sprite;
+    tileX: number;
+    tileY: number;
+  }[] = [];
   private static readonly LADDER_OCCLUDED_ALPHA = 0.35;
 
   // --- Climb (sewer ladder/hatch) hold-to-confirm ---------------------------
@@ -428,16 +432,27 @@ export class WorldScene extends Phaser.Scene {
       // A rotated prop is flat and single-tile (no lean/occlusion needs), so
       // it rotates in place around its tile's center rather than the usual
       // bottom-right lean anchor.
-      const sprite = prop.angle
-        ? this.add
-            .image(tileAnchorX(prop.x) - TILE_SIZE / 2, tileAnchorY(prop.y) - TILE_SIZE / 2, prop.textureKey)
-            .setOrigin(0.5, 0.5)
-            .setAngle(prop.angle)
-            .setDepth(depthForTileY(prop.y))
-        : this.add
-            .image(tileAnchorX(prop.x), tileAnchorY(prop.y), prop.textureKey)
-            .setOrigin(1, 1)
-            .setDepth(depthForTileY(prop.y));
+      let sprite: Phaser.GameObjects.Image | Phaser.GameObjects.Sprite;
+      if (prop.angle) {
+        sprite = this.add
+          .image(tileAnchorX(prop.x) - TILE_SIZE / 2, tileAnchorY(prop.y) - TILE_SIZE / 2, prop.textureKey)
+          .setOrigin(0.5, 0.5)
+          .setAngle(prop.angle)
+          .setDepth(depthForTileY(prop.y));
+      } else if (prop.textureKey === "torch") {
+        // Only textureKey that's a Sprite among these Images — it's the one
+        // prop with a flicker animation to .play().
+        sprite = this.add
+          .sprite(tileAnchorX(prop.x), tileAnchorY(prop.y), prop.textureKey)
+          .setOrigin(1, 1)
+          .setDepth(depthForTileY(prop.y))
+          .play({ key: "torch-flicker", startFrame: Phaser.Math.Between(0, 3) });
+      } else {
+        sprite = this.add
+          .image(tileAnchorX(prop.x), tileAnchorY(prop.y), prop.textureKey)
+          .setOrigin(1, 1)
+          .setDepth(depthForTileY(prop.y));
+      }
       // Ladders are two tiles tall and only one tile wide — there's no way
       // to walk "around" one the way you can skirt a tree's canopy, so it
       // fades instead of hiding the player standing behind it.
@@ -465,7 +480,7 @@ export class WorldScene extends Phaser.Scene {
    * actually gives it motion, same tween-and-destroy idiom as burst() below,
    * just repeating on a timer instead of firing once.
    */
-  private startChimneySmoke(chimneySprite: Phaser.GameObjects.Image) {
+  private startChimneySmoke(chimneySprite: Phaser.GameObjects.Image | Phaser.GameObjects.Sprite) {
     const topX = chimneySprite.x - chimneySprite.displayWidth / 2;
     const topY = chimneySprite.y - chimneySprite.displayHeight;
     const spawnPuff = () => {

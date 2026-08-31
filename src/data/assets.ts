@@ -223,7 +223,6 @@ export const IMAGE_ASSETS: ImageAsset[] = [
   { key: "bench", path: "props/bench_01.png" },
   { key: "cart", path: "props/cart_01.png" },
   { key: "campfire", path: "props/campfire_01.png" },
-  { key: "torch", path: "props/torch_01.png" },
   { key: "gravestone", path: "props/gravestone_01.png" },
   // Real art cropped from the user's transparent props sheet (not procedural
   // like the rest of this list) — a testing placement, see tilemap.ts PROPS.
@@ -389,6 +388,9 @@ export const SHEET_ASSETS: SheetAsset[] = [
   { key: "troll", path: "creatures/troll_sheet.png", frameWidth: 40, frameHeight: 52 },
   { key: "goblin", path: "creatures/goblin_sheet.png", ...TILE_FRAME, smooth: true },
   { key: "bear", path: "creatures/bear_sheet.png", ...TILE_FRAME, smooth: true },
+  // 4-frame flicker cycle, bottom-anchored like the other leaning props (see
+  // tileAnchor.ts) but twice the tile height since the flame extends above it.
+  { key: "torch", path: "props/torch_01.png", frameWidth: 32, frameHeight: 64 },
 ];
 
 /** How many frames the water cycle has, and how long each is held. */

@@ -9,6 +9,7 @@
 
 import Phaser from "phaser";
 import { TILE_SIZE } from "./constants";
+import { SURFACE_HEIGHT } from "../data/tilemap";
 
 /** Real seconds for one full dawn -> day -> dusk -> night cycle. */
 export const DAY_LENGTH_SECONDS = 480;
@@ -44,6 +45,12 @@ const PHASES: Phase[] = [
   { at: 0.92, color: 0x0a1428, alpha: 0.66 }, // late night
   { at: 1.0, color: 0x1a2440, alpha: 0.32 }, // back to dawn
 ];
+
+// The sewer is windowless rock below the surface, so it never sees the sun —
+// it stays at this damp, faintly green-black gloom regardless of the surface
+// clock, dimmer than even full night, with torchlight doing all the work of
+// carving out the safe pools (see update()'s inSewer branch).
+const DUNGEON_AMBIENT: Phase = { at: 0, color: 0x0d1811, alpha: 0.62 };
 
 function lerp(a: number, b: number, t: number): number {
   return a + (b - a) * t;
@@ -119,7 +126,8 @@ export class DayNightCycle {
     return "night";
   }
 
-  private ambient(): { color: number; alpha: number } {
+  private ambient(inSewer: boolean): { color: number; alpha: number } {
+    if (inSewer) return { color: DUNGEON_AMBIENT.color, alpha: DUNGEON_AMBIENT.alpha };
     for (let i = 0; i < PHASES.length - 1; i++) {
       const from = PHASES[i];
       const to = PHASES[i + 1];
@@ -139,7 +147,8 @@ export class DayNightCycle {
     this.elapsedMs += deltaMs;
     this.clock = (this.elapsedMs / (DAY_LENGTH_SECONDS * 1000)) % 1;
 
-    const { color, alpha } = this.ambient();
+    const inSewer = playerTile.y >= SURFACE_HEIGHT;
+    const { color, alpha } = this.ambient(inSewer);
     if (alpha <= 0.001) {
       // Broad daylight: skip the work entirely rather than compositing a
       // fully transparent layer every frame.
