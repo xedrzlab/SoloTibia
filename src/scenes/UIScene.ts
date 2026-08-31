@@ -382,21 +382,25 @@ export class UIScene extends Phaser.Scene {
       x += slotSize + slotGap;
     }
 
-    for (let i = 0; i < this.logLines.length; i++) {
-      this.logLines[i].setPosition(10, h - 66 - (this.logLines.length - 1 - i) * 13);
-    }
-
-    // D-pad: mid-left, clear of both the log (bottom-left) and the action
-    // bar (bottom-center) — a thumb resting there in landscape reaches every
-    // button without the hand ever needing to move.
+    // D-pad: lower-left corner, clear of the action bar (bottom-center) — a
+    // thumb resting there in landscape reaches every button without the
+    // hand ever needing to move.
     const dpadStep = slotSize + slotGap;
     const dpadCenterX = 20 + slotSize * 1.5;
-    const dpadCenterY = h / 2;
+    const dpadCenterY = h - slotSize / 2 - 8 - dpadStep;
     for (const btn of this.dpadButtons) {
       const bx = dpadCenterX + btn.gridX * dpadStep;
       const by = dpadCenterY + btn.gridY * dpadStep;
       btn.bg.setPosition(bx, by);
       btn.label.setPosition(bx, by);
+    }
+
+    // Log: stacked just above the D-pad instead of the screen's bottom edge,
+    // so the two form one control cluster in the corner.
+    const dpadTopEdge = dpadCenterY - dpadStep - slotSize / 2;
+    const logBottomY = dpadTopEdge - 10;
+    for (let i = 0; i < this.logLines.length; i++) {
+      this.logLines[i].setPosition(10, logBottomY - (this.logLines.length - 1 - i) * 13);
     }
 
     this.toggleBg.setPosition(this.scale.width - this.sidebarWidth - TOGGLE_W / 2, h / 2);
