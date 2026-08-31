@@ -235,14 +235,27 @@ export function calculateShieldDefense(opts: {
 /**
  * Armor mitigation — centralized so every attacker (player, monster, a
  * future spell that deals physical damage) calls the same function rather
- * than each re-implementing the formula. Armor soaks a random slice of the
- * hit, so heavy armor blunts chip damage without making a defender
- * unkillable.
+ * than each re-implementing the formula.
+ *
+ * Classic Tibia 7.6-style FLAT reduction: armor removes a random flat amount
+ * of damage, never a percentage of the hit — so a given armor value blunts
+ * the same absolute chunk whether the blow was for 8 or for 100. For total
+ * armor A the reduction rolls a uniform integer in:
+ *   A <= 0            -> 0
+ *   A == 1            -> 1
+ *   A >= 2            -> floor(A/2) .. floor(A/2)*2 - 1   (inclusive)
+ * e.g. A4 -> 2..3, A6 -> 3..5, A9 -> 4..7, A14 -> 7..13.
  */
 export function calculateArmorMitigation(rawDamage: number, armor: number): number {
   if (armor <= 0) return Math.max(0, rawDamage);
-  const min = armor * 0.5;
-  const reduction = Math.floor(min + Math.random() * (armor - min + 1));
+  let reduction: number;
+  if (armor === 1) {
+    reduction = 1;
+  } else {
+    const min = Math.floor(armor / 2);
+    const max = min * 2 - 1;
+    reduction = min + Math.floor(Math.random() * (max - min + 1));
+  }
   return Math.max(0, rawDamage - reduction);
 }
 

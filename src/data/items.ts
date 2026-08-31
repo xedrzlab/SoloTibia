@@ -250,7 +250,7 @@ export const ITEMS: Record<string, ItemDef> = {
     stackable: false,
     weight: 12,
     equipSlot: "head",
-    armor: 2,
+    armor: 1,
   },
   steel_helmet: {
     id: "steel_helmet",
@@ -280,7 +280,7 @@ export const ITEMS: Record<string, ItemDef> = {
     stackable: false,
     weight: 110,
     equipSlot: "armor",
-    armor: 9,
+    armor: 10,
   },
   leather_legs: {
     id: "leather_legs",
@@ -290,7 +290,7 @@ export const ITEMS: Record<string, ItemDef> = {
     stackable: false,
     weight: 22,
     equipSlot: "legs",
-    armor: 2,
+    armor: 1,
   },
   plate_legs: {
     id: "plate_legs",
@@ -300,7 +300,7 @@ export const ITEMS: Record<string, ItemDef> = {
     stackable: false,
     weight: 85,
     equipSlot: "legs",
-    armor: 6,
+    armor: 7,
   },
   leather_boots: {
     id: "leather_boots",
@@ -316,7 +316,7 @@ export const ITEMS: Record<string, ItemDef> = {
   // --- Jewellery ---------------------------------------------------------
   amulet_of_life: {
     id: "amulet_of_life",
-    name: "Amulet of Life",
+    name: "Amulet of Protection",
     textureKey: "amulet",
     kind: "equipment",
     stackable: false,
