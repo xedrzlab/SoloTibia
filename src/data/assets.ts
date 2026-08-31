@@ -112,6 +112,26 @@ export const IMAGE_ASSETS: ImageAsset[] = [
   { key: "dirt-pebbles-underground", path: "terrain/dirt-pebbles-underground.png" },
   { key: "dirt-small-rock-underground", path: "terrain/dirt-small-rock-underground.png" },
   { key: "dirt-twigs-underground", path: "terrain/dirt-twigs-underground.png" },
+  // Real art (cavedirttiles2.zip, not checked into the repo) — 21 subtle
+  // gravelly variants keyed off a black-background sheet. Replaces the old
+  // dirt-underground family as the cave floor mix (see LEGEND K): a much
+  // wider variant pool per cell so the floor stops reading as a repeating
+  // pattern, and matches the color/tone of the new cave wall art.
+  ...Array.from({ length: 21 }, (_, i) => ({
+    key: `cave-dirt-mix-${i + 1}`,
+    path: `terrain/cave-dirt-mix-${i + 1}.png`,
+  })),
+  // Sewer wall tiles — 20 variants per side (N/S/E/W), each fills a 32×32
+  // cell edge-to-edge (no transparent margin) and is composited onto a
+  // floor-mix base so it tiles seamlessly against neighbor dirt cells with
+  // no visible seam. See tilemap.ts caveWallOverlay for the per-cell
+  // selection based on which side has walkable floor.
+  ...(["N", "S", "E", "W"].flatMap((side) =>
+    Array.from({ length: 20 }, (_, i) => ({
+      key: `cave-wall-${side}-${i + 1}`,
+      path: `terrain/cave-wall-${side}-${i + 1}.png`,
+    })),
+  )),
   // Real art (UndergroundWallsOutofBound.zip, not checked into the repo) —
   // the earthen out-of-bounds fill for the cave under the town, replacing
   // the old procedural wall-sewer. Same "walkable-looking but isn't" trick

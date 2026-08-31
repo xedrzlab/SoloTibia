@@ -17,6 +17,7 @@ import {
   variantForCell,
   overlayForCell,
   wholeTreeForCell,
+  caveWallOverlay,
   entryPointAt,
   sewerLinkAtSurface,
   sewerLinkAtSewer,
@@ -386,7 +387,16 @@ export class WorldScene extends Phaser.Scene {
         animatedCells.push({ x, y, key: tile.textureKey });
         return;
       }
-      rt.draw(variantForCell(tile, x, y), x * TILE_SIZE, y * TILE_SIZE);
+      // Sewer wall cells that border a passage get a boulder-wall tile
+      // (see tilemap.ts caveWallOverlay) instead of the flat
+      // cave-wall-earth ground texture — these are opaque and include a
+      // baked floor base, so no separate ground draw is needed under them.
+      const wallOverride = caveWallOverlay(x, y);
+      if (wallOverride) {
+        rt.draw(wallOverride, x * TILE_SIZE, y * TILE_SIZE);
+      } else {
+        rt.draw(variantForCell(tile, x, y), x * TILE_SIZE, y * TILE_SIZE);
+      }
       const wholeTree = wholeTreeForCell(tile, x, y);
       if (wholeTree) wholeTreeCells.push({ x, y, textureKey: wholeTree });
       const overlay = overlayForCell(tile, x, y);

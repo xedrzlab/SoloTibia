@@ -662,6 +662,41 @@ export function wholeTreeForCell(tile: TileInfo, x: number, y: number): string |
   return tile.wholeTree[cellHash(x + 29, y + 31) % tile.wholeTree.length];
 }
 
+/**
+ * If the given cell is a sewer wall bordering a passage, return the right
+ * boulder-wall variant to draw instead of the flat cave-wall-earth texture:
+ * cave-wall-N-* when a floor cell sits directly SOUTH of this wall (wall
+ * runs along the north edge of a corridor), S/E/W the other three ways.
+ * Returns undefined for wall cells surrounded by more wall (still get the
+ * flat texture) and for non-wall or non-sewer cells (unchanged behavior).
+ *
+ * The four families each contain 20 variants (see extract_wall_tiles2.mjs),
+ * picked per-cell by cellHash so adjacent wall tiles read as different
+ * boulders rather than one repeating pattern. Every variant tile is fully
+ * opaque and composited onto a floor-mix base at extraction time, so
+ * placing them into the base tile-render pass leaves no transparent seams
+ * between wall and floor.
+ */
+export function caveWallOverlay(x: number, y: number): string | undefined {
+  if (y < SURFACE_HEIGHT) return undefined;
+  if (tileAt(x, y).walkable) return undefined;
+  const southFloor = tileAt(x, y + 1).walkable;
+  const northFloor = tileAt(x, y - 1).walkable;
+  const eastFloor = tileAt(x + 1, y).walkable;
+  const westFloor = tileAt(x - 1, y).walkable;
+  const CAVE_WALL_VARIANTS = 20;
+  const pick = (family: string) => `${family}-${(cellHash(x, y) % CAVE_WALL_VARIANTS) + 1}`;
+  // Priority: south wins over north (a room ceiling reads as "top of a
+  // corridor" — the boulders should show their bases at the seam facing
+  // into the room, i.e. the N-family with rock rising from the tile's
+  // bottom). Then east/west for vertical corridors.
+  if (southFloor) return pick("cave-wall-N");
+  if (northFloor) return pick("cave-wall-S");
+  if (eastFloor) return pick("cave-wall-W");
+  if (westFloor) return pick("cave-wall-E");
+  return undefined;
+}
+
 const LEGEND: Record<string, TileInfo> = {
   "#": { walkable: false, textureKey: "void-wall", safe: false },
   ".": {
@@ -733,22 +768,15 @@ const LEGEND: Record<string, TileInfo> = {
   // pebbles/rock/twigs which read as discrete objects.
   K: {
     walkable: true,
-    textureKey: "dirt-underground",
-    variants: [
-      "dirt-underground",
-      "dirt-underground",
-      "dirt-underground",
-      "dirt-underground",
-      "dirt-underground",
-      "dirt-underground",
-      "dirt-underground",
-      "dirt-underground",
-      "dirt-underground",
-      "dirt-underground",
-      "dirt-pebbles-underground",
-      "dirt-small-rock-underground",
-      "dirt-twigs-underground",
-    ],
+    textureKey: "cave-dirt-mix-1",
+    // 21 real-art variants keyed off cavedirttiles2 (see ASSETS comment):
+    // each cell independently picks one via cellHash, so the floor reads as
+    // genuine speckled gravel rather than a repeating tile. Deliberately
+    // NOT weighted like a base+accent list — every variant here is close
+    // enough in tone to shuffle freely without a busy checkerboard effect,
+    // which the extra art detail (per-tile pebble placement) provides
+    // instead of a debris-overlay pass.
+    variants: Array.from({ length: 21 }, (_, i) => `cave-dirt-mix-${i + 1}`),
     safe: false,
     groundFriction: 130,
   },
