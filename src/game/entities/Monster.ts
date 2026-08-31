@@ -41,6 +41,8 @@ export class Monster {
   private targetFrame: Phaser.GameObjects.Rectangle;
   private aiTimer = Math.random() * AI_TICK_MS; // desync monsters so they don't all decide on the same frame
   private attackCooldown = 0;
+  /** Counts down the brief swing pose so face-tracking doesn't stomp it mid-attack. */
+  private poseTimer = 0;
   private respawnTimer = 0;
 
   constructor(
@@ -331,6 +333,53 @@ export class Monster {
   }
 
   /**
+   * Turn to look at a target tile without moving. Directional sheets swap to
+   * the matching facing's idle pose (unless a swing pose is still showing, or
+   * mid-step); flip-only sheets (rat/slime) just mirror left/right.
+   */
+  private faceToward(target: TileCoord) {
+    const dx = target.x - this.tileX;
+    const dy = target.y - this.tileY;
+    if (dx === 0 && dy === 0) return;
+    if (this.def.framesPerDirection) {
+      const next = directionFromDelta(dx, dy, this.facing);
+      if (next !== this.facing) {
+        this.facing = next;
+        if (!this.moving && this.poseTimer <= 0) this.applyFrame(true);
+      }
+    } else if (dx !== 0) {
+      this.sprite.setFlipX(dx < 0);
+    }
+  }
+
+  /**
+   * Next step toward a free tile adjacent to the player (MELEE_RANGE = 1, so
+   * the eight surrounding tiles), preferring the one nearest this monster and
+   * skipping any it can't actually reach — this is what makes a pack surround
+   * the player rather than pile onto a single approach tile. `isWalkable`
+   * already treats other monsters' occupied tiles as blocked, so two monsters
+   * settle on different sides. Falls back to closing on the player's own tile
+   * when the ring is full or unreachable.
+   */
+  private surroundStep(playerTile: TileCoord, isWalkable: (x: number, y: number) => boolean): TileCoord | null {
+    const ring: TileCoord[] = [];
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        if (dx === 0 && dy === 0) continue;
+        const t = { x: playerTile.x + dx, y: playerTile.y + dy };
+        if (isWalkable(t.x, t.y)) ring.push(t);
+      }
+    }
+    ring.sort((a, b) => chebyshevDistance(this.tile, a) - chebyshevDistance(this.tile, b));
+    for (const goal of ring) {
+      const path = findPath(isWalkable, this.tile, goal);
+      if (path.length > 0) return path[0];
+    }
+    const fallback = findPath(isWalkable, this.tile, playerTile);
+    return fallback.length > 0 ? fallback[0] : null;
+  }
+
+  /**
    * Advance AI/movement/attacks for this frame. Decision-making (pathfinding)
    * is throttled to AI_TICK_MS rather than run every frame, both to save
    * battery and because it reads better than instant micro-corrections.
@@ -357,15 +406,18 @@ export class Monster {
     if (!playerAlive) return;
 
     this.attackCooldown -= dtMs;
+    this.poseTimer = Math.max(0, this.poseTimer - dtMs);
     // Closest occupied tile, not just the front one — a bear can bite from
     // its back legs' tile just as well as its head's.
     const dist = closestChebyshevDistance(playerTile, this.occupiedTiles());
 
     if (dist <= MELEE_RANGE) {
+      // Always turn to look at the player while in melee, not just on the
+      // swing tick — a player circling an adjacent monster is tracked.
+      this.faceToward(playerTile);
       if (this.attackCooldown <= 0) {
-        // Face the player before swinging, so the pose points the right way.
-        this.facing = directionFromDelta(playerTile.x - this.tileX, playerTile.y - this.tileY, this.facing);
         this.playAttack();
+        this.poseTimer = ATTACK_POSE_MS;
         // Hit chance, damage roll, and the whole defense pipeline are the
         // world's job to resolve centrally (calculateArmorMitigation etc.
         // must not be duplicated per-attacker) — this only reports that an
@@ -383,8 +435,11 @@ export class Monster {
     this.aiTimer = AI_TICK_MS;
 
     if (dist <= MONSTER_AGGRO_RANGE) {
-      const path = findPath(isWalkable, this.tile, playerTile);
-      if (path.length > 0) void this.stepTo(path[0].x, path[0].y, frictionAt(path[0].x, path[0].y));
+      // Head for a free tile *beside* the player, not the player's own tile,
+      // so a pack fans out and takes the ring of tiles around them instead of
+      // all queuing behind each other on one approach.
+      const step = this.surroundStep(playerTile, isWalkable);
+      if (step) void this.stepTo(step.x, step.y, frictionAt(step.x, step.y));
     } else if (this.tileX !== this.spawnX || this.tileY !== this.spawnY) {
       const path = findPath(isWalkable, this.tile, { x: this.spawnX, y: this.spawnY });
       if (path.length > 0) void this.stepTo(path[0].x, path[0].y, frictionAt(path[0].x, path[0].y));
