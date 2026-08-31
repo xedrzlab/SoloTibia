@@ -240,6 +240,7 @@ export class WorldScene extends Phaser.Scene {
     lights.push({ x: 27, y: 22, radius: 5, flicker: 0.05 });
     this.dayNight = new DayNightCycle(this, lights);
     this.buildLogoutButton();
+    this.buildPauseButton();
 
     this.debug = new DebugOverlay(this, {
       sprites: () => [this.player.sprite, ...this.monsters.filter((m) => m.alive).map((m) => m.sprite)],
@@ -1341,6 +1342,152 @@ export class WorldScene extends Phaser.Scene {
   private destroyLogoutButton() {
     if (this.logoutButton?.parentNode) this.logoutButton.parentNode.removeChild(this.logoutButton);
     this.logoutButton = null;
+  }
+
+  // --- Pause / resume ------------------------------------------------------
+  /** DOM pause/resume button, the "PAUSED" overlay, and the key handler. */
+  private pauseButton: HTMLButtonElement | null = null;
+  private pauseOverlay: HTMLDivElement | null = null;
+  private pauseKeyHandler: ((e: KeyboardEvent) => void) | null = null;
+  /**
+   * The scene we paused for the user, so Resume targets exactly it. null when
+   * not user-paused. Kept separate from the engine's own scene.pause() used
+   * for interiors/climbs so the two never get confused.
+   */
+  private userPausedScene: string | null = null;
+
+  /**
+   * Pause sits next to Log Out as an HTML button — same reasoning as
+   * buildLogoutButton: a DOM control keeps working while the gameplay scene
+   * itself is paused (a Phaser button on a paused scene would freeze with it),
+   * and the P / Escape shortcut is a DOM key listener for the same reason.
+   */
+  private buildPauseButton() {
+    if (this.pauseButton) return;
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.textContent = "Pause";
+    btn.style.cssText = [
+      "position: absolute",
+      "top: 8px",
+      "left: 84px",
+      "z-index: 20",
+      "padding: 6px 12px",
+      "font-family: monospace",
+      "font-size: 12px",
+      "color: #f4e6c8",
+      "background: rgba(13,13,13,0.85)",
+      "border: 1px solid #3a3a3a",
+      "border-radius: 3px",
+      "cursor: pointer",
+    ].join(";");
+    btn.addEventListener("click", () => this.togglePause());
+    document.body.appendChild(btn);
+    this.pauseButton = btn;
+
+    this.pauseKeyHandler = (e: KeyboardEvent) => {
+      if (e.key === "Escape" || e.key === "p" || e.key === "P") {
+        e.preventDefault();
+        this.togglePause();
+      }
+    };
+    window.addEventListener("keydown", this.pauseKeyHandler);
+
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.destroyPauseButton());
+  }
+
+  private destroyPauseButton() {
+    // Never leave the game frozen if the scene is torn down mid-pause.
+    if (this.userPausedScene) this.resumeGame();
+    if (this.pauseKeyHandler) window.removeEventListener("keydown", this.pauseKeyHandler);
+    this.pauseKeyHandler = null;
+    if (this.pauseButton?.parentNode) this.pauseButton.parentNode.removeChild(this.pauseButton);
+    this.pauseButton = null;
+    this.removePauseOverlay();
+  }
+
+  private togglePause() {
+    if (this.userPausedScene) this.resumeGame();
+    else this.pauseGame();
+  }
+
+  private pauseGame() {
+    if (this.userPausedScene) return;
+    // Freeze whichever gameplay scene is actually running: the interior when
+    // one is open (World is already paused underneath it), otherwise World.
+    const target = this.scene.isActive("Interior") ? "Interior" : this.scene.isActive("World") ? "World" : null;
+    if (!target) return;
+    this.scene.pause(target);
+    this.userPausedScene = target;
+    if (this.pauseButton) this.pauseButton.textContent = "Resume";
+    this.showPauseOverlay();
+  }
+
+  private resumeGame() {
+    if (!this.userPausedScene) return;
+    this.scene.resume(this.userPausedScene);
+    this.userPausedScene = null;
+    if (this.pauseButton) this.pauseButton.textContent = "Pause";
+    this.removePauseOverlay();
+  }
+
+  private showPauseOverlay() {
+    if (this.pauseOverlay) return;
+    const overlay = document.createElement("div");
+    overlay.style.cssText = [
+      "position: absolute",
+      "inset: 0",
+      "z-index: 30",
+      "display: flex",
+      "flex-direction: column",
+      "align-items: center",
+      "justify-content: center",
+      "gap: 16px",
+      "background: rgba(0,0,0,0.6)",
+      "font-family: monospace",
+      "color: #f4e6c8",
+      "cursor: pointer",
+    ].join(";");
+
+    const label = document.createElement("div");
+    label.textContent = "PAUSED";
+    label.style.cssText = "font-size: 32px; letter-spacing: 4px; text-shadow: 0 2px 4px #000";
+
+    const resume = document.createElement("button");
+    resume.type = "button";
+    resume.textContent = "Resume";
+    resume.style.cssText = [
+      "padding: 8px 20px",
+      "font-family: monospace",
+      "font-size: 14px",
+      "color: #f4e6c8",
+      "background: rgba(13,13,13,0.9)",
+      "border: 1px solid #6a5a34",
+      "border-radius: 3px",
+      "cursor: pointer",
+    ].join(";");
+
+    const hint = document.createElement("div");
+    hint.textContent = "press P or Esc";
+    hint.style.cssText = "font-size: 11px; opacity: 0.7";
+
+    // A click anywhere on the dimmed backdrop resumes too, but not clicks that
+    // land on the button itself (it handles its own).
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) this.resumeGame();
+    });
+    resume.addEventListener("click", () => this.resumeGame());
+
+    overlay.appendChild(label);
+    overlay.appendChild(resume);
+    overlay.appendChild(hint);
+    document.body.appendChild(overlay);
+    this.pauseOverlay = overlay;
+  }
+
+  private removePauseOverlay() {
+    if (this.pauseOverlay?.parentNode) this.pauseOverlay.parentNode.removeChild(this.pauseOverlay);
+    this.pauseOverlay = null;
   }
 
   private logout() {
