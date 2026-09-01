@@ -254,7 +254,7 @@ export const INTERIORS: Record<string, InteriorRoom> = {
         "I fletch arrows and string bows. If you'd sooner keep the fight at a distance, this is the shop.",
       x: 4,
       y: 3,
-      directional: { framesPerDirection: 3, initialFacing: "down", wanders: true },
+      directional: { framesPerDirection: 3, initialFacing: "down", wanders: true, scale: 1.5 },
     },
     decor: [],
   },

@@ -33,15 +33,6 @@ export interface SheetAsset extends ImageAsset {
 
 /** Frame size shared by everything drawn on the standard one-tile canvas. */
 const TILE_FRAME = { frameWidth: 32, frameHeight: 32 };
-/**
- * Frame size for shop NPCs. They're authored at 48×48 (character silhouette
- * ~44 px tall) and rendered 1:1 in the interior, matching the player's
- * on-screen size (32 px art × PLAYER_SCALE 1.5 = 48 px on screen) so the two
- * read as the same scale of character rather than a tiny NPC next to a
- * tall player. Native 48 preserves the source pixel-art detail; downscaling
- * to 32 crushed faces into blobs.
- */
-const NPC_FRAME = { frameWidth: 48, frameHeight: 48 };
 
 export const IMAGE_ASSETS: ImageAsset[] = [
   // --- terrain ---
@@ -355,7 +346,7 @@ export const IMAGE_ASSETS: ImageAsset[] = [
   { key: "npc-borin", path: "characters/npc_borin.png", ...TILE_FRAME },
   { key: "npc-wren", path: "characters/npc_wren.png" },
   { key: "npc-elder-corwin", path: "characters/npc_corwin.png" },
-  { key: "npc-fenn", path: "characters/npc_fenn.png", ...NPC_FRAME },
+  { key: "npc-fenn", path: "characters/npc_fenn.png", ...TILE_FRAME },
   { key: "npc-farmer-01", path: "characters/npc_farmer_01.png" },
   { key: "npc-farmer-02", path: "characters/npc_farmer_02.png" },
   { key: "npc-priest", path: "characters/npc_priest.png" },
