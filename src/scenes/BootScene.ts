@@ -105,6 +105,27 @@ export class BootScene extends Phaser.Scene {
       });
     });
 
+    // Shop NPCs (Borin the blacksmith, Fenn the fletcher) — 3 frames per
+    // direction rather than the player's 4. Frame 1 is the idle stance and
+    // the wander step animation ping-pongs [0, 1, 2, 1] so a stride reads as
+    // a proper step-and-return rather than jumping stance→stance. See
+    // InteriorScene's ambient-wander AI, which plays this animation on each
+    // step and holds frame (dir*3 + 1) between steps.
+    const NPC_FRAMES_PER_DIRECTION = 3;
+    const NPC_WALK_SEQUENCE = [0, 1, 2, 1];
+    for (const textureKey of ["npc-borin", "npc-fenn"]) {
+      DIRECTION_ORDER.forEach((direction, i) => {
+        this.anims.create({
+          key: walkAnimKey(textureKey, direction),
+          frames: this.anims.generateFrameNumbers(textureKey, {
+            frames: NPC_WALK_SEQUENCE.map((f) => i * NPC_FRAMES_PER_DIRECTION + f),
+          }),
+          frameRate: 4,
+          repeat: -1,
+        });
+      });
+    }
+
     this.scene.start("World");
     this.scene.launch("UI");
   }

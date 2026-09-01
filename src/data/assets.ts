@@ -338,10 +338,15 @@ export const IMAGE_ASSETS: ImageAsset[] = [
   { key: "building-general-store", path: "buildings/general_store_01.png", smooth: true },
 
   // --- npcs ---
-  { key: "npc-borin", path: "characters/npc_borin.png" },
+  // Borin (melee shop) and Fenn (distance shop) got real directional
+  // spritesheets — same 3-frame-per-direction layout used by the goblin's
+  // continuousWalk (down/left/right/up × 3, in DIRECTION_ORDER). Frame index
+  // 1 within each direction is the idle stance; the wander animation loops
+  // 0-1-2-1 like the player. Every other NPC is still a static single image.
+  { key: "npc-borin", path: "characters/npc_borin.png", ...TILE_FRAME },
   { key: "npc-wren", path: "characters/npc_wren.png" },
   { key: "npc-elder-corwin", path: "characters/npc_corwin.png" },
-  { key: "npc-fenn", path: "characters/npc_fenn.png" },
+  { key: "npc-fenn", path: "characters/npc_fenn.png", ...TILE_FRAME },
   { key: "npc-farmer-01", path: "characters/npc_farmer_01.png" },
   { key: "npc-farmer-02", path: "characters/npc_farmer_02.png" },
   { key: "npc-priest", path: "characters/npc_priest.png" },

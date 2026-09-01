@@ -1,10 +1,11 @@
 import Phaser from "phaser";
 import { TILE_SIZE, NPC_INTERACT_RANGE } from "../game/constants";
 import { tileAnchorX, tileAnchorY, depthForTileY } from "../game/tileAnchor";
-import { INTERIORS, InteriorRoom, isFloorTile } from "../data/interiors";
+import { INTERIORS, InteriorRoom, InteriorNpc, isFloorTile } from "../data/interiors";
 import { chebyshevDistance, TileCoord } from "../game/pathfinding";
 import { Player } from "../game/entities/Player";
 import { bus, EVENTS, SetMoveDirectionPayload } from "../game/events";
+import { Direction, directionFromDelta, directionalFrameIndex, walkAnimKey } from "../game/directionalSprite";
 
 const ROOM_MARGIN_TILES = 2;
 
@@ -92,7 +93,25 @@ export class InteriorScene extends Phaser.Scene {
   private initData!: InteriorInit;
 
   private player!: Player;
-  private npcSprite: Phaser.GameObjects.Image | null = null;
+  private npcSprite: Phaser.GameObjects.Sprite | Phaser.GameObjects.Image | null = null;
+  /**
+   * State for a directional (spritesheet) NPC — tracks facing, the tile the
+   * NPC is currently standing on (may differ from its data-file spawn if it
+   * has wandered), a cooldown counter for the next wander step, and whether
+   * a wander step tween is currently in flight. Undefined for static NPCs.
+   */
+  private npcAi: {
+    def: InteriorNpc;
+    facing: Direction;
+    tileX: number;
+    tileY: number;
+    /** Ambient-wander cooldown in ms — the NPC only considers stepping once this drops to ≤0. */
+    wanderCooldown: number;
+    /** True while a step tween is animating so we don't kick a second one. */
+    stepping: boolean;
+    /** True while a dialogue is open — freezes wander and faces the player. */
+    conversing: boolean;
+  } | null = null;
   /** Direction held on the on-screen D-pad — the only way to move now. */
   private heldDirection: TileCoord | null = null;
   private transitionScheduled = false;
@@ -204,15 +223,34 @@ export class InteriorScene extends Phaser.Scene {
 
     if (room.npc) {
       const npc = room.npc;
-      this.npcSprite = this.add
-        .image(
-          tileAnchorX(npc.x + this.tileOffsetX),
-          tileAnchorY(npc.y + this.tileOffsetY),
-          npc.textureKey,
-        )
-        .setOrigin(1, 1)
-        .setDepth(depthForTileY(npc.y + this.tileOffsetY))
-        .setInteractive({ useHandCursor: true });
+      const worldX = tileAnchorX(npc.x + this.tileOffsetX);
+      const worldY = tileAnchorY(npc.y + this.tileOffsetY);
+      if (npc.directional) {
+        // Directional sprite: 4×N frames, initial pose is idle-frame of
+        // whatever direction the room says the NPC starts facing.
+        const facing: Direction = npc.directional.initialFacing ?? "down";
+        const idleFrame = directionalFrameIndex(facing, 1, npc.directional.framesPerDirection);
+        this.npcSprite = this.add
+          .sprite(worldX, worldY, npc.textureKey, idleFrame)
+          .setOrigin(1, 1)
+          .setDepth(depthForTileY(npc.y + this.tileOffsetY))
+          .setInteractive({ useHandCursor: true });
+        this.npcAi = {
+          def: npc,
+          facing,
+          tileX: npc.x + this.tileOffsetX,
+          tileY: npc.y + this.tileOffsetY,
+          wanderCooldown: 1800 + Math.random() * 1200,
+          stepping: false,
+          conversing: false,
+        };
+      } else {
+        this.npcSprite = this.add
+          .image(worldX, worldY, npc.textureKey)
+          .setOrigin(1, 1)
+          .setDepth(depthForTileY(npc.y + this.tileOffsetY))
+          .setInteractive({ useHandCursor: true });
+      }
       this.npcSprite.on("pointerdown", () => this.talkToNpc());
     }
 
@@ -342,8 +380,9 @@ export class InteriorScene extends Phaser.Scene {
     return true;
   }
 
-  update() {
+  update(_time: number, delta: number) {
     if (this.transitionScheduled) return;
+    this.updateNpc(delta);
     if (this.player.moving) return;
     this.checkTransition();
     if (!this.heldDirection || !this.canStepInDirection(this.heldDirection)) return;
@@ -351,6 +390,129 @@ export class InteriorScene extends Phaser.Scene {
     // Interior floors are always cobble/plank — friction 100, same as a
     // town street. Interiors don't need per-tile friction lookup.
     void this.player.stepTo(next.x, next.y, 100).then(() => this.checkTransition());
+  }
+
+  /**
+   * Ambient behaviour for a directional NPC:
+   *  - if the player is within talking range, the NPC freezes at its current
+   *    tile and turns to face the player, so a shopkeeper never wanders mid-
+   *    dialogue or presents their back to a customer
+   *  - otherwise, if the NPC wanders, it takes 1-tile steps around its spawn
+   *    with an idle pause between steps ("one left, idle, one right, idle…")
+   *    staying within a 2-tile radius so it never drifts across the room
+   */
+  private updateNpc(delta: number) {
+    const ai = this.npcAi;
+    if (!ai) return;
+    const inTalkRange = chebyshevDistance(
+      { x: this.player.tileX, y: this.player.tileY },
+      { x: ai.tileX, y: ai.tileY },
+    ) <= NPC_INTERACT_RANGE;
+    if (inTalkRange) {
+      ai.conversing = true;
+      // Face the player. If the player is standing on the NPC's own tile
+      // (shouldn't happen — NPC blocks it — but be defensive) keep facing.
+      const dx = this.player.tileX - ai.tileX;
+      const dy = this.player.tileY - ai.tileY;
+      if (dx !== 0 || dy !== 0) this.setNpcFacing(directionFromDelta(dx, dy, ai.facing));
+      return;
+    }
+    if (ai.conversing) {
+      // Just left talking range — reset the wander cooldown so the shopkeeper
+      // doesn't instantly step the moment the player walks away.
+      ai.conversing = false;
+      ai.wanderCooldown = 900 + Math.random() * 900;
+    }
+    if (!ai.def.directional?.wanders || ai.stepping) return;
+    ai.wanderCooldown -= delta;
+    if (ai.wanderCooldown > 0) return;
+    this.tryWanderStep();
+    ai.wanderCooldown = 1500 + Math.random() * 2200;
+  }
+
+  private setNpcFacing(direction: Direction) {
+    const ai = this.npcAi;
+    if (!ai || !ai.def.directional) return;
+    if (ai.facing === direction) return;
+    ai.facing = direction;
+    if (this.npcSprite instanceof Phaser.GameObjects.Sprite) {
+      const idleFrame = directionalFrameIndex(direction, 1, ai.def.directional.framesPerDirection);
+      this.npcSprite.stop();
+      this.npcSprite.setFrame(idleFrame);
+    }
+  }
+
+  /**
+   * Pick a random adjacent walkable tile within the wander radius and step
+   * the NPC onto it. The step tween mirrors the player's own step feel
+   * (roughly a tile-time at friction 100) and plays the NPC's per-direction
+   * walk animation for the duration; a completed step lands on the new
+   * tile's idle frame.
+   */
+  private tryWanderStep() {
+    const ai = this.npcAi;
+    if (!ai || !ai.def.directional || !this.npcSprite) return;
+    if (!(this.npcSprite instanceof Phaser.GameObjects.Sprite)) return;
+    const spawnX = ai.def.x + this.tileOffsetX;
+    const spawnY = ai.def.y + this.tileOffsetY;
+    const WANDER_RADIUS = 2;
+    const dirs: Array<[number, number, Direction]> = [
+      [ 0,  1, "down"],
+      [ 0, -1, "up"],
+      [ 1,  0, "right"],
+      [-1,  0, "left"],
+    ];
+    // Shuffle so the choice is random each tick
+    for (let i = dirs.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [dirs[i], dirs[j]] = [dirs[j], dirs[i]];
+    }
+    for (const [dx, dy, dir] of dirs) {
+      const nx = ai.tileX + dx;
+      const ny = ai.tileY + dy;
+      if (Math.abs(nx - spawnX) > WANDER_RADIUS) continue;
+      if (Math.abs(ny - spawnY) > WANDER_RADIUS) continue;
+      if (!this.isWalkableWorld(nx, ny)) continue;
+      this.stepNpcTo(nx, ny, dir);
+      return;
+    }
+    // No valid neighbor — just idle, but still update facing so the shop-
+    // keeper occasionally turns to look elsewhere even when boxed in.
+    const [, , dir] = dirs[0];
+    this.setNpcFacing(dir);
+  }
+
+  private stepNpcTo(tileX: number, tileY: number, direction: Direction) {
+    const ai = this.npcAi;
+    if (!ai || !ai.def.directional) return;
+    const sprite = this.npcSprite;
+    if (!(sprite instanceof Phaser.GameObjects.Sprite)) return;
+    ai.stepping = true;
+    ai.tileX = tileX;
+    ai.tileY = tileY;
+    ai.facing = direction;
+    // Play the per-direction walk anim while the tween runs, then hold the
+    // idle frame of the new facing when the step completes.
+    sprite.play(walkAnimKey(ai.def.textureKey, direction));
+    const targetX = tileAnchorX(tileX);
+    const targetY = tileAnchorY(tileY);
+    // Match the player's own step duration at friction 100 for a shared
+    // sense of pace inside the shop.
+    const STEP_MS = 360;
+    this.tweens.add({
+      targets: sprite,
+      x: targetX,
+      y: targetY,
+      duration: STEP_MS,
+      ease: "Linear",
+      onUpdate: () => sprite.setDepth(depthForTileY(tileY)),
+      onComplete: () => {
+        ai.stepping = false;
+        sprite.stop();
+        sprite.setFrame(directionalFrameIndex(direction, 1, ai.def.directional!.framesPerDirection));
+        sprite.setDepth(depthForTileY(tileY));
+      },
+    });
   }
 
   /** After each step, decide whether the tile the player just landed on triggers a transition. */
@@ -416,7 +578,13 @@ export class InteriorScene extends Phaser.Scene {
   private talkToNpc() {
     if (!this.room.npc) return;
     const npc = this.room.npc;
-    if (chebyshevDistance(this.player.tile, { x: npc.x + this.tileOffsetX, y: npc.y + this.tileOffsetY }) > NPC_INTERACT_RANGE) {
+    // Use the NPC's CURRENT tile if it wanders (npcAi tracks it); otherwise
+    // the static spawn tile from the room def. Without this, a wandered
+    // shopkeeper's tap-to-talk still measures range from the old spawn tile.
+    const npcTile = this.npcAi
+      ? { x: this.npcAi.tileX, y: this.npcAi.tileY }
+      : { x: npc.x + this.tileOffsetX, y: npc.y + this.tileOffsetY };
+    if (chebyshevDistance(this.player.tile, npcTile) > NPC_INTERACT_RANGE) {
       bus.emit(EVENTS.LOG, { kind: "info", text: `Walk closer to talk to ${npc.name}.` });
       return;
     }
@@ -446,7 +614,16 @@ export class InteriorScene extends Phaser.Scene {
     if (localY < 0 || localY >= this.roomH || localX < 0 || localX >= this.roomW) return false;
     const ch = this.room.rows[localY][localX];
     if (!isFloorTile(ch)) return false;
-    if (this.room.npc && this.room.npc.x === localX && this.room.npc.y === localY) return false;
+    // NPC blocks its current tile. Directional NPCs may have wandered off the
+    // spawn tile, so we check the live position tracked in npcAi first;
+    // static NPCs use the room-def spawn.
+    if (this.npcAi) {
+      if (this.npcAi.tileX === worldTileX && this.npcAi.tileY === worldTileY) return false;
+    } else if (this.room.npc && this.room.npc.x === localX && this.room.npc.y === localY) {
+      return false;
+    }
+    // A wandering NPC's step target also can't be the player's own tile.
+    if (this.player && this.player.tileX === worldTileX && this.player.tileY === worldTileY) return false;
     for (const d of this.room.decor) {
       if (d.blocks && d.x === localX && d.y === localY) return false;
     }

@@ -1895,7 +1895,12 @@ export class UIScene extends Phaser.Scene {
       .setOrigin(0, 0)
       .setStrokeStyle(1, COLORS.border);
     const portraitBg = this.add.rectangle(10, 10, 48, 48, 0x000000, 0.3).setOrigin(0, 0);
-    const portrait = this.add.image(34, 34, npc.textureKey).setScale(1.3);
+    // Directional NPCs (spritesheets) render the down-facing idle frame (index
+    // 1 — the middle frame of the "down" row) as their portrait; static
+    // images fall back to the whole texture.
+    const npcTexture = this.textures.get(npc.textureKey);
+    const portraitFrame = npcTexture.has("1") ? 1 : undefined;
+    const portrait = this.add.image(34, 34, npc.textureKey, portraitFrame).setScale(1.3);
     const name = this.add
       .text(66, 14, npc.npcName, { ...TEXT, fontSize: "13px", color: "#e6c34a" })
       .setOrigin(0, 0);

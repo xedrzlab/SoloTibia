@@ -29,6 +29,26 @@ export interface InteriorNpc {
   about: string;
   x: number;
   y: number;
+  /**
+   * If set, this NPC uses a directional 4×N spritesheet (see
+   * directionalSprite.ts DIRECTION_ORDER) rather than a static single image,
+   * and can idle-wander around its spawn tile. Facing state and the number
+   * of frames per direction come from here. Undefined = static image, no
+   * wander, no facing (the legacy behaviour every other NPC uses).
+   */
+  directional?: {
+    framesPerDirection: number;
+    /** Which way the NPC is facing when the room loads. Defaults to "down". */
+    initialFacing?: "down" | "left" | "right" | "up";
+    /**
+     * If true, the NPC takes 1-tile idle steps around its spawn tile between
+     * long pauses — "pace one left, idle, one right, idle" and so on. The
+     * wander pauses (and the NPC faces the player) whenever the player is
+     * within talking range so the shopkeeper actually looks at their
+     * customer rather than shuffling around during a chat.
+     */
+    wanders?: boolean;
+  };
 }
 
 export interface InteriorDecor {
@@ -207,6 +227,7 @@ export const INTERIORS: Record<string, InteriorRoom> = {
         "I've been the blacksmith here in Oakhollow for twenty years. Swords, axes, plate — if it's for a close fight, I forge it.",
       x: 4,
       y: 3,
+      directional: { framesPerDirection: 3, initialFacing: "down", wanders: true },
     },
     decor: [],
   },
@@ -226,6 +247,7 @@ export const INTERIORS: Record<string, InteriorRoom> = {
         "I fletch arrows and string bows. If you'd sooner keep the fight at a distance, this is the shop.",
       x: 4,
       y: 3,
+      directional: { framesPerDirection: 3, initialFacing: "down", wanders: true },
     },
     decor: [],
   },
