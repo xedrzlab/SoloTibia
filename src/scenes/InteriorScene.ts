@@ -262,25 +262,27 @@ export class InteriorScene extends Phaser.Scene {
   /**
    * The room's walls are always a plain rectangular perimeter, so every W
    * cell is exactly one of: a corner, a top/bottom/left/right edge segment.
-   * Only two corner pieces ship (top-left, top-right) — the bottom corners
-   * reuse them flipped vertically, which moves the dark trim from the top
-   * edge to the bottom edge without disturbing which side the vertical
-   * beam sits on.
+   * Each direction has its own tile (N/S/E/W) and each outer corner is its
+   * own composed piece (corner-NW/NE/SW/SE) — the corner tiles are stitched
+   * from the same straight-wall bands the edges use, mitered at 45°, so
+   * every wall/corner join lands on matching pixels with no stagger.
    */
   private shopWallTextureFor(x: number, y: number): { key: string; flipY: boolean } {
     const isTop = y === 0;
     const isBottom = y === this.roomH - 1;
     const isLeft = x === 0;
     const isRight = x === this.roomW - 1;
-    if (isTop && isLeft) return { key: "shop-wall-corner-tl", flipY: false };
-    if (isTop && isRight) return { key: "shop-wall-corner-tr", flipY: false };
-    if (isBottom && isLeft) return { key: "shop-wall-corner-tl", flipY: true };
-    if (isBottom && isRight) return { key: "shop-wall-corner-tr", flipY: true };
-    if (isTop) return { key: "shop-wall-top", flipY: false };
-    if (isBottom) return { key: "shop-wall-bottom", flipY: false };
-    if (isLeft) return { key: "shop-wall-left", flipY: false };
-    if (isRight) return { key: "shop-wall-right", flipY: false };
-    return { key: "shop-wall-basic", flipY: false };
+    if (isTop && isLeft) return { key: "shop-wall-corner-NW", flipY: false };
+    if (isTop && isRight) return { key: "shop-wall-corner-NE", flipY: false };
+    if (isBottom && isLeft) return { key: "shop-wall-corner-SW", flipY: false };
+    if (isBottom && isRight) return { key: "shop-wall-corner-SE", flipY: false };
+    if (isTop) return { key: "shop-wall-N", flipY: false };
+    if (isBottom) return { key: "shop-wall-S", flipY: false };
+    if (isLeft) return { key: "shop-wall-W", flipY: false };
+    if (isRight) return { key: "shop-wall-E", flipY: false };
+    // Rectangular shops don't have interior wall cells, but if one ever gets
+    // added the north-edge tile is a safe generic wall body.
+    return { key: "shop-wall-N", flipY: false };
   }
 
   /** The counter is a run of consecutive "C" cells in one row — left/right end caps at the run's edges, center tiled between them. */

@@ -198,13 +198,25 @@ export const IMAGE_ASSETS: ImageAsset[] = [
   { key: "shop-wood-floor-light", path: "terrain/wood-floor-light.png" },
   { key: "shop-wood-floor-staggered", path: "terrain/wood-floor-staggered.png" },
   { key: "shop-wood-floor-worn", path: "terrain/wood-floor-worn.png" },
-  { key: "shop-wall-corner-tl", path: "terrain/shop-wall-corner.png" },
-  { key: "shop-wall-corner-tr", path: "terrain/shop-wall-corner-tr.png" },
-  { key: "shop-wall-top", path: "terrain/shop-wall-top.png" },
-  { key: "shop-wall-bottom", path: "terrain/shop-wall-bottom.png" },
-  { key: "shop-wall-left", path: "terrain/shop-wall-left.png" },
-  { key: "shop-wall-right", path: "terrain/shop-wall-right.png" },
-  { key: "shop-wall-basic", path: "terrain/shop-wall-basic.png" },
+  // Shop walls — pixel-styled cream/wood/stone frame extracted from NewShopWalls2
+  // and downscaled + palette-quantized to 32×32 to match the game's chunky
+  // pixel-art. The straight edges (N/S/E/W) are 16-px shallow bands pushed
+  // flush against the outer edge of their tile; the outer corners are
+  // composed from those straights with a 45° miter so they seam perfectly
+  // (no dark-vs-cream mismatch, no stagger). Inside corners are shipped for
+  // completeness but the rectangular shop rooms never trigger them.
+  { key: "shop-wall-N", path: "terrain/shop-wall-N.png" },
+  { key: "shop-wall-S", path: "terrain/shop-wall-S.png" },
+  { key: "shop-wall-W", path: "terrain/shop-wall-W.png" },
+  { key: "shop-wall-E", path: "terrain/shop-wall-E.png" },
+  { key: "shop-wall-corner-NW", path: "terrain/shop-wall-corner-NW.png" },
+  { key: "shop-wall-corner-NE", path: "terrain/shop-wall-corner-NE.png" },
+  { key: "shop-wall-corner-SW", path: "terrain/shop-wall-corner-SW.png" },
+  { key: "shop-wall-corner-SE", path: "terrain/shop-wall-corner-SE.png" },
+  { key: "shop-wall-inside-NW", path: "terrain/shop-wall-inside-NW.png" },
+  { key: "shop-wall-inside-NE", path: "terrain/shop-wall-inside-NE.png" },
+  { key: "shop-wall-inside-SW", path: "terrain/shop-wall-inside-SW.png" },
+  { key: "shop-wall-inside-SE", path: "terrain/shop-wall-inside-SE.png" },
 
   // --- environment ---
   { key: "bush", path: "environment/bush_01.png" },
@@ -252,17 +264,11 @@ export const IMAGE_ASSETS: ImageAsset[] = [
   { key: "ladder-up", path: "props/ladder_up_01.png" },
   { key: "sewer-entrance", path: "props/sewer_entrance_01.png" },
   { key: "sack", path: "props/sack_01.png" },
-  // Real art (ShopCounter.zip, not checked into the repo), replacing the
-  // old procedural single-tile "counter". Three pieces so a multi-tile
-  // counter reads as one built bar with proper end caps rather than a flat
-  // texture repeated across the row — see InteriorScene's shopCounterFor.
-  // Each source tile had a few px of transparent margin plus its own
-  // dark plank-seam border on BOTH edges (a leftover from being drawn as
-  // a standalone piece), so placed side by side they read as separate
-  // boxes rather than one bar. Edited: the seam/border along whichever
-  // edge touches a neighbor is replaced with the plain body fill (sampled
-  // from the piece's own clean center column) so only the two true end
-  // posts (the outer edges of "left" and "right") still show a border.
+  // Shop counter — three lego-fitting pieces designed so vertical panel
+  // dividers land ON tile boundaries (cols 0 and 31 of every tile carry a
+  // divider). Two center tiles butted together share that divider, so a run
+  // of any length reads as one continuous paneled bar with proper end posts
+  // only at its true ends. Palette matches the new shop walls.
   { key: "shop-counter-left", path: "props/shop-counter-left.png" },
   { key: "shop-counter-center", path: "props/shop-counter-center.png" },
   { key: "shop-counter-right", path: "props/shop-counter-right.png" },
