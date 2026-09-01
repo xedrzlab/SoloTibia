@@ -126,7 +126,7 @@ export const IMAGE_ASSETS: ImageAsset[] = [
   // floor-mix base so it tiles seamlessly against neighbor dirt cells with
   // no visible seam. See tilemap.ts caveWallOverlay for the per-cell
   // selection based on which side has walkable floor.
-  ...(["N", "S", "E", "W"].flatMap((side) =>
+  ...(["N", "S", "E", "W", "corner-NE", "corner-NW", "corner-SE", "corner-SW"].flatMap((side) =>
     Array.from({ length: 20 }, (_, i) => ({
       key: `cave-wall-${side}-${i + 1}`,
       path: `terrain/cave-wall-${side}-${i + 1}.png`,

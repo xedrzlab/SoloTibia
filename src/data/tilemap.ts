@@ -686,14 +686,30 @@ export function caveWallOverlay(x: number, y: number): string | undefined {
   const westFloor = tileAt(x - 1, y).walkable;
   const CAVE_WALL_VARIANTS = 20;
   const pick = (family: string) => `${family}-${(cellHash(x, y) % CAVE_WALL_VARIANTS) + 1}`;
-  // Priority: south wins over north (a room ceiling reads as "top of a
-  // corridor" — the boulders should show their bases at the seam facing
-  // into the room, i.e. the N-family with rock rising from the tile's
-  // bottom). Then east/west for vertical corridors.
+  // Straight walls — floor on one adjacent side. Rock is drawn on the OPPOSITE
+  // edge of the tile from the floor, blending into the void behind it, so the
+  // corridor side (the seam with the floor) stays clean.
   if (southFloor) return pick("cave-wall-N");
   if (northFloor) return pick("cave-wall-S");
   if (eastFloor) return pick("cave-wall-W");
   if (westFloor) return pick("cave-wall-E");
+  // Diagonal-floor cells — no adjacent floor, but a diagonal neighbour is
+  // floor. These are the outer-corner cells that would otherwise show as
+  // flat brown between two perpendicular wall runs, leaving a visible gap
+  // where the horizontal wall's rock stops and the vertical wall's rock
+  // starts. Filling this cell with rock in the quadrant CLOSEST to the
+  // diagonal floor bridges the two straight walls into one continuous
+  // line. Corner tile names describe which quadrant holds the rock (see
+  // extract_wall_corners2.mjs): corner-SE = rock in the bottom-right of
+  // the tile, and so on.
+  const seDiag = tileAt(x + 1, y + 1).walkable;
+  const swDiag = tileAt(x - 1, y + 1).walkable;
+  const neDiag = tileAt(x + 1, y - 1).walkable;
+  const nwDiag = tileAt(x - 1, y - 1).walkable;
+  if (seDiag) return pick("cave-wall-corner-SE");
+  if (swDiag) return pick("cave-wall-corner-SW");
+  if (neDiag) return pick("cave-wall-corner-NE");
+  if (nwDiag) return pick("cave-wall-corner-NW");
   return undefined;
 }
 
