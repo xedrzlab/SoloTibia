@@ -235,6 +235,13 @@ export class InteriorScene extends Phaser.Scene {
           .setOrigin(1, 1)
           .setDepth(depthForTileY(npc.y + this.tileOffsetY))
           .setInteractive({ useHandCursor: true });
+        // The shop NPC art is authored at 48×48 to match the player's
+        // rendered size, so the sprite is wider than one tile — origin (1,1)
+        // pins its right edge to the tile's right edge, leaving the extra
+        // width hanging LEFT of the tile. Shift right by half the overhang
+        // so the character silhouette is horizontally centred over the tile
+        // column (mirrors Player.ts's PLAYER_ANCHOR_OFFSET).
+        this.npcSprite.x += (this.npcSprite.width - TILE_SIZE) / 2;
         this.npcAi = {
           def: npc,
           facing,
@@ -494,7 +501,12 @@ export class InteriorScene extends Phaser.Scene {
     // Play the per-direction walk anim while the tween runs, then hold the
     // idle frame of the new facing when the step completes.
     sprite.play(walkAnimKey(ai.def.textureKey, direction));
-    const targetX = tileAnchorX(tileX);
+    // See create() — wider-than-tile sprites get shifted right by half the
+    // overhang so the silhouette centres over the tile; the wander step
+    // target has to keep that same offset or the NPC would drift left over
+    // time (each new step tile would re-anchor at the raw tile edge).
+    const anchorOffset = (sprite.width - TILE_SIZE) / 2;
+    const targetX = tileAnchorX(tileX) + anchorOffset;
     const targetY = tileAnchorY(tileY);
     // Match the player's own step duration at friction 100 for a shared
     // sense of pace inside the shop.
