@@ -686,6 +686,15 @@ export function caveWallOverlay(x: number, y: number): string | undefined {
   const westFloor = tileAt(x - 1, y).walkable;
   const CAVE_WALL_VARIANTS = 20;
   const pick = (family: string) => `${family}-${(cellHash(x, y) % CAVE_WALL_VARIANTS) + 1}`;
+  // Inside corner — floor on two ADJACENT sides. The single-floor fallback
+  // below would pick a straight tile with dark earth on the OTHER floor-
+  // facing edge, leaving a visible dark step next to the floor there. The
+  // inside-* tiles blend both floor-facing edges to dirt-mix and place the
+  // rock in the opposite (away-from-both-floors) quadrant.
+  if (northFloor && eastFloor) return pick("cave-wall-inside-NE");
+  if (northFloor && westFloor) return pick("cave-wall-inside-NW");
+  if (southFloor && eastFloor) return pick("cave-wall-inside-SE");
+  if (southFloor && westFloor) return pick("cave-wall-inside-SW");
   // Straight walls — floor on one adjacent side. Rock is drawn on the OPPOSITE
   // edge of the tile from the floor, blending into the void behind it, so the
   // corridor side (the seam with the floor) stays clean.
