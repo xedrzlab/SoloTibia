@@ -233,15 +233,15 @@ export class InteriorScene extends Phaser.Scene {
         this.npcSprite = this.add
           .sprite(worldX, worldY, npc.textureKey, idleFrame)
           .setOrigin(1, 1)
+          .setScale(npc.directional.scale ?? 1)
           .setDepth(depthForTileY(npc.y + this.tileOffsetY))
           .setInteractive({ useHandCursor: true });
-        // The shop NPC art is authored at 48×48 to match the player's
-        // rendered size, so the sprite is wider than one tile — origin (1,1)
-        // pins its right edge to the tile's right edge, leaving the extra
-        // width hanging LEFT of the tile. Shift right by half the overhang
-        // so the character silhouette is horizontally centred over the tile
-        // column (mirrors Player.ts's PLAYER_ANCHOR_OFFSET).
-        this.npcSprite.x += (this.npcSprite.width - TILE_SIZE) / 2;
+        // Shop NPCs render at 48 px on screen (32-art × 1.5 scale, or
+        // 48-art × 1). Either way the SCALED sprite is wider than one tile,
+        // so origin (1,1) leaves the extra width hanging LEFT of the tile.
+        // Shift right by half that overhang so the silhouette centres over
+        // the tile column (mirrors Player.ts's PLAYER_ANCHOR_OFFSET).
+        this.npcSprite.x += (this.npcSprite.displayWidth - TILE_SIZE) / 2;
         this.npcAi = {
           def: npc,
           facing,
@@ -505,7 +505,7 @@ export class InteriorScene extends Phaser.Scene {
     // overhang so the silhouette centres over the tile; the wander step
     // target has to keep that same offset or the NPC would drift left over
     // time (each new step tile would re-anchor at the raw tile edge).
-    const anchorOffset = (sprite.width - TILE_SIZE) / 2;
+    const anchorOffset = (sprite.displayWidth - TILE_SIZE) / 2;
     const targetX = tileAnchorX(tileX) + anchorOffset;
     const targetY = tileAnchorY(tileY);
     // Match the player's own step duration at friction 100 for a shared

@@ -48,6 +48,13 @@ export interface InteriorNpc {
      * customer rather than shuffling around during a chat.
      */
     wanders?: boolean;
+    /**
+     * On-screen scale for the sprite. Defaults to 1. The player is 32×32
+     * art rendered at 1.5× (48 tall on screen); a 32×32 NPC uses the same
+     * 1.5 to match player size, while a 48×48-authored NPC leaves this at
+     * 1 since 48 art × 1 = 48 on screen, already matching.
+     */
+    scale?: number;
   };
 }
 
@@ -227,7 +234,7 @@ export const INTERIORS: Record<string, InteriorRoom> = {
         "I've been the blacksmith here in Oakhollow for twenty years. Swords, axes, plate — if it's for a close fight, I forge it.",
       x: 4,
       y: 3,
-      directional: { framesPerDirection: 3, initialFacing: "down", wanders: true },
+      directional: { framesPerDirection: 3, initialFacing: "down", wanders: true, scale: 1.5 },
     },
     decor: [],
   },

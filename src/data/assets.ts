@@ -352,7 +352,7 @@ export const IMAGE_ASSETS: ImageAsset[] = [
   // continuousWalk (down/left/right/up × 3, in DIRECTION_ORDER). Frame index
   // 1 within each direction is the idle stance; the wander animation loops
   // 0-1-2-1 like the player. Every other NPC is still a static single image.
-  { key: "npc-borin", path: "characters/npc_borin.png", ...NPC_FRAME },
+  { key: "npc-borin", path: "characters/npc_borin.png", ...TILE_FRAME },
   { key: "npc-wren", path: "characters/npc_wren.png" },
   { key: "npc-elder-corwin", path: "characters/npc_corwin.png" },
   { key: "npc-fenn", path: "characters/npc_fenn.png", ...NPC_FRAME },

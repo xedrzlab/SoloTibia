@@ -1895,17 +1895,19 @@ export class UIScene extends Phaser.Scene {
       .setOrigin(0, 0)
       .setStrokeStyle(1, COLORS.border);
     const portraitBg = this.add.rectangle(10, 10, 48, 48, 0x000000, 0.3).setOrigin(0, 0);
-    // Directional NPCs (spritesheets) render the down-facing idle frame (index
-    // 1 — the middle frame of the "down" row) as their portrait; static
-    // images fall back to the whole texture. The 48-tall directional frames
-    // fit the 48-tall portrait box at 1:1; the older 32-tall static NPC art
-    // gets the historical 1.3× enlargement so its portrait doesn't look tiny
-    // in the same box.
+    // Directional NPCs (spritesheets) render the down-facing idle frame
+    // (index 1 — the middle frame of the "down" row) as their portrait.
+    // Portrait box is 48×48. A 48-tall directional frame fits at 1:1; a
+    // 32-tall directional frame (or the older 32-tall static NPC art) gets
+    // the historical 1.3× enlargement so it doesn't look tiny in the box.
     const npcTexture = this.textures.get(npc.textureKey);
     const isDirectional = npcTexture.has("1");
+    const frameH = isDirectional
+      ? npcTexture.get(1).height
+      : npcTexture.getSourceImage().height;
     const portrait = this.add
       .image(34, 34, npc.textureKey, isDirectional ? 1 : undefined)
-      .setScale(isDirectional ? 1 : 1.3);
+      .setScale(frameH >= 48 ? 1 : 1.3);
     const name = this.add
       .text(66, 14, npc.npcName, { ...TEXT, fontSize: "13px", color: "#e6c34a" })
       .setOrigin(0, 0);
