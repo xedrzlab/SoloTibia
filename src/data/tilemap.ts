@@ -577,13 +577,28 @@ export const MONSTER_SPAWNS: MonsterSpawn[] = [
     // above) — this override just keeps the town copy harmless to walk into.
     overrides: { hitChance: 0, minDamage: 0, maxDamage: 0 },
   },
-  { monsterId: "rat", x: 21, y: 66 }, // room A
-  { monsterId: "rat", x: 48, y: 66 }, // room B
-  { monsterId: "rat", x: 11, y: 67 }, // dead-end side chamber
-  { monsterId: "rat", x: 25, y: 68 }, // A-B corridor
-  { monsterId: "cave_rat", x: 44, y: 68 }, // A-B corridor, east end
-  { monsterId: "cave_rat", x: 33, y: 90 }, // central chamber
-  { monsterId: "cave_rat", x: 37, y: 92 }, // central chamber
+  // Sewer rat distribution: 12 total, biased toward corners and walls so
+  // no room feels like a grid — a couple of rats wander (see Monster.ts
+  // wander branch) so a walked-into room isn't a display of statues.
+  // Room A (NW arrival): 2 rats tucked near the walls
+  { monsterId: "rat", x: 17, y: 65 },
+  { monsterId: "rat", x: 22, y: 70, overrides: { wanders: true } },
+  // A-B corridor (upper east-west artery): 2 rats spread across its length
+  { monsterId: "rat", x: 27, y: 69 },
+  { monsterId: "cave_rat", x: 43, y: 68, overrides: { wanders: true } },
+  // Room B (NE arrival): 2 rats
+  { monsterId: "rat", x: 48, y: 66 },
+  { monsterId: "cave_rat", x: 52, y: 70 },
+  // Left/lower drop corridor (A → C): 1 rat halfway down
+  { monsterId: "rat", x: 20, y: 78 },
+  // Right/lower drop corridor (B → C): 1 rat
+  { monsterId: "cave_rat", x: 50, y: 79, overrides: { wanders: true } },
+  // Room C (central/bottom chamber): 3 cave rats, tucked to walls, one wanderer
+  { monsterId: "cave_rat", x: 32, y: 89 },
+  { monsterId: "cave_rat", x: 38, y: 94 },
+  { monsterId: "cave_rat", x: 35, y: 91, overrides: { wanders: true } },
+  // Dead-end side chamber (small side room west of Room A) — one lonely rat
+  { monsterId: "rat", x: 11, y: 67 },
 ];
 
 const DISABLED_MONSTER_SPAWNS: MonsterSpawn[] = [

@@ -72,6 +72,14 @@ export interface MonsterDef {
   speed: number;
   fleeAtHpPct: number; // 0 = never flees
   loot: LootEntry[];
+  /**
+   * If true, this monster takes small random steps around its spawn when
+   * the player isn't in aggro range — makes a room feel inhabited rather
+   * than showing rows of statues. See Monster.update's wander branch.
+   * Only relevant for peaceful/idle states; combat and aggro paths ignore
+   * this. Default false = stationary.
+   */
+  wanders?: boolean;
 }
 
 // Shared per-direction target boxes for the cave-rat texture (used by both

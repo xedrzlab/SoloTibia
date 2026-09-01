@@ -451,6 +451,20 @@ export class Monster {
     } else if (this.tileX !== this.spawnX || this.tileY !== this.spawnY) {
       const path = findPath(isWalkable, this.tile, { x: this.spawnX, y: this.spawnY });
       if (path.length > 0) void this.stepTo(path[0].x, path[0].y, frictionAt(path[0].x, path[0].y));
+    } else if (this.def.wanders && Math.random() < 0.25) {
+      // Idle wander: 25% of the AI ticks (throttled to AI_TICK_MS above),
+      // try to take one random 4-direction step, but only if it lands
+      // within WANDER_RADIUS of spawn — keeps the creature inside its own
+      // room instead of drifting down a corridor forever.
+      const WANDER_RADIUS = 3;
+      const dirs = [[0, 1], [0, -1], [1, 0], [-1, 0]].sort(() => Math.random() - 0.5);
+      for (const [dx, dy] of dirs) {
+        const nx = this.tileX + dx, ny = this.tileY + dy;
+        if (!isWalkable(nx, ny)) continue;
+        if (Math.abs(nx - this.spawnX) > WANDER_RADIUS || Math.abs(ny - this.spawnY) > WANDER_RADIUS) continue;
+        void this.stepTo(nx, ny, frictionAt(nx, ny));
+        break;
+      }
     }
   }
 
