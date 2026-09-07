@@ -1574,13 +1574,13 @@ export class WorldScene extends Phaser.Scene {
       .setInteractive({ draggable: true, useHandCursor: true });
 
     const label = this.add
-      .text(cx, tileY * TILE_SIZE - 2, `Dead ${monster.def.name}`, {
+      .text(cx, tileY * TILE_SIZE - 2, `${monster.def.name} Loot`, {
         ...CREATURE_LABEL_STYLE,
       })
       .setOrigin(0.5, 1)
       .setDepth(LABEL_DEPTH + 1);
 
-    const container = new Container(`Dead ${monster.def.name}`, "loot-bag", CORPSE_CAPACITY);
+    const container = new Container(`${monster.def.name} Loot`, "loot-bag", CORPSE_CAPACITY);
     for (const drop of loot) container.addItem(drop.itemId, drop.amount);
     this.lootContainerIds.add(container.id);
 
